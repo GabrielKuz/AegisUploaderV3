@@ -1,5 +1,8 @@
 from fastapi import FastAPI
 
+from fastapi import FastAPI, Depends
+from modules.LinkGenerator import LinkRequest, generate_links, setup
+from modules.auth import getCurrentActiveUser, getCurrentUser, User, userAuthenticated
 from modules.uploader import router as uploader_router
 
 from modules.downloadData import downloadData
@@ -9,6 +12,11 @@ from typing import Annotated
 
 app = FastAPI(title="Aegis Backend", root_path="/api")
 app.include_router(uploader_router)
+
+@app.post("/links/create/")
+def create_link(link_request: LinkRequest):
+    authentication: bool = userAuthenticated(getCurrentUser())
+    return generate_links(link_request, authentication)
 
 @app.get("/")
 def read_root():
