@@ -1,3 +1,4 @@
+[![Pytest](https://github.com/GabrielKuz/AegisSummerInterns2026/actions/workflows/pytest.yml/badge.svg)](https://github.com/GabrielKuz/AegisSummerInterns2026/actions/workflows/pytest.yml)
 # AegisSummerInterns2026
 Project of Aegis Software interns during the summer of 2026
 
