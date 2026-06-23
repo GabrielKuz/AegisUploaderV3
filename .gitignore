@@ -245,3 +245,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+#azurite
+azurite_db_*.json
+azurite_data/*

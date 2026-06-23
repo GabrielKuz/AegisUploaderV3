@@ -1,6 +1,9 @@
-from modules.auth import getCurrentUser, User
+from modules.auth import User
 from fastapi import HTTPException, status
+from fastapi.responses import RedirectResponse
+from sqlalchemy import text
 from modules import Session
+from modules.models import UploadRecord, LinkRecord
 """
 LinkDB schema
 
@@ -44,15 +47,18 @@ class LinkRecord(Base):
     expired = Column(Boolean)
  
 """
+
+
 session = Session()
 
-def downloadData(uuid: str, currentUser: User) -> str:
 
+def downloadData(uuid: str, currentUser: User) -> RedirectResponse:
     unauthenticated = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
+
     unauthorized = HTTPException(
         status_code=status.HTTP_403_FORBIDDEN,
         detail="You do not have permission to access this resource",
@@ -61,22 +67,45 @@ def downloadData(uuid: str, currentUser: User) -> str:
 
     if not currentUser or currentUser.disabled:
         raise unauthenticated
-    
-    if not uuid or session.query("SELECT * FROM LinkDB.links WHERE uuid = :uuid", {"uuid": uuid}).rowcount == 0:
+
+    if not uuid:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Link not found",
+            detail="Upload not found",
         )
-    
-    if currentUser.username not in session.query("SELECT users_with_access FROM LinkDB.links WHERE uuid = :uuid", {"uuid": uuid}).fetchone()[0]:
-        raise unauthorized
-    
-    redirect = HTTPException(
+
+    upload = session.execute(
+        text("""
+            SELECT sas_retrieval_link, users_with_access
+            FROM "LinkDB".uploads
+            WHERE uuid = :uuid
+        """),
+        {"uuid": uuid},
+    ).first()
+
+    if upload is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Upload not found",
+        )
+
+    sasLink, accessList = upload
+
+    if accessList:
+        if currentUser.username not in accessList:
+            raise unauthorized
+
+    if not sasLink:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Retrieval link not found",
+        )
+
+    return RedirectResponse(
+        url=sasLink,
         status_code=status.HTTP_302_FOUND,
-        detail="Redirecting to the link",
-        headers={"Location": session.query("SELECT sas_retrieval_link FROM LinkDB.uploads WHERE uuid = :uuid", {"uuid": uuid}).fetchone()[0]}, #get retrieval link from uploads
     )
-    return redirect
+
 
 def logAccess(uuid: str, currentUser: User):
-    print(f"User {currentUser.username} accessed link {uuid}") #TODO: Implement logging to file
+    print(f"User {currentUser.username} accessed upload {uuid}")
