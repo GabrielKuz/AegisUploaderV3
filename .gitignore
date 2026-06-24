@@ -1,3 +1,5 @@
+*.pyc
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
@@ -244,6 +246,9 @@ dist-ssr
 *.sln
 *.sw?
 
+#azurite
+azurite_db_*.json
+azurite_data/*
 # Azurite storage data
 .azurite/
 azurite/
