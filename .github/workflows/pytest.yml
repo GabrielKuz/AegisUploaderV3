@@ -14,7 +14,14 @@ permissions:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-  DATABASE_URL: postgresql+psycopg://dummy:dummy@postgres:5432/dummy
+  DATABASE_URL: postgresql+psycopg://test_user:test_password@postgres:5432/test_db
+  POSTGRES_USER: test_user
+  POSTGRES_PASSWORD: test_password
+  POSTGRES_DB: test_db
+  TENANT_ID: test-tenant-id
+  CLIENT_ID: test-client-id
+  BACKEND_URL: http://backend:8000
+  SECRET_KEY: test-secret-key
 
 jobs:
   build:
