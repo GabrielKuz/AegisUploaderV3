@@ -1,0 +1,7 @@
+from hubspot import HubSpot
+
+api_client = HubSpot(access_token='your_access_token')
+
+# or set your access token later
+api_client = HubSpot()
+api_client.access_token = 'your_access_token'
