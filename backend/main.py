@@ -14,7 +14,7 @@ def create_link(link_request: LinkRequest, current_user: Annotated[User, Depends
     #authentication: bool = userAuthenticated(getCurrentUser())
     return generate_links(link_request, current_user) #TODO: CHANGE IMMENDIATLY AFTER TESTING
 
-@app.get("/links")
+@app.get("/api/links")
 def get_links(current_user: Annotated[User, Depends(getCurrentActiveUser)]):
     return get_all_links(current_user)
 
