@@ -130,6 +130,7 @@ dependencies = [
     { name = "pytest" },
     { name = "python-dotenv" },
     { name = "python-multipart" },
+    { name = "requests" },
     { name = "sqlalchemy" },
     { name = "uvicorn" },
 ]
@@ -147,6 +148,7 @@ requires-dist = [
     { name = "pytest", specifier = ">=9.1.1" },
     { name = "python-dotenv", specifier = ">=1.2.2" },
     { name = "python-multipart", specifier = ">=0.0.32" },
+    { name = "requests", specifier = ">=2.34.2" },
     { name = "sqlalchemy", specifier = ">=2.0.51" },
     { name = "uvicorn", specifier = ">=0.30.0" },
 ]
