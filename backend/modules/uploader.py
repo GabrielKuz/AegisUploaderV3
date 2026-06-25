@@ -176,7 +176,7 @@ async def create_upload_file(link_uuid: str,
                 container_name=AZURE_CONTAINER_NAME,
                 blob_name=blob_name,
                 permission=BlobSasPermissions(read=True),
-                expiry=datetime.datetime.utcnow() + datetime.timedelta(days=30),
+                expiry=datetime.datetime.now(datetime.UTC) + datetime.timedelta(days=30),
             )
 
             sas_retrieval_link = (
