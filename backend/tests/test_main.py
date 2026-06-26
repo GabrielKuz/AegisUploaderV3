@@ -1,8 +1,10 @@
 import ast
+import os
 import sys
 from pathlib import Path
 
 import jwt
+from fastapi import Depends
 from fastapi.testclient import TestClient
 
 
@@ -11,7 +13,13 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
+os.environ.setdefault("TENANT_ID", "tenant-id")
+os.environ.setdefault("CLIENT_ID", "client-id")
+os.environ.setdefault("DATABASE_URL", "sqlite:///:memory:")
+os.environ.setdefault("AZURE_STORAGE_CONNECTION_STRING", "UseDevelopmentStorage=true")
+
 from main import app
+from modules.auth import getCurrentActiveUser
 
 
 client = TestClient(app)
@@ -29,6 +37,21 @@ def test_normal():
     assert 5 - 3 == 2
     assert 10 / 2 == 5
     assert 3 ** 2 == 9
+
+
+def test_current_active_user_dependency_does_not_recurse():
+    from fastapi import FastAPI
+
+    app = FastAPI()
+
+    @app.get("/protected")
+    async def protected_route(current_user: str = Depends(getCurrentActiveUser)):
+        return {"ok": current_user is not None}
+
+    with TestClient(app) as test_client:
+        response = test_client.get("/protected")
+
+    assert response.status_code == 401
 
 
 def test_jwt():

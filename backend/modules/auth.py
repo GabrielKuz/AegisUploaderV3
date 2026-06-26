@@ -76,7 +76,7 @@ async def getCurrentActiveUser(current_user: Annotated[User, Depends(getCurrentU
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Inactive user")
     return current_user
 
-async def userAuthenticated(current_user: Annotated[User, Depends(getCurrentUser)]) -> bool:
+async def userAuthenticated(current_user: Annotated[User, Depends(getCurrentActiveUser)]) -> bool:
     return current_user is not None
 
 @deprecated("use getCurrentActiveUser instead. This is insecure and only intended for testing")
