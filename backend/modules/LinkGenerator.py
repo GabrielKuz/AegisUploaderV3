@@ -24,6 +24,10 @@ url = f"http://{os.getenv('BACKEND_URL')}/backend/links/"
 
 
 def generate_links(link_request: LinkRequest, current_user: User):
+    """
+    Generates link and UUID and assigns them to the provided case ID and ITAR status. 
+    Stores the link in the database.
+    """
     if not current_user or current_user.disabled:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -41,6 +45,10 @@ def generate_links(link_request: LinkRequest, current_user: User):
 
 
 def store_link(link_request: LinkRequest,uuid_str: str, current_user: User):
+    """
+    Stores the generated link and UUID in the database with associated case ID, 
+    ITAR status, creator, timestamp, users with access, expiration date, and expiration status.
+    """
     print("STORE_LINK CALLED", uuid_str)
 
     with Session() as session:
@@ -64,6 +72,10 @@ def store_link(link_request: LinkRequest,uuid_str: str, current_user: User):
 
 
 def expire_old_links(expiry_days: int = 2):
+    """
+    Checks if the current timestamp is past a link's expiration date.
+    Expires links that are older than the specified number of days (default is 2 days).
+    """
     cutoff = datetime.now() - timedelta(days=expiry_days)
 
     with Session() as session:
@@ -91,6 +103,9 @@ def expire_old_links(expiry_days: int = 2):
         session.commit()
 
 def extend_link_expiration(uuid_str: str, current_user: User, extension: int):
+    """
+    Extends expiration date by specified number of days for a specific link
+    """
     if not current_user or current_user.disabled:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -123,6 +138,9 @@ def extend_link_expiration(uuid_str: str, current_user: User, extension: int):
         session.commit()
 
 def get_all_links(current_user: User):
+    """
+    Retrieves all links from the database and returns them as a list of dictionaries.
+    """
     if not current_user or current_user.disabled:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
