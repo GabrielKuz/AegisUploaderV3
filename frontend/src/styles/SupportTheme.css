@@ -1,0 +1,119 @@
+/* ==========================================================================
+   SUPPORT THEME TOKENS
+   Shared visual tokens for all support pages.
+   ========================================================================== */
+
+:root {
+    /* Brand palette */
+    --support-red: #ef3b32;
+    --support-navy: #083446;
+    --support-teal: #0b3f4e;
+    --support-blue: #1d5a83;
+    --support-light-blue: #81a5bb;
+
+    /* Accent colors */
+    --support-accent: var(--support-blue);
+    --support-accent-hover: var(--support-navy);
+    --support-accent-soft: rgba(129, 165, 187, 0.18);
+    --support-accent-border: rgba(29, 90, 131, 0.35);
+    --support-focus-ring: rgba(29, 90, 131, 0.2);
+
+    /* Card surfaces */
+    --support-card-background: rgba(255, 255, 255, 0.94);
+    --support-card-border: #d9dfe3;
+    --support-divider: #d9e2e7;
+
+    /* Decorative pattern */
+    --support-dot-color: rgba(29, 90, 131, 0.42);
+
+    /* Card depth */
+    --support-card-shadow:
+        0 8px 24px rgba(0, 0, 0, 0.06),
+        0 2px 6px rgba(0, 0, 0, 0.03);
+
+    --support-card-shadow-hover:
+        0 18px 40px rgba(8, 52, 70, 0.1),
+        0 4px 12px rgba(0, 0, 0, 0.05);
+
+    /* Form and table surfaces */
+    --support-control-background: var(--theme-surface-secondary);
+    --support-control-border: var(--theme-border-strong);
+    --support-row-hover: rgba(29, 90, 131, 0.06);
+
+    /* Error feedback */
+    --support-error-text: #8d241f;
+    --support-error-background: #fff1f0;
+    --support-error-border: #ef3b32;
+
+    /* Open status */
+    --support-open-text: #8d241f;
+    --support-open-background: #fff1f0;
+    --support-open-border: #ef3b32;
+
+    /* In-progress status */
+    --support-progress-text: #1d5a83;
+    --support-progress-background: #edf5fa;
+    --support-progress-border: #81a5bb;
+
+    /* Resolved status */
+    --support-resolved-text: #404040;
+    --support-resolved-background: #f2f2f2;
+    --support-resolved-border: #999999;
+}
+
+
+/* ==========================================================================
+   DARK MODE
+   Preserves the same visual character with dark-compatible contrast.
+   ========================================================================== */
+
+:root[data-theme="dark"] {
+    /* Accent colors */
+    --support-accent: #78c5e8;
+    --support-accent-hover: #9bd7f0;
+    --support-accent-soft: rgba(120, 197, 232, 0.14);
+    --support-accent-border: rgba(120, 197, 232, 0.38);
+    --support-focus-ring: rgba(120, 197, 232, 0.24);
+
+    /* Card surfaces */
+    --support-card-background: rgba(17, 25, 30, 0.92);
+    --support-card-border: rgba(255, 255, 255, 0.12);
+    --support-divider: rgba(255, 255, 255, 0.1);
+
+    /* Decorative pattern */
+    --support-dot-color: rgba(120, 197, 232, 0.36);
+
+    /* Card depth */
+    --support-card-shadow:
+        0 10px 30px rgba(0, 0, 0, 0.26),
+        0 2px 8px rgba(0, 0, 0, 0.18);
+
+    --support-card-shadow-hover:
+        0 20px 44px rgba(0, 0, 0, 0.36),
+        0 5px 14px rgba(0, 0, 0, 0.22);
+
+    /* Form and table surfaces */
+    --support-control-background: rgba(255, 255, 255, 0.05);
+    --support-control-border: rgba(255, 255, 255, 0.18);
+    --support-row-hover: rgba(120, 197, 232, 0.08);
+
+    /* Error feedback */
+    --support-error-text: #ffaaa5;
+    --support-error-background: rgba(239, 59, 50, 0.12);
+    --support-error-border: #ff6f68;
+
+    /* Open status */
+    --support-open-text: #ffaaa5;
+    --support-open-background: rgba(239, 59, 50, 0.12);
+    --support-open-border: #ff6f68;
+
+    /* In-progress status */
+    --support-progress-text: #9bd7f0;
+    --support-progress-background: rgba(120, 197, 232, 0.12);
+    --support-progress-border: rgba(120, 197, 232, 0.6);
+
+    /* Resolved status */
+    --support-resolved-text: #d2d8dc;
+    --support-resolved-background: rgba(255, 255, 255, 0.07);
+    --support-resolved-border: rgba(255, 255, 255, 0.24);
+}

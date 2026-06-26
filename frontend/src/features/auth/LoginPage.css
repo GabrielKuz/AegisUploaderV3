@@ -1,37 +1,59 @@
+/* ==========================================================================
+   LOGIN PAGE
+   ========================================================================== */
+
 .login-page {
-  min-height: 100vh;
+  width: 100%;
+  height: 100vh;
+  height: 100dvh;
   display: grid;
-  grid-template-columns: minmax(520px, 46%) 1fr;
-  background: var(--color-white);
+  grid-template-columns: minmax(480px, 46%) minmax(0, 1fr);
+  overflow: hidden;
+  background: var(--theme-page);
 }
 
-/* LEFT BRAND SIDE */
+
+/* ==========================================================================
+   LEFT BRAND PANEL
+   ========================================================================== */
 
 .brand-side {
   position: relative;
-  min-height: 100vh;
+  min-width: 0;
+  height: 100%;
   overflow: hidden;
-  padding: 44px 52px;
+  padding: clamp(28px, 3vw, 44px) clamp(28px, 3.5vw, 52px);
   display: flex;
   flex-direction: column;
   color: var(--color-white);
   background:
-    radial-gradient(circle at 18% 80%, rgba(239, 59, 50, 0.2), transparent 28%),
-    linear-gradient(145deg, #000000 0%, #05090b 48%, #083446 100%);
+    radial-gradient(circle at 18% 80%,
+      rgba(239, 59, 50, 0.2),
+      transparent 28%),
+    linear-gradient(145deg,
+      #000 0%,
+      #05090b 48%,
+      #083446 100%);
 }
 
+/* Decorative diagonal grid placed behind the panel content. */
 .brand-grid {
   position: absolute;
   inset: 0;
   opacity: 0.22;
   background-image:
-    linear-gradient(45deg, rgba(255, 255, 255, 0.12) 1px, transparent 1px),
-    linear-gradient(-45deg, rgba(255, 255, 255, 0.08) 1px, transparent 1px);
-  background-size: 120px 120px;
+    linear-gradient(45deg,
+      rgba(255, 255, 255, 0.12) 1px,
+      transparent 1px),
+    linear-gradient(-45deg,
+      rgba(255, 255, 255, 0.08) 1px,
+      transparent 1px);
   background-position: center;
+  background-size: 120px 120px;
   pointer-events: none;
 }
 
+/* Decorative diamond shapes. */
 .brand-shapes {
   position: absolute;
   inset: 0;
@@ -44,8 +66,8 @@
   width: 160px;
   height: 160px;
   transform: rotate(45deg);
-  background: rgba(255, 255, 255, 0.06);
   border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.06);
 }
 
 .shape-one {
@@ -70,10 +92,11 @@
 .shape-outline {
   right: 22%;
   bottom: 24%;
-  background: transparent;
   border-color: rgba(239, 59, 50, 0.72);
+  background: transparent;
 }
 
+/* Keep meaningful content above decorative elements. */
 .brand-header,
 .brand-message,
 .security-list {
@@ -84,32 +107,19 @@
 .brand-header {
   display: flex;
   align-items: flex-start;
-  gap: 26px;
 }
 
 .brand-logo {
-  width: 250px;
+  display: block;
+  width: clamp(180px, 16vw, 250px);
+  max-width: 100%;
   height: auto;
-}
-
-.brand-header-rule {
-  width: 1px;
-  height: 48px;
-  background: rgba(255, 255, 255, 0.24);
-}
-
-.brand-header p {
-  max-width: 250px;
-  margin: 0;
-  color: rgba(255, 255, 255, 0.72);
-  font-size: 13px;
-  line-height: 1.5;
 }
 
 .brand-message {
   max-width: 620px;
   margin-top: auto;
-  padding-bottom: 44px;
+  padding-block: clamp(40px, 8vh, 88px) clamp(28px, 5vh, 52px);
 }
 
 .eyebrow,
@@ -128,9 +138,9 @@
   max-width: 640px;
   margin: 0;
   color: var(--color-white);
-  font-size: clamp(48px, 5vw, 76px);
-  line-height: 0.98;
+  font-size: clamp(42px, 4.8vw, 72px);
   font-weight: 400;
+  line-height: 0.98;
   letter-spacing: -0.07em;
 }
 
@@ -142,60 +152,36 @@
   max-width: 500px;
   margin: 28px 0 0;
   color: rgba(255, 255, 255, 0.72);
-  font-size: 17px;
+  font-size: clamp(15px, 1.2vw, 17px);
   line-height: 1.65;
 }
 
-.brand-callout {
-  max-width: 520px;
-  margin-top: 34px;
-  padding: 18px 20px;
-  display: grid;
-  grid-template-columns: 18px 1fr;
-  gap: 14px;
-  align-items: start;
-  border: 1px solid rgba(239, 59, 50, 0.6);
-  background: rgba(255, 255, 255, 0.045);
-  backdrop-filter: blur(16px);
-}
 
-.callout-mark {
-  width: 12px;
-  height: 12px;
-  margin-top: 6px;
-  display: block;
-  background: var(--color-aegis-red);
-  clip-path: polygon(0 0, 100% 50%, 0 100%);
-}
-
-.brand-callout p {
-  margin: 0;
-  color: rgba(255, 255, 255, 0.82);
-  font-size: 14px;
-  line-height: 1.6;
-}
+/* ==========================================================================
+   SECURITY HIGHLIGHTS
+   ========================================================================== */
 
 .security-list {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 1px;
   border: 1px solid rgba(255, 255, 255, 0.14);
   background: rgba(255, 255, 255, 0.14);
 }
 
 .security-item {
-  min-height: 150px;
-  padding: 18px;
+  min-height: 132px;
+  padding: 16px;
   background: rgba(0, 0, 0, 0.32);
   backdrop-filter: blur(14px);
 }
 
-.security-item span {
+.security-number {
   display: block;
-  margin-bottom: 26px;
+  margin-bottom: 20px;
   color: rgba(255, 255, 255, 0.42);
   font-family: var(--font-mono);
-  font-size: 22px;
+  font-size: 20px;
 }
 
 .security-item h2 {
@@ -209,35 +195,57 @@
   margin: 0;
   color: rgba(255, 255, 255, 0.62);
   font-size: 12px;
-  line-height: 1.55;
+  line-height: 1.5;
 }
 
-/* RIGHT AUTH SIDE */
+
+/* ==========================================================================
+   RIGHT AUTHENTICATION PANEL
+   ========================================================================== */
 
 .auth-side {
   position: relative;
-  min-height: 100vh;
-  padding: 64px 56px 96px;
+  min-width: 0;
+  height: 100%;
+  overflow: hidden;
+  padding: clamp(88px, 10vh, 112px) clamp(28px, 4vw, 56px) clamp(82px, 9vh, 104px);
   display: grid;
-  place-items: center;
-  background:
-    linear-gradient(90deg, rgba(8, 52, 70, 0.06), transparent 28%),
-    var(--color-gray-light);
+  align-content: center;
+  justify-items: center;
+  background: linear-gradient(90deg, var(--theme-panel-gradient), transparent 28%), var(--theme-page);
+  transition: background-color 180ms ease;
 }
 
+/* Subtle background texture for the authentication panel. */
 .auth-side::before {
   content: "";
   position: absolute;
   inset: 0;
   opacity: 0.42;
   background-image:
-    linear-gradient(45deg, rgba(8, 52, 70, 0.045) 1px, transparent 1px),
-    linear-gradient(-45deg, rgba(8, 52, 70, 0.035) 1px, transparent 1px);
+    linear-gradient(45deg,
+      var(--theme-pattern) 1px,
+      transparent 1px),
+    linear-gradient(-45deg,
+      var(--theme-pattern-secondary) 1px,
+      transparent 1px);
   background-size: 140px 140px;
   pointer-events: none;
 }
 
-.support-link,
+/* Top-right controls for theme selection and support access. */
+.auth-controls {
+  position: absolute;
+  z-index: 2;
+  top: 28px;
+  right: clamp(28px, 4vw, 56px);
+  left: clamp(28px, 4vw, 56px);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 18px;
+}
+
 .auth-card,
 .identity-card,
 .auth-footer {
@@ -246,89 +254,117 @@
 }
 
 .support-link {
-  position: absolute;
-  top: 42px;
-  right: 58px;
   color: var(--color-blue);
   font-size: 14px;
   font-weight: 600;
   text-decoration: none;
+  transition: color 160ms ease;
 }
 
 .support-link:hover {
   color: var(--color-aegis-red);
 }
 
+.support-link:focus-visible,
+.access-note a:focus-visible,
+.auth-footer a:focus-visible {
+  border-radius: 2px;
+  outline: 3px solid rgba(239, 59, 50, 0.24);
+  outline-offset: 4px;
+}
+
+
+/* ==========================================================================
+   AUTHENTICATION CARD
+   ========================================================================== */
+
 .auth-card {
   width: min(520px, 100%);
-  padding: 54px;
-  background: rgba(255, 255, 255, 0.74);
-  border: 1px solid rgba(255, 255, 255, 0.9);
-  box-shadow: var(--shadow-soft);
+  padding: clamp(34px, 4vw, 54px);
+  border: 1px solid var(--theme-border);
+  background: var(--theme-surface);
+  box-shadow: var(--theme-card-shadow);
   backdrop-filter: blur(20px);
+  transition:
+    color 180ms ease,
+    border-color 180ms ease,
+    background-color 180ms ease;
 }
 
 .auth-eyebrow {
-  color: var(--color-gray);
+  color: var(--theme-muted);
   text-align: center;
 }
 
 .auth-icon {
-  width: 72px;
-  height: 72px;
-  margin: 0 auto 30px;
+  width: 68px;
+  height: 68px;
+  margin: 0 auto 26px;
   display: grid;
   place-items: center;
-  border: 1px solid var(--color-border-dark);
-  background: var(--color-white);
+  border: 1px solid var(--theme-border-strong);
+  background: var(--theme-surface-secondary);
 }
 
 .auth-icon span {
-  width: 28px;
-  height: 34px;
   display: block;
+  width: 26px;
+  height: 32px;
   background: var(--color-aegis-red);
   clip-path: polygon(0 0, 100% 50%, 0 100%);
 }
 
 .auth-card h2 {
   margin: 0;
-  color: var(--color-black);
-  text-align: center;
-  font-size: clamp(36px, 4vw, 52px);
-  line-height: 1;
+  color: var(--theme-text);
+  font-size: clamp(34px, 3.6vw, 50px);
   font-weight: 400;
+  line-height: 1;
+  text-align: center;
   letter-spacing: -0.06em;
 }
 
 .auth-copy {
   max-width: 370px;
-  margin: 22px auto 34px;
-  color: var(--color-charcoal);
-  text-align: center;
+  margin: 20px auto 30px;
+  color: var(--theme-text-secondary);
   font-size: 16px;
-  line-height: 1.65;
+  line-height: 1.6;
+  text-align: center;
 }
+
+
+/* ==========================================================================
+   SSO BUTTON
+   ========================================================================== */
 
 .sso-button {
   width: 100%;
-  min-height: 58px;
+  min-height: 56px;
   padding: 0 22px;
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  background: var(--color-black);
-  color: var(--color-white);
+  border: 0;
+  border-radius: 0;
+  background: var(--theme-button);
+  color: var(--theme-button-text);
+  font: inherit;
   cursor: pointer;
   transition:
+    color 160ms ease,
     transform 160ms ease,
-    background 160ms ease,
-    color 160ms ease;
+    background-color 160ms ease;
 }
 
 .sso-button:hover {
   background: var(--color-aegis-red);
+  color: #fff;
   transform: translateY(-1px);
+}
+
+.sso-button:active {
+  transform: translateY(0);
 }
 
 .sso-button:focus-visible {
@@ -337,28 +373,36 @@
 }
 
 .sso-button-label {
+  overflow: hidden;
   font-family: var(--font-mono);
   font-size: 14px;
   font-weight: 500;
   text-align: left;
+  text-overflow: ellipsis;
   letter-spacing: -0.02em;
+  white-space: nowrap;
 }
 
 .sso-button-arrow {
   font-size: 18px;
 }
 
+
+/* ==========================================================================
+   ACCESS AND IDENTITY INFORMATION
+   ========================================================================== */
+
 .access-note {
-  margin-top: 28px;
-  padding-top: 24px;
+  margin-top: 24px;
+  padding-top: 22px;
   display: grid;
   gap: 10px;
+  border-top: 1px solid var(--theme-divider);
   text-align: center;
-  border-top: 1px solid rgba(0, 0, 0, 0.12);
 }
 
 .access-note span {
-  color: var(--color-gray);
+  color: var(--theme-muted);
   font-size: 12px;
 }
 
@@ -367,6 +411,7 @@
   font-size: 12px;
   font-weight: 600;
   text-decoration: none;
+  transition: color 160ms ease;
 }
 
 .access-note a:hover {
@@ -375,17 +420,22 @@
 
 .identity-card {
   width: min(430px, 100%);
-  margin-top: 18px;
-  padding: 18px 20px;
+  margin-top: 16px;
+  padding: 16px 18px;
   display: grid;
-  grid-template-columns: 36px 1fr;
+  grid-template-columns: 36px minmax(0, 1fr);
   gap: 16px;
   align-items: center;
-  background: rgba(255, 255, 255, 0.68);
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  border: 1px solid var(--theme-border);
+  background: var(--theme-surface-secondary);
   backdrop-filter: blur(16px);
+  transition:
+    color 180ms ease,
+    border-color 180ms ease,
+    background-color 180ms ease;
 }
 
+/* Four-square Microsoft identity mark. */
 .identity-grid {
   display: grid;
   grid-template-columns: repeat(2, 14px);
@@ -411,27 +461,32 @@
 
 .identity-card h3 {
   margin: 0 0 4px;
-  color: var(--color-black);
+  color: var(--theme-text);
   font-size: 14px;
   font-weight: 600;
 }
 
 .identity-card p {
   margin: 0;
-  color: var(--color-gray);
+  color: var(--theme-muted);
   font-size: 13px;
   line-height: 1.45;
 }
 
+
+/* ==========================================================================
+   AUTHENTICATION FOOTER
+   ========================================================================== */
+
 .auth-footer {
   position: absolute;
-  bottom: 30px;
-  left: 56px;
-  right: 56px;
+  right: clamp(28px, 4vw, 56px);
+  bottom: 26px;
+  left: clamp(28px, 4vw, 56px);
   display: flex;
   justify-content: space-between;
   gap: 18px;
-  color: var(--color-gray);
+  color: var(--theme-muted);
   font-size: 12px;
 }
 
@@ -443,67 +498,246 @@
 .auth-footer a {
   color: var(--color-blue);
   text-decoration: none;
+  transition: color 160ms ease;
 }
 
 .auth-footer a:hover {
   color: var(--color-aegis-red);
 }
 
-/* RESPONSIVE */
 
-@media (max-width: 1100px) {
+/* ==========================================================================
+   MEDIUM SCREENS
+   ========================================================================== */
+
+@media (max-width: 1180px) {
   .login-page {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(430px, 44%) minmax(0, 1fr);
   }
 
   .brand-side {
-    min-height: 720px;
+    padding-inline: 36px;
   }
 
-  .auth-side {
-    min-height: 720px;
+  .security-item {
+    padding: 14px;
+  }
+
+  .security-number {
+    margin-bottom: 16px;
   }
 }
 
+
+/* ==========================================================================
+   TABLET AND SMALL LAPTOP LAYOUT
+   ========================================================================== */
+
+@media (max-width: 960px) {
+  .login-page {
+    height: auto;
+    min-height: 100vh;
+    min-height: 100dvh;
+    grid-template-columns: 1fr;
+    overflow: visible;
+  }
+
+  .brand-side,
+  .auth-side {
+    height: auto;
+    min-height: auto;
+    overflow: visible;
+  }
+
+  .brand-side {
+    padding: 36px 32px;
+  }
+
+  .brand-message {
+    margin-top: 80px;
+    padding-block: 40px;
+  }
+
+  .auth-side {
+    padding: 104px 32px 120px;
+  }
+}
+
+
+/* ==========================================================================
+   MOBILE LAYOUT
+   ========================================================================== */
+
 @media (max-width: 720px) {
   .brand-side {
-    padding: 32px 24px;
+    padding: 30px 24px;
   }
 
-  .brand-header {
-    flex-direction: column;
-    gap: 16px;
+  .brand-logo {
+    width: 210px;
   }
 
-  .brand-header-rule {
-    display: none;
+  .brand-message {
+    margin-top: 72px;
+    padding-block: 32px 36px;
   }
 
   .brand-message h1 {
-    font-size: 44px;
+    font-size: clamp(40px, 12vw, 48px);
+    letter-spacing: -0.06em;
+  }
+
+  .brand-description {
+    font-size: 15px;
   }
 
   .security-list {
     grid-template-columns: 1fr;
   }
 
-  .auth-side {
-    padding: 92px 20px 120px;
+  .security-item {
+    min-height: auto;
   }
 
-  .support-link {
-    right: 24px;
+  .security-number {
+    margin-bottom: 12px;
+  }
+
+  .auth-side {
+    padding: 96px 20px 118px;
+  }
+
+  .auth-controls {
+    top: 22px;
+    right: 20px;
+    left: 20px;
+    justify-content: space-between;
   }
 
   .auth-card {
-    padding: 38px 24px;
+    padding: 36px 24px;
   }
 
   .auth-footer {
-    left: 20px;
     right: 20px;
+    bottom: 22px;
+    left: 20px;
     flex-direction: column;
     align-items: center;
     text-align: center;
+  }
+}
+
+
+/* ==========================================================================
+   SMALL MOBILE LAYOUT
+   ========================================================================== */
+
+@media (max-width: 420px) {
+  .brand-side {
+    padding-inline: 20px;
+  }
+
+  .auth-side {
+    padding-inline: 16px;
+  }
+
+  .auth-controls {
+    right: 16px;
+    left: 16px;
+    gap: 12px;
+  }
+
+  .support-link {
+    font-size: 13px;
+  }
+
+  .auth-card {
+    padding-inline: 20px;
+  }
+
+  .identity-card {
+    padding-inline: 16px;
+  }
+
+  .auth-footer {
+    right: 16px;
+    left: 16px;
+  }
+}
+
+
+/* ==========================================================================
+   SHORT VIEWPORTS
+   ========================================================================== */
+
+@media (min-width: 961px) and (max-height: 760px) {
+  .brand-side {
+    padding-block: 24px;
+  }
+
+  .brand-message {
+    padding-block: 24px;
+  }
+
+  .brand-message h1 {
+    font-size: clamp(38px, 4vw, 58px);
+  }
+
+  .security-item {
+    min-height: 104px;
+    padding: 12px;
+  }
+
+  .security-number {
+    margin-bottom: 10px;
+    font-size: 17px;
+  }
+
+  .auth-side {
+    padding-top: 76px;
+    padding-bottom: 72px;
+  }
+
+  .auth-card {
+    padding: 28px 36px;
+  }
+
+  .auth-icon {
+    width: 56px;
+    height: 56px;
+    margin-bottom: 18px;
+  }
+
+  .auth-copy {
+    margin-block: 14px 20px;
+  }
+
+  .identity-card {
+    margin-top: 10px;
+    padding-block: 13px;
+  }
+}
+
+
+/* ==========================================================================
+   REDUCED MOTION
+   ========================================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+
+  .theme-toggle,
+  .sso-button,
+  .support-link,
+  .access-note a,
+  .auth-footer a {
+    transition: none;
+  }
+
+  .theme-toggle:hover,
+  .theme-toggle:active,
+  .sso-button:hover,
+  .sso-button:active {
+    transform: none;
   }
 }
