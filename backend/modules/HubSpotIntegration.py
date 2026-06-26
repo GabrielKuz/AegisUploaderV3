@@ -17,14 +17,14 @@ def get_ticket(ais_id: str):
             FilterGroup(
                 filters=[
                     Filter(
-                        property_name="ais_id",
+                        property_name="ais_ticket_number",
                         operator="EQ",
                         value=ais_id,
                     )
                 ]
             )
         ],
-        properties=["ais_id", "subject", "caseID", "caseStatus", "expiration_date"],
+        properties=["ais_ticket_number", "subject", "caseID", "caseStatus", "expiration_date"],
     )
 
     try:
