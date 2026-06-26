@@ -20,7 +20,7 @@ class LinkRequest(BaseModel):
 
 link_data: Dict[str, LinkRequest] = {}
 
-url = f"http://{os.getenv('BACKEND_URL')}/backend/links/"
+url = f"{os.getenv('BACKEND_URL')}/backend/links/"
 
 
 def generate_links(link_request: LinkRequest, current_user: User):
@@ -40,9 +40,7 @@ def generate_links(link_request: LinkRequest, current_user: User):
     }
 
 
-def store_link(link_request: LinkRequest,uuid_str: str, current_user: User):
-    print("STORE_LINK CALLED", uuid_str)
-
+def store_link(link_request: LinkRequest, uuid_str: str, current_user: User):
     with Session() as session:
         record = LinkRecord(
             uuid=uuid_str,
@@ -51,8 +49,9 @@ def store_link(link_request: LinkRequest,uuid_str: str, current_user: User):
             itar=link_request.itar,
             creator=current_user.username,
             timestamp=datetime.now(),
+            expiration_date=datetime.now() + timedelta(days=2),
             users_with_access=[current_user.username],
-            expired=False
+            expired=False,
         )
 
         # print("TABLE:", LinkRecord.__table__)
@@ -63,8 +62,8 @@ def store_link(link_request: LinkRequest,uuid_str: str, current_user: User):
         session.commit()
 
 
-def expire_old_links(expiry_days: int = 2):
-    cutoff = datetime.now() - timedelta(days=expiry_days)
+def expire_old_links(expiry_days: int = 2) -> bool:
+    record_expiry: bool = False
 
     with Session() as session:
         stmt = select(LinkRecord).where(
@@ -76,19 +75,20 @@ def expire_old_links(expiry_days: int = 2):
 
         for record in records:
             if not record.timestamp:
-                continue
+                record.timestamp = datetime.now()  # Set to current time if timestamp is None
+            if not record.expiration_date:
+                record.expiration_date = record.timestamp + timedelta(days=expiry_days)  # Set expiration date based on timestamp
 
-            try:
-                ts_dt = record.timestamp
-            except Exception:
-                continue
+            # cutoff: datetime = (record.expiration_date - timedelta(days=record.timestamp.day))
 
-            if ts_dt <= cutoff:
+            if record.expiration_date <= datetime.now():
                 record.expired = True
+                record_expiry = True
             else:
                 record.expired = False
 
         session.commit()
+        return record_expiry
 
 def extend_link_expiration(uuid_str: str, current_user: User, extension: int):
     if not current_user or current_user.disabled:
@@ -119,8 +119,28 @@ def extend_link_expiration(uuid_str: str, current_user: User, extension: int):
                 detail="Extension must be a positive integer"
             )
 
-        expire_old_links(expiry_days=extension)
+        record.expiration_date += timedelta(days=extension)
+        record.expired = False
         session.commit()
+
+def get_link(uuid_str: str):
+    with Session() as session:
+        stmt = select(LinkRecord).where(LinkRecord.uuid == uuid_str)
+        record = session.scalar(stmt)
+        if not record:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Link not found")
+
+        return {
+            "uuid": record.uuid,
+            "link": record.link,
+            "case_id": record.case_id,
+            "itar": record.itar,
+            "creator": record.creator,
+            "timestamp": record.timestamp,
+            "expiration_date": record.expiration_date,
+            "users_with_access": record.users_with_access,
+            "expired": record.expired,
+        }
 
 def get_all_links(current_user: User):
     if not current_user or current_user.disabled:
@@ -129,7 +149,7 @@ def get_all_links(current_user: User):
             detail="User not authenticated"
         )
     with Session() as session:
-        stmt = select(LinkRecord)
+        stmt = select(LinkRecord).where(LinkRecord.creator == current_user.username)
         records = session.scalars(stmt).all()
         result = []
         for r in records:
@@ -139,7 +159,8 @@ def get_all_links(current_user: User):
                 "case_id": r.case_id,
                 "itar": r.itar,
                 "creator": r.creator,
-                "timestamp": r.timestamp.isoformat() if r.timestamp is not None else None,
+                "timestamp": r.timestamp,
+                "expiration_date": r.expiration_date,
                 "users_with_access": r.users_with_access,
                 "expired": r.expired,
             })
