@@ -1,3 +1,8 @@
+networks:
+  default:
+    ipam:
+      config:
+        - subnet: 172.29.0.0/16
 services:
   backend:
     build:
@@ -20,7 +25,7 @@ services:
 
       AZURE_STORAGE_CONNECTION_STRING_ITAR: DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://azurite-itar:10000/devstoreaccount1;QueueEndpoint=http://azurite-itar:10001/devstoreaccount1;
 
-    command: ["sh", "-c", "python create_tables.py && uvicorn main:app --host 0.0.0.0 --port 8000"]
+    command: ["sh", "-c", "python create_tables.py && uvicorn main:app --host 0.0.0.0 --port 8000 --proxy-headers --forwarded-allow-ips=172.29.0.0/16"]
 
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
@@ -131,7 +136,8 @@ services:
     ports:
       - "80:80"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost"]
       interval: 5s
