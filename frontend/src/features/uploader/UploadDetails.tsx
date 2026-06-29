@@ -17,12 +17,7 @@ export function UploadDetails() {
                     <div className="details-value">No</div>
                 </div>
 
-                <div className="details-row">
-                    <div className="details-label">Days Until Expiration Date</div>
-                    <div className="details-value">30</div>
-                </div>
-
-                <div className="details-row">
+                {/*</div><div className="details-row">
                     <div className="details-label">Server Location</div>
 
                     <div className="details-toggle">
@@ -41,6 +36,7 @@ export function UploadDetails() {
                         </button>
                     </div>
                 </div>
+                */}
             </div>
         </main>
     );
