@@ -1,9 +1,11 @@
 import os
 import datetime
 import hashlib
+import traceback
+import traceback
 import uuid
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Literal
 
 from sqlalchemy import Column, String, Integer, DateTime, Boolean, Text, JSON
 from sqlalchemy import or_
@@ -15,7 +17,7 @@ from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.backends import default_backend
 from fastapi import APIRouter, Depends, File, Header, HTTPException, UploadFile
 from modules import Session
-from modules.auth import getCurrentActiveUser, User, getCurrentUser
+from modules.auth import getCurrentActiveUser, User
 from modules.models import Base, UploadRecord, LinkRecord
 
 router = APIRouter()
@@ -60,24 +62,42 @@ def find_link_entry(db_session, filename: str, url: str | None = None):
         return None
     return q.filter(or_(*filters)).first()
 
-AZURE_CONNECTION_STRING = os.getenv("AZURE_STORAGE_CONNECTION_STRING")
+US_CONNECTION_STRING = os.getenv("AZURE_STORAGE_CONNECTION_STRING_US")
+EU_CONNECTION_STRING = os.getenv("AZURE_STORAGE_CONNECTION_STRING_EU")
+ITAR_CONNECTION_STRING = os.getenv("AZURE_STORAGE_CONNECTION_STRING_ITAR")
+
 AZURE_CONTAINER_NAME = os.getenv("AZURE_STORAGE_CONTAINER", "mycontainer")
 
-if AZURE_CONNECTION_STRING is None:
-    raise RuntimeError("AZURE_STORAGE_CONNECTION_STRING is required for blob uploads")
+if not US_CONNECTION_STRING:
+    raise RuntimeError("AZURE_STORAGE_CONNECTION_STRING_US is required")
 
-blob_service_client = BlobServiceClient.from_connection_string(AZURE_CONNECTION_STRING)
-container_client = blob_service_client.get_container_client(AZURE_CONTAINER_NAME)
-try:
-    container_client.create_container()
-except ResourceExistsError:
-    pass
+if not EU_CONNECTION_STRING:
+    raise RuntimeError("AZURE_STORAGE_CONNECTION_STRING_EU is required")
+
+if not ITAR_CONNECTION_STRING:
+    raise RuntimeError("AZURE_STORAGE_CONNECTION_STRING_ITAR is required")
+
+us_blob_service = BlobServiceClient.from_connection_string(US_CONNECTION_STRING)
+eu_blob_service = BlobServiceClient.from_connection_string(EU_CONNECTION_STRING)
+itar_blob_service = BlobServiceClient.from_connection_string(ITAR_CONNECTION_STRING)
+
+itar_container = itar_blob_service.get_container_client(AZURE_CONTAINER_NAME)
+us_container = us_blob_service.get_container_client(AZURE_CONTAINER_NAME)
+eu_container = eu_blob_service.get_container_client(AZURE_CONTAINER_NAME)
+
+for container in (us_container, eu_container, itar_container):
+    try:
+        container.create_container()
+    except ResourceExistsError:
+        pass
 
 @router.post("/uploadfile/{link_uuid}")
-async def create_upload_file(link_uuid: str,
+async def create_upload_file(
+    link_uuid: str,
     current_user: Annotated[User, Depends(getCurrentActiveUser)],
     file: Annotated[UploadFile | None, File(description="A file read as UploadFile")] = None,
     file_hash_clientside: Annotated[str | None, Header(alias="X-File-Hash")] = None,
+    userLocation: Annotated[Literal["US", "EU"], Header(alias="X-User-Location")] = "US"
 ):
     if file is None:
         return {"message": "No upload file sent"}
@@ -88,6 +108,24 @@ async def create_upload_file(link_uuid: str,
         server_hash = validate_file_hash(contents, file_hash_clientside)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    try:
+        link_entry = session.query(LinkRecord).filter(LinkRecord.uuid == link_uuid).first()
+    except Exception as e:
+        print("LINK LOOKUP ERROR:", e)
+        raise
+
+    itar_status = bool(link_entry.expired) if link_entry else False
+
+    if itar_status:
+        blob_service_client = itar_blob_service
+        container_client = itar_container
+    elif userLocation == "EU":
+        blob_service_client = eu_blob_service
+        container_client = eu_container
+    else:
+        blob_service_client = us_blob_service
+        container_client = us_container
 
     filename = Path(file.filename).name
     blob_name = filename
@@ -104,98 +142,82 @@ async def create_upload_file(link_uuid: str,
             else:
                 blob_name = f"{stem}_{counter}"
             blob_client = container_client.get_blob_client(blob_name)
-
             counter += 1
 
-
-    
-
-    
-    # ensure uploads table exists before persisting
     try:
         ensure_uploads_table(session)
     except Exception:
-        # if table creation fails, continue with upload but don't block the file upload
         pass
     blob_client.upload_blob(contents, overwrite=False)
 
     persisted_contents = blob_client.download_blob().readall()
     persisted_hash = hash_bytes(persisted_contents)
     if persisted_hash != server_hash:
-        raise HTTPException(status_code=500, detail="Uploaded file hash does not match the persisted blob contents")
+        raise HTTPException(status_code=500,detail="Uploaded file hash does not match the persisted blob contents")
 
-    # create a DB record for this upload, pulling info from LinkDB if available
     try:
         now = datetime.datetime.now()
         case_id = None
         users_with_access = []
         original_link = blob_client.url
         sas_retrieval_link = None
-        itar_status = False
-
-        # lookup LinkDB entry by provided UUID
-        try:
-            link_entry = session.query(LinkRecord).filter(LinkRecord.uuid == link_uuid).first()
-        except Exception as e:
-            print("LINK LOOKUP ERROR:", e)
-            raise
 
         if link_entry:
             case_id = link_entry.case_id
-            # keep users_with_access as stored in LinkDB if present
             users_with_access = link_entry.users_with_access or []
             original_link = link_entry.link or original_link
-            # attempt to interpret timestamp if possible
+
             try:
                 if link_entry.timestamp:
                     try:
-                        parsed_ts = link_entry.timestamp # alrealdy a datetime object
+                        parsed_ts = link_entry.timestamp
                     except Exception:
                         parsed_ts = None
             except Exception:
                 parsed_ts = None
+
             if parsed_ts:
                 timestamp_val = parsed_ts
             else:
                 timestamp_val = now
-            # expired flag might indicate ITAR or restricted
-            itar_status = bool(link_entry.expired)
         else:
             timestamp_val = now
 
         try:
             account_name = blob_service_client.account_name
+            account_key = blob_service_client.credential.account_key
 
-            public_blob_endpoint = (
-                f"http://localhost:10000/{account_name}"
-            )
+            public_blob_endpoint = blob_service_client.primary_endpoint
 
             sas_token = generate_blob_sas(
                 account_name=account_name,
-                account_key=blob_service_client.credential.account_key,
+                account_key=account_key,
                 container_name=AZURE_CONTAINER_NAME,
                 blob_name=blob_name,
                 permission=BlobSasPermissions(read=True),
-                expiry=datetime.datetime.now(datetime.UTC) + datetime.timedelta(days=30),
+                expiry=datetime.datetime.now(datetime.UTC)
+                + datetime.timedelta(days=30),
             )
 
             sas_retrieval_link = (
-                f"{public_blob_endpoint}/"
+                f"{public_blob_endpoint.rstrip('/')}/"
                 f"{AZURE_CONTAINER_NAME}/"
                 f"{blob_name}?{sas_token}"
             )
 
         except Exception as e:
-            print("SAS GENERATION ERROR:", e)
+            session.rollback()
+            traceback.print_exc()
             sas_retrieval_link = blob_client.url
 
-
         inserted_upload_id = None
-        if link_entry and getattr(link_entry, 'uuid', None):
+
+        if link_entry and getattr(link_entry, "uuid", None):
             record = UploadRecord(
                 upload_id=str(uuid.uuid4()),
                 link_uuid=link_entry.uuid,
                 original_filename=file.filename,
+                for_deletion=False,
                 blob_name=blob_name,
                 content_type=file.content_type,
                 sha256=server_hash,
@@ -210,12 +232,16 @@ async def create_upload_file(link_uuid: str,
                 upload_complete=True,
                 users_with_access=users_with_access,
             )
+
             session.add(record)
             session.commit()
+
             inserted_upload_id = record.upload_id
-    except Exception:
+
+    except Exception as e:
         try:
-            print("UPLOAD ERROR:" + str(Exception))
+            print("UPLOAD ERROR:" + str(e))
+            session.rollback()
         except Exception:
             pass
 
@@ -223,15 +249,12 @@ async def create_upload_file(link_uuid: str,
         "filename": file.filename,
         "content_type": file.content_type,
         "size": len(contents),
-        "blob_name": blob_name,
-        "blob_url": blob_client.url,
         "uuid": link_uuid,
         "upload_id": inserted_upload_id,
         "file_transfer_check": True,
         "server_hash": server_hash,
         "blob_hash": persisted_hash,
         "date_and_time": str(datetime.datetime.now()),
-        "Sas_retrieval_link": sas_retrieval_link,
     }
 
 
