@@ -26,6 +26,9 @@ class FakeSession:
 
     def first(self):
         return None
+    
+    def rollback(self):
+        pass
 
 
 class FakeBlobClient:
@@ -95,6 +98,8 @@ def test_verify_and_test_uploader_endpoint(monkeypatch):
     sys.modules.pop("modules.uploader", None)
 
     from modules import uploader
+
+    monkeypatch.setattr(uploader, "generate_blob_sas",lambda **kwargs: "sas-token")
 
     fake = FakeBlobServiceClient()
     container = fake.get_container_client("mycontainer")

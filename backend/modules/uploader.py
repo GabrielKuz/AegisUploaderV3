@@ -241,6 +241,7 @@ async def create_upload_file(
     except Exception as e:
         try:
             print("UPLOAD ERROR:" + str(e))
+            traceback.print_exc()
             session.rollback()
         except Exception:
             pass
