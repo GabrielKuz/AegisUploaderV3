@@ -57,6 +57,21 @@ def ticket_updated_at(ais_id: str) -> Optional[str]:
 def get_caseCreateDate(ais_id: str) -> Optional[str]:
     return quikSrch(ais_id,"createdate")
 
+def get_caseCloseDate(ais_id: str) -> Optional[str]:
+    return quikSrch(ais_id,"closedate")
+
+#def get_caseStatus(ais_id: str) -> Optional[str]:
+#    return quikSrch(ais_id,"case_status")
+
+#def get_caseSource(ais_id: str) -> Optional[str]:
+#    return quikSrch(ais_id,"case_source")
+
+#def get_caseITARstatus(ais_id: str) -> Optional[str]:
+#    return quikSrch(ais_id,"itar")
+
+#def get_caseIssue(ais_id: str) -> Optional[str]:
+#    return quikSrch(ais_id,"category")
+
 def get_caseCompany(ais_id: str) -> Optional[str]:
     return quikSrch(ais_id,"company_name")
 
@@ -82,7 +97,7 @@ def advancedSearchThroughHubSpot(searchTerm: str, searchTermHS_name: str):
                 ]
             )
         ],
-        properties=["ais_ticket_number", "hs_object_id", "createdate", "sql_server", "company_name", "hs_lastmodifieddate"],
+        properties=["ais_ticket_number", "hs_object_id", "createdate", "sql_server", "company_name", "hs_lastmodifieddate","closedate","case_status(fill with correct data later)","source_type(fill with correct data later)","itar(fill with correct data later)","issue(fill with correct data later)"],
     )
 
     try:
@@ -93,4 +108,4 @@ def advancedSearchThroughHubSpot(searchTerm: str, searchTermHS_name: str):
     results = getattr(response, "results", None) or []
     return results[0] if results else None
 
-    
+#       ||| USED FOR TESTING |||  if __name__ == "__main__":  ||| USED FOR TESTING |||  
