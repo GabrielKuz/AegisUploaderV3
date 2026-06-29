@@ -11,8 +11,17 @@ services:
       TENANT_ID: ${TENANT_ID}
       CLIENT_ID: ${CLIENT_ID}
       BACKEND_URL: ${BACKEND_URL}
-      AZURE_STORAGE_CONNECTION_STRING: DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://azurite:10000/devstoreaccount1;QueueEndpoint=http://azurite:10001/devstoreaccount1;
+
+      AZURE_STORAGE_CONTAINER: mycontainer
+
+      AZURE_STORAGE_CONNECTION_STRING_US: DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://azurite-us:10000/devstoreaccount1;QueueEndpoint=http://azurite-us:10001/devstoreaccount1;
+
+      AZURE_STORAGE_CONNECTION_STRING_EU: DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://azurite-eu:10000/devstoreaccount1;QueueEndpoint=http://azurite-eu:10001/devstoreaccount1;
+
+      AZURE_STORAGE_CONNECTION_STRING_ITAR: DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://azurite-itar:10000/devstoreaccount1;QueueEndpoint=http://azurite-itar:10001/devstoreaccount1;
+
     command: ["sh", "-c", "python create_tables.py && uvicorn main:app --host 0.0.0.0 --port 8000"]
+
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 5s
@@ -20,20 +29,24 @@ services:
       retries: 10
 
     depends_on:
-      azurite:
+      azurite-us:
+        condition: service_healthy
+      azurite-eu:
+        condition: service_healthy
+      azurite-itar:
         condition: service_healthy
       postgres:
         condition: service_healthy
 
-  azurite:
+  azurite-us:
     image: mcr.microsoft.com/azure-storage/azurite
-    container_name: azurite
+    container_name: azurite-us
     ports:
       - "10000:10000"
       - "10001:10001"
       - "10002:10002"
     volumes:
-      - ./azurite_data:/data
+      - ./azurite_data/us:/data
     command: >
       azurite
       --blobHost 0.0.0.0
@@ -47,13 +60,59 @@ services:
       timeout: 5s
       retries: 10
     restart: unless-stopped
-  
+
+  azurite-eu:
+    image: mcr.microsoft.com/azure-storage/azurite
+    container_name: azurite-eu
+    ports:
+      - "10010:10000"
+      - "10011:10001"
+      - "10012:10002"
+    volumes:
+      - ./azurite_data/eu:/data
+    command: >
+      azurite
+      --blobHost 0.0.0.0
+      --queueHost 0.0.0.0
+      --tableHost 0.0.0.0
+      --location /data
+      --skipApiVersionCheck
+    healthcheck:
+      test: ["CMD", "nc", "-z", "127.0.0.1", "10000"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  azurite-itar:
+    image: mcr.microsoft.com/azure-storage/azurite
+    container_name: azurite-itar
+    ports:
+      - "10020:10000"
+      - "10021:10001"
+      - "10022:10002"
+    volumes:
+      - ./azurite_data/itar:/data
+    command: >
+      azurite
+      --blobHost 0.0.0.0
+      --queueHost 0.0.0.0
+      --tableHost 0.0.0.0
+      --location /data
+      --skipApiVersionCheck
+    healthcheck:
+      test: ["CMD", "nc", "-z", "127.0.0.1", "10000"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
   postgres:
     image: postgres:17
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD} #TODO: change
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB} -h localhost"]
       interval: 5s
