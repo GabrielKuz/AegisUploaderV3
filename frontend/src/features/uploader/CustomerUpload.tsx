@@ -1,20 +1,39 @@
 import "./CustomerUpload.css";
 import "../../styles/SupportTheme.css";
-import { useRef, type ChangeEvent } from "react";
+import { useRef, type ChangeEvent, useState } from "react";
 
 export function CustomerUpload() {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const handleBrowseClick = () => {
         fileInputRef.current?.click();
     };
-    
-    const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+    type SelectedFile = { 
+        file: File;
+        preview: string;
+    };
+    const [selectedFiles, setSelectedFiles] = useState<SelectedFile[]>([]);
+    const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const files = event.target.files;
-        if(files){
-            console.log(files);
-        }
-    }
+        console.log("selectedFiles:", selectedFiles);
+        if (!files) return;
 
+
+        const newFiles = Array.from(files).map(file => ({
+            file,
+            preview: URL.createObjectURL(file)
+        }));
+        setSelectedFiles(prev => {
+            const existingNames = new Set(prev.map(f => f.file.name));
+            const filteredNew = newFiles.filter(
+                f => !existingNames.has(f.file.name)
+            );
+            return [...prev, ...filteredNew];
+        });
+        
+    };
+    const removeFile = (indexToRemove: number) => {
+        setSelectedFiles(prev => prev.filter((_, index) => index !== indexToRemove));
+    };
     return (
         <main className="support-main">
             <div className="upload-content">
@@ -29,10 +48,44 @@ export function CustomerUpload() {
                     <button className="browse-button" onClick={handleBrowseClick}>
                         Browse Files
                     </button>
+                {selectedFiles.length > 0 && (
+                    <div className="selected-files">
+                       
 
+                        {selectedFiles.map((item, index) => (
+                                <div key={index} className="selected-file">
+                                    <span>{item.file.name}</span>
+
+                                    <div style={{ display: "flex", gap: "10px" }}>
+                                        <a
+                                            href={item.preview}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                        >
+                                            Preview
+                                        </a>
+
+                                        <button
+                                            onClick={() => removeFile(index)}
+                                            className="delete-button"
+                                        >
+                                            Delete
+                                        </button>
+                                    </div>
+                                </div>
+                        ))}
+                    </div>
+                )}
                     <input type="file" ref={fileInputRef} multiple style={{ display: "none" }} onChange={handleFileChange} />
+                {selectedFiles.length > 0 && (
+                    <button className="browse-button">
+                        Upload Files
+                    </button>
+                )}
                 </div>
+                
             </div>
+
         </main>
     );
 
