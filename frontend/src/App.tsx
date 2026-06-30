@@ -13,12 +13,14 @@ import { SupportLayout } from "./layouts/SupportLayout";
 import { CustomerLayout } from "./layouts/CustomerLayout";
 import { CustomerUpload } from "./features/uploader/CustomerUpload";
 import { UploadDetails } from "./features/uploader/UploadDetails";
+
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-
         <Route path="/" element={<LoginPage />} />
+
+        <Route path="/upload/:uuid" element={<CustomerUpload />} />
 
         <Route
           path="/upload"
@@ -29,12 +31,8 @@ export default function App() {
           }
         >
           <Route index element={<CustomerUpload />} />
-          <Route
-            path="/upload/details"
-            element={<UploadDetails />}
-          />
+          <Route path="details" element={<UploadDetails />} />
         </Route>
-
 
 
 
@@ -47,16 +45,10 @@ export default function App() {
           }
         >
           <Route index element={<SupportHomePage />} />
-          <Route
-            path="links"
-            element={<SupportLinksPage />}
-          />
-          <Route
-            path="links/new"
-            element={<CreateSupportLinkPage />}
-          />
-
+          <Route path="links" element={<SupportLinksPage />} />
+          <Route path="links/new" element={<CreateSupportLinkPage />} />
         </Route>
+
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
