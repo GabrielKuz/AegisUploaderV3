@@ -26,6 +26,9 @@ class FakeSession:
 
     def first(self):
         return None
+    
+    def rollback(self):
+        pass
 
 
 class FakeBlobClient:
@@ -62,6 +65,7 @@ class FakeContainerClient:
 class FakeBlobServiceClient:
     def __init__(self, *args, **kwargs):
         self.account_name = "devstoreaccount1"
+        self.primary_endpoint = "http://localhost:10000/devstoreaccount1"
         self.credential = SimpleNamespace(account_key="fake-key")
 
     def get_container_client(self, container_name):
@@ -80,17 +84,36 @@ def test_verify_and_test_uploader_endpoint(monkeypatch):
 
     import azure.storage.blob as azure_blob_module
 
-    monkeypatch.setattr(azure_blob_module, "BlobServiceClient", FakeBlobServiceClient)
-    monkeypatch.setattr(azure_blob_module, "generate_blob_sas", lambda **kwargs: "sas-token")
+    monkeypatch.setattr(
+        azure_blob_module,
+        "BlobServiceClient",
+        FakeBlobServiceClient,
+    )
+    monkeypatch.setattr(
+        azure_blob_module,
+        "generate_blob_sas",
+        lambda **kwargs: "sas-token",
+    )
 
     sys.modules.pop("modules.uploader", None)
 
     from modules import uploader
 
-    monkeypatch.setattr(uploader, "ensure_uploads_table", lambda *args, **kwargs: None)
+    monkeypatch.setattr(uploader, "generate_blob_sas",lambda **kwargs: "sas-token")
+
+    fake = FakeBlobServiceClient()
+    container = fake.get_container_client("mycontainer")
+
+    monkeypatch.setattr(uploader, "us_blob_service", fake)
+    monkeypatch.setattr(uploader, "eu_blob_service", fake)
+    monkeypatch.setattr(uploader, "itar_blob_service", fake)
+
+    monkeypatch.setattr(uploader, "us_container", container)
+    monkeypatch.setattr(uploader, "eu_container", container)
+    monkeypatch.setattr(uploader, "itar_container", container)
+
+    monkeypatch.setattr(uploader, "ensure_uploads_table", lambda *a, **k: None)
     monkeypatch.setattr(uploader, "session", FakeSession())
-    monkeypatch.setattr(uploader, "blob_service_client", FakeBlobServiceClient())
-    monkeypatch.setattr(uploader, "container_client", FakeContainerClient())
 
     async def override_get_current_active_user():
         return uploader.User(username="testuser", disabled=False)
