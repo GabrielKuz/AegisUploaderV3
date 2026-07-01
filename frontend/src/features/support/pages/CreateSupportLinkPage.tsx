@@ -116,7 +116,7 @@ export function CreateSupportLinkPage() {
     setError(null);
 
     //console.info("Support link submitted:", form);
-    const response = await fetch("/api/links/create", {
+    const response = await fetch("/api/links/create/", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${getDevToken()}`,
