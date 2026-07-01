@@ -1,5 +1,7 @@
 from fastapi import FastAPI, Depends, HTTPException
-from modules.LinkGenerator import LinkRequest, generate_links, get_all_links, extend_link_expiration, get_link
+from modules.LinkGenerator import LinkRequest, generate_links, get_all_links, get_all_files_for_link
+from modules.auth import getCurrentActiveUser, getCurrentUser, User, userAuthenticated
+from modules.LinkGenerator import LinkRequest, generate_links, get_all_links, get_link
 from modules.auth import getCurrentActiveUser, getCurrentUser, User
 from modules.uploader import router as uploader_router, listFiles
 from modules.deletionRequest import router as deletionRequest_router
@@ -37,9 +39,6 @@ def get_links(current_user: Annotated[User, Depends(getCurrentActiveUser)]):  # 
 def get_link_endpoint(uuid: str, current_user: Annotated[User, Depends(getCurrentActiveUser)]):  # TODO: Change to getCurrentActiveUser after testing
     return get_link(uuid)
 
-@app.patch("/links/{uuid}/extend")
-def extend_link_endpoint(uuid: str, extension: int, current_user: Annotated[User, Depends(getCurrentActiveUser)]):  # TODO: Change to getCurrentActiveUser after testing
-    return extend_link_expiration(uuid, current_user, extension)
 
 @app.get("/")
 def read_root():

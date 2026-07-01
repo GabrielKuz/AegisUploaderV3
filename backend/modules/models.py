@@ -36,7 +36,7 @@ class LinkRecord(Base): # "LinkDB".links table
     case_id = Column(String) # from hubspot
     creator = Column(String) # From entra token
     timestamp = Column(DateTime)
-    expiration_date = Column(DateTime) # 48 hours from creation
+    expiration_date = Column(DateTime, nullable=False)# 48 hours from creation
     itar = Column(Boolean, default=False, nullable=False) # From hubspot
     users_with_access = Column(JSON)
     expired = Column(Boolean)
