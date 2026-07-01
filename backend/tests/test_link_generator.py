@@ -18,7 +18,7 @@ import os
 
 client = TestClient(app)
 current_user = User(username="testuser", disabled=False)  # Mock user for testing
-url = f"http://{os.getenv('BACKEND_URL')}/backend/links/"  # Assuming this is the base URL for links
+url = f"http://{os.getenv('FRONTEND_URL')}/links/"  # Assuming this is the base URL for links
 
 async def override_get_current_active_user() -> User:
     return User(username="testuser", disabled=False)
