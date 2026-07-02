@@ -62,7 +62,7 @@ def is_link_case_expirable(link: str) -> bool:
         return False  # If we can't find the case status, assume it's not expirable
 
     # Define statuses that are considered expirable
-    expirable_statuses = {"Closed", "Resolved", "Completed"}  # Adjust based on your business logic
+    expirable_statuses = {"Closed", "Engineering", "Waiting on Agent", "Waiting on Customer"}  # TODO: Adjust based on your business logic
 
     return case_status in expirable_statuses
 
