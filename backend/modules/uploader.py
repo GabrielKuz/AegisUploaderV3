@@ -19,7 +19,7 @@ from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.backends import default_backend
 from fastapi import APIRouter, Depends, File, Header, HTTPException, UploadFile
 from modules import Session
-from modules.auth import getCurrentActiveUser, User, getCurrentUserNoAuthForTest
+from modules.auth import getCurrentActiveUser, User, getCurrentActiveUser
 from modules.models import Base, UploadRecord, LinkRecord
 
 router = APIRouter()
@@ -51,18 +51,8 @@ def ensure_uploads_table(db_session):
     Base.metadata.create_all(bind=engine, tables=[UploadRecord.__table__])
 
 
-def find_link_entry(db_session, filename: str, url: str | None = None):
-    """Attempt to find a LinkDB.links entry matching the given URL or filename."""
-    q = db_session.query(LinkRecord)
-    filters = []
-    if url:
-        filters.append(LinkRecord.link == url)
-    if filename:
-        filters.append(LinkRecord.link == filename)
-        filters.append(LinkRecord.link.like(f"%{filename}%"))
-    if not filters:
-        return None
-    return q.filter(or_(*filters)).first()
+def find_link_entry(link_uuid: str):
+    return session.query(LinkRecord).filter(LinkRecord.uuid == link_uuid).first()
 
 # Set up all 3 azure regions
 US_CONNECTION_STRING = os.getenv("AZURE_STORAGE_CONNECTION_STRING_US")
@@ -93,10 +83,10 @@ if not ITAR_CONNECTION_STRING:
 #         container.create_container() 
 #     except ResourceExistsError:
 #         pass
-
-usFileStorageProvider = LocalStorageProvider(base_path=".storage/us")
-euFileStorageProvider = LocalStorageProvider(base_path=".storage/eu")
-itarFileStorageProvider = LocalStorageProvider(base_path=".storage/itar")
+STORAGE_ROOT = os.getenv("STORAGE_ROOT", ".storage") # Default to .storage if not set
+usFileStorageProvider = LocalStorageProvider(base_path=STORAGE_ROOT + "/us")
+euFileStorageProvider = LocalStorageProvider(base_path=STORAGE_ROOT + "/eu")
+itarFileStorageProvider = LocalStorageProvider(base_path=STORAGE_ROOT + "/itar")
 
 @router.post("/uploadfile/{link_uuid}")
 async def create_upload_file(
@@ -116,12 +106,12 @@ async def create_upload_file(
         raise HTTPException(status_code=400, detail=str(exc)) from exc # Invalid file hash
 
     try: # attempt to find the link entry in the db to determine if it is ITAR 
-        link_entry = session.query(LinkRecord).filter(LinkRecord.uuid == link_uuid).first() # This field is populated by hubspot
+        link_entry = find_link_entry(link_uuid) # This field is populated by hubspot
     except Exception as e:
         print("LINK LOOKUP ERROR:", e)
         raise
 
-    itar_status = bool(link_entry.expired) if link_entry else False # assume false if not found
+    itar_status = bool(link_entry.itar) if link_entry else False # assume false if not found
 
     if itar_status: # itar overrides user location, otherwise store closer to user
         serviceClient = itarFileStorageProvider
@@ -247,7 +237,7 @@ def get_uploads_for_link(link_uuid: str): # Get all uploads for a given link uui
 
 
 @router.get("/links/{linkUUID}/files") # Get all files for a given link uuid from the db. Only returns files the user has access to
-def listFiles(linkUUID: str, current_user: Annotated[User, Depends(getCurrentUserNoAuthForTest)]):
+def listFiles(linkUUID: str, current_user: Annotated[User, Depends(getCurrentActiveUser)]):
     uploads = get_uploads_for_link(linkUUID) # Get all uploads for the given link uuid
     authorized_uploads = [ # Filter the uploads to only include what the user can access
         upload for upload in uploads

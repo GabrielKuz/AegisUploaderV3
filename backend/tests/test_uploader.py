@@ -1,3 +1,4 @@
+import datetime
 import hashlib
 import os
 import sys
@@ -5,7 +6,6 @@ from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-
 
 class FakeSession:
     def __init__(self):
@@ -44,6 +44,9 @@ def test_verify_and_test_uploader_endpoint(monkeypatch, tmp_path):
 
     monkeypatch.setattr(uploader, "ensure_uploads_table", lambda *a, **k: None)
     monkeypatch.setattr(uploader, "session", FakeSession())
+    fake_link_record = uploader.LinkRecord(uuid="test-link", case_id="test-case", itar=False, users_with_access=["testuser"], timestamp=datetime.datetime.now())
+    monkeypatch.setattr(uploader, "find_link_entry", lambda *a, **k: fake_link_record)
+    monkeypatch.setattr(uploader, "usFileStorageProvider", uploader.LocalStorageProvider(base_path=str(tmp_path / "us")))
 
     async def override_get_current_active_user():
         return uploader.User(username="testuser", disabled=False)
@@ -69,7 +72,7 @@ def test_verify_and_test_uploader_endpoint(monkeypatch, tmp_path):
     assert body["server_hash"] == file_hash
     assert body["blob_hash"] == file_hash
 
-    stored_file = Path(tmp_path) / "us" / "hello.txt"
+    stored_file = Path(tmp_path) / "us"/ "test-case" / "hello.txt"
     assert stored_file.exists()
 
 
