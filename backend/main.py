@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Depends, HTTPException
 from modules.LinkGenerator import LinkRequest, generate_links, get_all_links, get_all_files_for_link
-from modules.auth import getCurrentActiveUser, getCurrentUser, User, userAuthenticated
+from modules.auth import getCurrentActiveUser, getCurrentUser, User, userAuthenticated, getCurrentUserNoAuthForTest
 from modules.LinkGenerator import LinkRequest, generate_links, get_all_links, get_link
 from modules.auth import getCurrentActiveUser, getCurrentUser, User
 from modules.uploader import router as uploader_router, listFiles
@@ -27,16 +27,16 @@ app.include_router(uploader_router)
 app.include_router(deletionRequest_router)
 
 @app.post("/links/create/")
-def create_link(link_request: LinkRequest, current_user: Annotated[User, Depends(getCurrentActiveUser)]):  # TODO: Change to getCurrentActiveUser after testing
+def create_link(link_request: LinkRequest, current_user: Annotated[User, Depends(getCurrentUserNoAuthForTest)]):  # TODO: Change to getCurrentActiveUser after testing
     #authentication: bool = userAuthenticated(getCurrentUser())
     return generate_links(link_request, current_user) #TODO: CHANGE IMMENDIATLY AFTER TESTING
 
 @app.get("/links/")
-def get_links(current_user: Annotated[User, Depends(getCurrentActiveUser)]):  # TODO: Change to getCurrentActiveUser after testing
+def get_links(current_user: Annotated[User, Depends(getCurrentUserNoAuthForTest)]):  # TODO: Change to getCurrentActiveUser after testing
     return get_all_links(current_user)
 
 @app.get("/links/{uuid}")
-def get_link_endpoint(uuid: str, current_user: Annotated[User, Depends(getCurrentActiveUser)]):  # TODO: Change to getCurrentActiveUser after testing
+def get_link_endpoint(uuid: str, current_user: Annotated[User, Depends(getCurrentUserNoAuthForTest)]):  # TODO: Change to getCurrentActiveUser after testing
     return get_link(uuid)
 
 
@@ -60,7 +60,7 @@ def main(): # start the app when run directly and not through docker
 
 @app.get("/links/{uuid}/download")
 @deprecated("use /uploads/{upload_id}/download instead. This assumes only one uploaded file per link")
-def download_link(uuid: str, currentUser: Annotated[User, Depends(getCurrentActiveUser)]):
+def download_link(uuid: str, currentUser: Annotated[User, Depends(getCurrentUserNoAuthForTest)]):
     uploads = listFiles(uuid, currentUser)
     if len(uploads) == 1:
         return downloadData(uploads[0]["upload_id"], currentUser)
@@ -70,7 +70,7 @@ def download_link(uuid: str, currentUser: Annotated[User, Depends(getCurrentActi
 
 
 @app.get("/uploads/{upload_id}/download")
-def download_upload(upload_id: str, currentUser: Annotated[User, Depends(getCurrentActiveUser)]):
+def download_upload(upload_id: str, currentUser: Annotated[User, Depends(getCurrentUserNoAuthForTest)]):
     return downloadData(upload_id, currentUser)
 
 if __name__ == "__main__": # Doesnt get run by docker

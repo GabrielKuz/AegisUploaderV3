@@ -1,14 +1,14 @@
 from modules.auth import User
 from fastapi import HTTPException, status
-from fastapi.responses import RedirectResponse
-from sqlalchemy import text
+from fastapi.responses import FileResponse
+from pathlib import Path
 from modules import Session
-from modules.models import UploadRecord, LinkRecord
+from modules.models import UploadRecord
 
 session = Session()
 
-# If user is authenticated and authorized, return a a redirect response to the sas link
-def downloadData(upload_id: str, currentUser: User) -> RedirectResponse:
+# If user is authenticated and authorized, return file
+def downloadData(upload_id: str, currentUser: User) -> FileResponse:
     unauthenticated = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -30,14 +30,7 @@ def downloadData(upload_id: str, currentUser: User) -> RedirectResponse:
             detail="Upload not found",
         )
 
-    upload = session.execute(
-        text("""
-            SELECT sas_retrieval_link, users_with_access
-            FROM "LinkDB".uploads
-            WHERE upload_id = :upload_id
-        """),
-        {"upload_id": upload_id},
-    ).first()
+    upload = session.query(UploadRecord).filter(UploadRecord.upload_id == upload_id).first()
 
     if upload is None: # No upload matching id
         raise HTTPException(
@@ -45,21 +38,25 @@ def downloadData(upload_id: str, currentUser: User) -> RedirectResponse:
             detail="Upload not found",
         )
 
-    sasLink, accessList = upload
+    accessList = upload.users_with_access or []
 
     if not accessList or currentUser.username not in accessList: #Not authorized
         raise unauthorized
 
-    if not sasLink: # No sas link was generated
+    file_path = upload.sas_retrieval_link or upload.original_link
+    if not file_path:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Retrieval link not found",
+            detail="Retrieval file not found",
+        )
+    path = Path(file_path)
+    if not path.exists():
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Retrieval file not found",
         )
     logAccess(upload_id, currentUser) # log for auditting purposes
-    return RedirectResponse( # Return a redirect response for the browser to follow 
-        url=sasLink,
-        status_code=status.HTTP_302_FOUND,
-    )
+    return FileResponse(path, filename=upload.original_filename or path.name, media_type=upload.content_type or "application/octet-stream")
 
 
 def logAccess(upload_id: str, currentUser: User): #TODO: replace once on azure

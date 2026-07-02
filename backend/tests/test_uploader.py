@@ -1,7 +1,7 @@
 import hashlib
 import os
 import sys
-from types import SimpleNamespace
+from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -31,86 +31,16 @@ class FakeSession:
         pass
 
 
-class FakeBlobClient:
-    def __init__(self, blob_name):
-        self.blob_name = blob_name
-        self.url = f"http://localhost/{blob_name}"
-        self.uploaded = None
-
-    def exists(self):
-        return False
-
-    def upload_blob(self, contents, overwrite=False):
-        self.uploaded = contents
-
-    def download_blob(self):
-        class FakeDownload:
-            def __init__(self, data):
-                self._data = data
-
-            def readall(self):
-                return self._data
-
-        return FakeDownload(self.uploaded or b"")
-
-
-class FakeContainerClient:
-    def create_container(self):
-        return None
-
-    def get_blob_client(self, blob_name):
-        return FakeBlobClient(blob_name)
-
-
-class FakeBlobServiceClient:
-    def __init__(self, *args, **kwargs):
-        self.account_name = "devstoreaccount1"
-        self.primary_endpoint = "http://localhost:10000/devstoreaccount1"
-        self.credential = SimpleNamespace(account_key="fake-key")
-
-    def get_container_client(self, container_name):
-        return FakeContainerClient()
-
-    @classmethod
-    def from_connection_string(cls, connection_string):
-        return cls()
-
-
-def test_verify_and_test_uploader_endpoint(monkeypatch):
+def test_verify_and_test_uploader_endpoint(monkeypatch, tmp_path):
     os.environ.setdefault("TENANT_ID", "tenant-id")
     os.environ.setdefault("CLIENT_ID", "client-id")
     os.environ.setdefault("DATABASE_URL", "sqlite:///:memory:")
-    os.environ.setdefault("AZURE_STORAGE_CONNECTION_STRING", "UseDevelopmentStorage=true")
-
-    import azure.storage.blob as azure_blob_module
-
-    monkeypatch.setattr(
-        azure_blob_module,
-        "BlobServiceClient",
-        FakeBlobServiceClient,
-    )
-    monkeypatch.setattr(
-        azure_blob_module,
-        "generate_blob_sas",
-        lambda **kwargs: "sas-token",
-    )
 
     sys.modules.pop("modules.uploader", None)
 
     from modules import uploader
 
-    monkeypatch.setattr(uploader, "generate_blob_sas",lambda **kwargs: "sas-token")
-
-    fake = FakeBlobServiceClient()
-    container = fake.get_container_client("mycontainer")
-
-    monkeypatch.setattr(uploader, "us_blob_service", fake)
-    monkeypatch.setattr(uploader, "eu_blob_service", fake)
-    monkeypatch.setattr(uploader, "itar_blob_service", fake)
-
-    monkeypatch.setattr(uploader, "us_container", container)
-    monkeypatch.setattr(uploader, "eu_container", container)
-    monkeypatch.setattr(uploader, "itar_container", container)
+    monkeypatch.setattr(uploader, "STORAGE_ROOT", Path(tmp_path))
 
     monkeypatch.setattr(uploader, "ensure_uploads_table", lambda *a, **k: None)
     monkeypatch.setattr(uploader, "session", FakeSession())
@@ -138,5 +68,8 @@ def test_verify_and_test_uploader_endpoint(monkeypatch):
     assert body["size"] == len(payload)
     assert body["server_hash"] == file_hash
     assert body["blob_hash"] == file_hash
+
+    stored_file = Path(tmp_path) / "us" / "hello.txt"
+    assert stored_file.exists()
 
 

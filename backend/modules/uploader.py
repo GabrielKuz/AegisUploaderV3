@@ -9,6 +9,7 @@ from typing import Annotated, Literal
 
 from sqlalchemy import Column, String, Integer, DateTime, Boolean, Text, JSON
 from sqlalchemy import or_
+from modules.StorageProvider import StorageProvider, AzureFileStorageProvider, LocalStorageProvider
 from warnings import warn, deprecated
 
 from azure.core.exceptions import ResourceExistsError
@@ -18,7 +19,7 @@ from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.backends import default_backend
 from fastapi import APIRouter, Depends, File, Header, HTTPException, UploadFile
 from modules import Session
-from modules.auth import getCurrentActiveUser, User
+from modules.auth import getCurrentActiveUser, User, getCurrentUserNoAuthForTest
 from modules.models import Base, UploadRecord, LinkRecord
 
 router = APIRouter()
@@ -79,19 +80,23 @@ if not EU_CONNECTION_STRING:
 if not ITAR_CONNECTION_STRING:
     raise RuntimeError("AZURE_STORAGE_CONNECTION_STRING_ITAR is required")
 
-us_blob_service = BlobServiceClient.from_connection_string(US_CONNECTION_STRING)
-eu_blob_service = BlobServiceClient.from_connection_string(EU_CONNECTION_STRING)
-itar_blob_service = BlobServiceClient.from_connection_string(ITAR_CONNECTION_STRING)
+# us_blob_service = BlobServiceClient.from_connection_string(US_CONNECTION_STRING)
+# eu_blob_service = BlobServiceClient.from_connection_string(EU_CONNECTION_STRING)
+# itar_blob_service = BlobServiceClient.from_connection_string(ITAR_CONNECTION_STRING)
 
-itar_container = itar_blob_service.get_container_client(AZURE_CONTAINER_NAME)
-us_container = us_blob_service.get_container_client(AZURE_CONTAINER_NAME)
-eu_container = eu_blob_service.get_container_client(AZURE_CONTAINER_NAME)
+# itar_container = itar_blob_service.get_container_client(AZURE_CONTAINER_NAME)
+# us_container = us_blob_service.get_container_client(AZURE_CONTAINER_NAME)
+# eu_container = eu_blob_service.get_container_client(AZURE_CONTAINER_NAME)
 
-for container in (us_container, eu_container, itar_container): # Create all 3 containers
-    try:
-        container.create_container() 
-    except ResourceExistsError:
-        pass
+# for container in (us_container, eu_container, itar_container): # Create all 3 containers
+#     try:
+#         container.create_container() 
+#     except ResourceExistsError:
+#         pass
+
+usFileStorageProvider = LocalStorageProvider(base_path=".storage/us")
+euFileStorageProvider = LocalStorageProvider(base_path=".storage/eu")
+itarFileStorageProvider = LocalStorageProvider(base_path=".storage/itar")
 
 @router.post("/uploadfile/{link_uuid}")
 async def create_upload_file(
@@ -119,39 +124,38 @@ async def create_upload_file(
     itar_status = bool(link_entry.expired) if link_entry else False # assume false if not found
 
     if itar_status: # itar overrides user location, otherwise store closer to user
-        blob_service_client = itar_blob_service
-        container_client = itar_container
+        serviceClient = itarFileStorageProvider
+        #container_client = itar_container
     elif userLocation == "EU":
-        blob_service_client = eu_blob_service
-        container_client = eu_container
+        serviceClient = euFileStorageProvider
+        #container_client = eu_container
     else:
-        blob_service_client = us_blob_service
-        container_client = us_container
+        serviceClient = usFileStorageProvider
+        #container_client = us_container
 
     filename = Path(file.filename).name
     blob_name = filename
-    blob_client = container_client.get_blob_client(blob_name)
+    #blob_client = container_client.get_blob_client(blob_name)
 
-    if blob_client.exists(): # Duplicate file name
+    if serviceClient.exists(link_entry.case_id + "/" + blob_name): # Duplicate file name
         path_obj = Path(filename)
         stem = path_obj.stem
         suffix = path_obj.suffix
         counter = 1 # handle duplicate file names by appending _{counter} until a unique name is found
-        while blob_client.exists():
+        while serviceClient.exists(link_entry.case_id + "/" + blob_name):
             if suffix:
                 blob_name = f"{stem}_{counter}{suffix}"
             else:
                 blob_name = f"{stem}_{counter}"
-            blob_client = container_client.get_blob_client(blob_name)
             counter += 1
+    
+    print(repr(link_entry.case_id))
+    print(repr(blob_name))
+    print(repr(f"{link_entry.case_id}/{blob_name}"))
 
-    try:
-        ensure_uploads_table(session)
-    except Exception:
-        pass
-    blob_client.upload_blob(contents, overwrite=False) # Upload to db once it has a unique name
+    serviceClient.upload_file(contents, link_entry.case_id + "/" + blob_name) # Upload to db once it has a unique name
 
-    persisted_contents = blob_client.download_blob().readall() 
+    persisted_contents:bytes = serviceClient.download_file(link_entry.case_id + "/" + blob_name)
     persisted_hash = hash_bytes(persisted_contents) # Check hash
     if persisted_hash != server_hash: # Return 500 if hashes dont match
         raise HTTPException(status_code=500,detail="Uploaded file hash does not match the persisted blob contents")
@@ -160,8 +164,8 @@ async def create_upload_file(
         now = datetime.datetime.now(tz=datetime.timezone.utc) # All timestamps in utc
         case_id = None
         users_with_access = []
-        original_link = blob_client.url
-        sas_retrieval_link = None
+        original_link = "" #TODO
+        sas_retrieval_link = "" #TODO
 
         if link_entry: # attempt to populate the db with the link entry info if it exists
             case_id = link_entry.case_id
@@ -183,33 +187,6 @@ async def create_upload_file(
                 timestamp_val = now
         else:
             timestamp_val = now
-
-        try:
-            account_name = blob_service_client.account_name
-            account_key = blob_service_client.credential.account_key
-
-            public_blob_endpoint = blob_service_client.primary_endpoint
-
-            sas_token = generate_blob_sas( # create sas link to allow downloads in the future
-                account_name=account_name,
-                account_key=account_key,
-                container_name=AZURE_CONTAINER_NAME,
-                blob_name=blob_name,
-                permission=BlobSasPermissions(read=True),# read only for download
-                expiry=datetime.datetime.now(datetime.timezone.utc)
-                + datetime.timedelta(days=30), # 30 days default expiration for sas link. Can be extended by admin
-            )
-
-            sas_retrieval_link = ( # build url via concatenation
-                f"{public_blob_endpoint.rstrip('/')}/" # Handle trailing slash in endpoint if it exists
-                f"{AZURE_CONTAINER_NAME}/"
-                f"{blob_name}?{sas_token}"
-            )
-
-        except Exception as e:# On error rollback to avoid invalid state but log the error
-            session.rollback() 
-            traceback.print_exc()
-            sas_retrieval_link = blob_client.url
 
         inserted_upload_id = None
 
@@ -264,7 +241,7 @@ def get_uploads_for_link(link_uuid: str): # Get all uploads for a given link uui
 
 
 @router.get("/links/{linkUUID}/files") # Get all files for a given link uuid from the db. Only returns files the user has access to
-def listFiles(linkUUID: str, current_user: Annotated[User, Depends(getCurrentActiveUser)]):
+def listFiles(linkUUID: str, current_user: Annotated[User, Depends(getCurrentUserNoAuthForTest)]):
     uploads = get_uploads_for_link(linkUUID) # Get all uploads for the given link uuid
     authorized_uploads = [ # Filter the uploads to only include what the user can access
         upload for upload in uploads
