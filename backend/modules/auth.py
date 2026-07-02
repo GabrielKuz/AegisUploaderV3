@@ -10,17 +10,9 @@ from pydantic import BaseModel, Field
 from warnings import deprecated
 
 load_dotenv()
-"""Use
-const response = await fetch("http://localhost:8000/auth/me", {
-  headers: {
-    Authorization: `Bearer ${entraIdToken}`,
-  },
-});
-const user = await response.json();
-console.log(user);
-"""
+#All from entraid sso
 TENANT_ID = os.getenv("TENANT_ID")
-CLIENT_ID = os.getenv("CLIENT_ID")
+CLIENT_ID = os.getenv("CLIENT_ID") 
 JWKS_URL = f"https://login.microsoftonline.com/{TENANT_ID}/discovery/v2.0/keys"
 ISSUER = f"https://login.microsoftonline.com/{TENANT_ID}/v2.0"
 
@@ -31,18 +23,18 @@ jwks_client = PyJWKClient(JWKS_URL)
 
 scheme = OAuth2PasswordBearer(tokenUrl="token")
 
-class Token(BaseModel):
+class Token(BaseModel): # structure of a token response from entra
     access_token: str = Field(..., description="The access token issued by Entra ID")
     token_type: str = Field(..., description="The type of the token, typically 'Bearer'")
 
-class TokenData(BaseModel):
+class TokenData(BaseModel): # data contained in the token once decoded
     username: str | None  = Field(None, description="The username extracted from the token")
 
-class User(BaseModel):
+class User(BaseModel): # structure of a user object
     username: str = Field(..., description="The username of the user")
     disabled: bool | None = Field(None, description="Indicates if the user is disabled")
 
-async def getCurrentUser(token: Annotated[str, Depends(scheme)]):
+async def getCurrentUser(token: Annotated[str, Depends(scheme)]): # get the current user from the token
     credentialsException = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -59,28 +51,28 @@ async def getCurrentUser(token: Annotated[str, Depends(scheme)]):
             issuer=ISSUER,
         )
         
-        username: str = payload.get("preferred_username") or payload.get("upn") or payload.get("oid")
-        if username is None:
+        username: str = payload.get("preferred_username") or payload.get("upn") or payload.get("oid") # docs list all as possible username claims
+        if username is None: # No user claim is found
             raise credentialsException
         
-        tokenData = TokenData(username=username)
-    except InvalidTokenError as e:
+        tokenData = TokenData(username=username) # create a token data object with the username
+    except InvalidTokenError as e: # token is invalid or expired
         raise credentialsException
-    except Exception as e:
+    except Exception as e: # catch all
         raise credentialsException
     
-    return User(username=tokenData.username, disabled=False)
+    return User(username=tokenData.username, disabled=False) # TODO: check users status from db later
 
-async def getCurrentActiveUser(current_user: Annotated[User, Depends(getCurrentUser)]):
+async def getCurrentActiveUser(current_user: Annotated[User, Depends(getCurrentUser)]): # get the current active user from the token and check if they are disabled
     if current_user.disabled:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Inactive user")
     return current_user
 
-async def userAuthenticated(current_user: Annotated[User, Depends(getCurrentActiveUser)]) -> bool:
+async def userAuthenticated(current_user: Annotated[User, Depends(getCurrentActiveUser)]) -> bool: # provide a bool for authentication status
     return current_user is not None
 
 @deprecated("use getCurrentActiveUser instead. This is insecure and only intended for testing")
-async def getCurrentUserNoAuthForTest():
+async def getCurrentUserNoAuthForTest(): # for testing purposes only, returns a fake user object to avoid needing entra auth
     warnings.warn("getCurrentUserNoAuthForTest is deprecated. Use getCurrentActiveUser instead.", UserWarning, stacklevel=2)
     return User(username="testuser", disabled=False)
 

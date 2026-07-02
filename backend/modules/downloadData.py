@@ -3,55 +3,12 @@ from fastapi import HTTPException, status
 from fastapi.responses import RedirectResponse
 from sqlalchemy import text
 from modules import Session
+from modules.HubSpotIntegration import is_caseExpirable
 from modules.models import UploadRecord, LinkRecord
-"""
-LinkDB schema
-
-links = Table(
-    "links",
-    md,
-    Column("uuid", String, primary_key=True),
-    Column("link", String),
-    Column("case_id", String),
-    Column("creator", String),
-    Column("timestamp", String),
-    Column("users_with_access", list[str]),
-    Column("expired", Boolean),
-    schema="LinkDB"
-)
-
-#Both tables defined elswhere. Defintions for reference and not neccesarrily up to date. Both are commented out
-class UploadRecord(Base): 
-    __tablename__ = "uploads"
-    uuid = Column(String(36), primary_key=True)
-    date_uploaded = Column(DateTime, nullable=False)
-    itar_status = Column(Boolean, default=False)
-    combined_file_size = Column(Integer)
-    timestamp = Column(DateTime)
-    max_days_in_storage = Column(Integer, default=30)
-    case_id = Column(String, nullable=True)
-    original_link = Column(Text, nullable=True)
-    sas_retrieval_link = Column(Text, nullable=True)
-    upload_complete = Column(Boolean, default=False)
-    users_with_access = Column(JSON, nullable=True)
- 
-class LinkRecord(Base):
-    __tablename__ = "links"
-    __table_args__ = {"schema": "LinkDB"}
-    uuid = Column(String, primary_key=True)
-    link = Column(String)
-    case_id = Column(String)
-    creator = Column(String)
-    timestamp = Column(String)
-    users_with_access = Column(JSON)
-    expired = Column(Boolean)
- 
-"""
-
 
 session = Session()
 
-
+# If user is authenticated and authorized, return a a redirect response to the sas link
 def downloadData(upload_id: str, currentUser: User) -> RedirectResponse:
     unauthenticated = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -65,10 +22,22 @@ def downloadData(upload_id: str, currentUser: User) -> RedirectResponse:
         headers={"WWW-Authenticate": "Bearer"},
     )
 
+    caseID = session.execute("""SELECT case_id FROM "LinkDB".uploads WHERE upload_id = :upload_id""", {"upload_id": upload_id}).scalar()
+    if caseID is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Upload not found",
+        )
+    if is_caseExpirable(caseID):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="This upload has expired and is no longer available for download.",
+        )
+
     if not currentUser or currentUser.disabled:
         raise unauthenticated
 
-    if not upload_id:
+    if not upload_id: # Check if upload_id is provided
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Upload not found",
@@ -83,7 +52,7 @@ def downloadData(upload_id: str, currentUser: User) -> RedirectResponse:
         {"upload_id": upload_id},
     ).first()
 
-    if upload is None:
+    if upload is None: # No upload matching id
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Upload not found",
@@ -91,20 +60,20 @@ def downloadData(upload_id: str, currentUser: User) -> RedirectResponse:
 
     sasLink, accessList = upload
 
-    if not accessList or currentUser.username not in accessList:
+    if not accessList or currentUser.username not in accessList: #Not authorized
         raise unauthorized
 
-    if not sasLink:
+    if not sasLink: # No sas link was generated
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Retrieval link not found",
         )
-
-    return RedirectResponse(
+    logAccess(upload_id, currentUser) # log for auditting purposes
+    return RedirectResponse( # Return a redirect response for the browser to follow 
         url=sasLink,
         status_code=status.HTTP_302_FOUND,
     )
 
 
-def logAccess(upload_id: str, currentUser: User):
+def logAccess(upload_id: str, currentUser: User): #TODO: replace once on azure
     print(f"User {currentUser.username} accessed upload {upload_id}")
