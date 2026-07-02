@@ -16,14 +16,15 @@ class UploadRecord(Base): # "LinkDB".uploads table
     content_type = Column(Text, nullable=True) # MIME
     sha256 = Column(Text, nullable=True) # server side hash
     date_uploaded = Column(DateTime, nullable=False)
-    itar_status = Column(Boolean, default=False) # From hubspot
-    combined_file_size = Column(BigInteger) # should just be file size since this only holds one file
-    timestamp = Column(DateTime) 
-    max_days_in_storage = Column(Integer, default=30) # Can be extended by admin
-    case_id = Column(String, nullable=True) # From hubspot
-    original_link = Column(Text, nullable=True) # upload link will likely expire well before file is deleted
-    sas_retrieval_link = Column(Text, nullable=True) 
-    upload_complete = Column(Boolean, default=False)# True when upload complete
+    itar_status = Column(Boolean, default=False)
+    combined_file_size = Column(BigInteger)
+    timestamp = Column(DateTime)
+    max_days_in_storage = Column(Integer, default=30)
+    case_id = Column(String, nullable=True)
+    original_link = Column(Text, nullable=True)
+    sas_retrieval_link = Column(Text, nullable=True)
+    upload_complete = Column(Boolean, default=False)
+    for_deletion = Column(Boolean, default=False, nullable=False)
     users_with_access = Column(JSON, nullable=True)
     for_deletion = Column(Boolean, default=False, nullable=False)  # flag to mark the record for deletion
 

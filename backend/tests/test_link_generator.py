@@ -150,7 +150,6 @@ def test_get_files_for_link():
     upload_uuid = uuid.uuid4()
 
     with Session() as session:
-        ensure_uploads_table(session)
         upload = UploadRecord(
             upload_id=upload_uuid,
             link_uuid=link_uuid,

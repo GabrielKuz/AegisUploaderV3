@@ -69,24 +69,34 @@ def get_caseSQLServer(ais_id: str) -> Optional[str]:
     return quikSrch(ais_id,"sql_server")
 
 #=======================================================================================================
-# Pipeline functions 
+# Pipeline get functions 
 #=======================================================================================================
 
-def get_pipeline_stage(ais_id: str) -> Optional[str]:
+def get_pipeline_stage_id(ais_id: str) -> Optional[str]:
     return quikSrch(ais_id,"hs_pipeline_stage")
 
-def get_pipeline(ais_id: str) -> Optional[str]:
+def get_pipeline_id(ais_id: str) -> Optional[str]:
     return quikSrch(ais_id,"hs_pipeline")
 
+def get_caseTier(ais_id: str) -> Optional[str]:
+    return search_pipeline(ais_id,0)
+
 def get_caseStatus(ais_id: str) -> Optional[str]:
-    stage_id = get_pipeline_stage(ais_id)
-    pipeline_id = get_pipeline(ais_id)
+    return search_pipeline(ais_id,1)
+
+#=======================================================================================================
+# Pipeline search function
+#=======================================================================================================
+
+def search_pipeline(ais_id: str, operationProtocolNumber: int) -> Optional[str]:
+    stage_id = get_pipeline_stage_id(ais_id)
+    pipeline_id = get_pipeline_id(ais_id)
 
     if not stage_id or not pipeline_id:
         return None
 
     # build lookup here
-    stage_lookup = {}
+    lookup = {}
 
     try:
         response = api_client.crm.pipelines.pipelines_api.get_all(
@@ -94,17 +104,33 @@ def get_caseStatus(ais_id: str) -> Optional[str]:
         )
     except ApiException:
         return None
+    
+    if operationProtocolNumber == 0:
 
-    for pipeline in response.results:
-        for stage in pipeline.stages:
-            stage_lookup[(pipeline.id, stage.id)] = stage.label
+        for pipeline in response.results:
+            lookup[pipeline.id] = pipeline.label
 
-    return stage_lookup.get((pipeline_id, stage_id))
+        return lookup.get((pipeline_id))
+    
+    if operationProtocolNumber == 1:
 
+        for pipeline in response.results:
+            for stage in pipeline.stages:
+                lookup[(pipeline.id, stage.id)] = stage.label
+
+        return lookup.get((pipeline_id, stage_id))
+    
+    return None
 
 #=======================================================================================================
 # Miscellaneous functions 
 #=======================================================================================================
+
+def is_caseExpirable(ais_id: str) -> Optional[bool]:
+    status = get_caseStatus(ais_id)
+    if status is None:
+        return None
+    return status.lower() == "Closed"
 
 def advancedSearchThroughHubSpot(searchTerm: str, searchTermHS_name: str):
     if not searchTerm:

@@ -5,6 +5,8 @@ description = "Backend for Aegis interns 2026 project"
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
+    "apscheduler>=3.11.2",
+    "alembic>=1.18.5",
     "azure-keyvault-secrets>=4.11.0",
     "azure-mgmt-resource>=25.0.0",
     "azure-mgmt-storage>=25.0.0",

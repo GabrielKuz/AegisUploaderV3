@@ -43,12 +43,12 @@ def test_get_link_case_id_returns_none_when_no_matches(monkeypatch):
 
 
 def test_get_link_case_status_returns_status_when_match_found(monkeypatch):
-    ticket = DummyTicket(properties={"case_status": "Resolved"})
+    ticket = DummyTicket(properties={"case_status": "Engineering"})
     response = SimpleNamespace(results=[ticket])
 
     _patch_api_client(monkeypatch, response)
 
-    assert hs.get_link_case_status("https://example.test/link") == "Resolved"
+    assert hs.get_link_case_status("https://example.test/link") == "Engineering"
 
 
 def test_is_link_case_expirable_returns_true_for_expirable_status(monkeypatch):
