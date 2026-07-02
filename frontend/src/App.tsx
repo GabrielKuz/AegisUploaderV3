@@ -8,8 +8,7 @@ import {
 import { LoginPage } from "./features/auth/LoginPage";
 import { RequireDevUser } from "./features/auth/RequireDevUser";
 
-import { SupportLayout } from "./layouts/SupportLayout";
-import { CustomerLayout } from "./layouts/CustomerLayout";
+
 
 import { SupportHomePage } from "./features/support/pages/SupportHomePage";
 import { SupportLinksPage } from "./features/support/pages/SupportLinksPage";

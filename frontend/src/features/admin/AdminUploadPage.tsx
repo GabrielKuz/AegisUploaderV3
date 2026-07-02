@@ -5,8 +5,12 @@ import "./AdminUploadPage.css";
 import { getDevToken } from "../auth/devAuth";
 
 type Upload = {
-  uuid: string;
-  days: number;
+  upload_id: string;
+  filename: string;
+  size: number;
+  blob_name: string;
+  content_type: string;
+  date_uploaded: string;
 };
 
 type SortKey = keyof Upload;
@@ -24,13 +28,13 @@ function getSortIcon(
 export function AdminUploadPage() {
   const { uuid } = useParams<{ uuid: string }>();
   const [uploads, setUploads] = useState<Upload[]>([]);
-  const [sortKey, setSortKey] = useState<SortKey>("uuid");
+  const [sortKey, setSortKey] = useState<SortKey>("date_uploaded");
   const [sortDirection, setSortDirection] =
-    useState<SortDirection>("asc");
+    useState<SortDirection>("desc");
 
   async function loadUploads() {
     if (!uuid) {return;}
-    const response = await fetch(`/api/upload/${uuid}`, {
+    const response = await fetch(`/api/links/${uuid}/files`, {
       headers: {
         Authorization: `Bearer ${getDevToken()}`
       }
@@ -142,40 +146,63 @@ export function AdminUploadPage() {
           <thead>
             <tr>
               <th
-                onClick={() => handleSort("uuid")}
-                style={{ cursor: "pointer" }}
+                  onClick={() => handleSort("filename")}
+                  style={{ cursor: "pointer" }}
               >
-                Upload UUID {getSortIcon("uuid", sortKey, sortDirection)}
+                  File {getSortIcon("filename", sortKey, sortDirection)}
               </th>
 
               <th
-                onClick={() => handleSort("days")}
-                style={{ cursor: "pointer" }}
+                  onClick={() => handleSort("size")}
+                  style={{ cursor: "pointer" }}
               >
-                Retention Days {getSortIcon("days", sortKey, sortDirection)}
+                  Size {getSortIcon("size", sortKey, sortDirection)}
+              </th>
+
+              <th
+                  onClick={() => handleSort("content_type")}
+                  style={{ cursor: "pointer" }}
+              >
+                  Type {getSortIcon("content_type", sortKey, sortDirection)}
+              </th>
+
+              <th
+                  onClick={() => handleSort("date_uploaded")}
+                  style={{ cursor: "pointer" }}
+              >
+                  Uploaded {getSortIcon("date_uploaded", sortKey, sortDirection)}
               </th>
 
               <th>Actions</th>
-            </tr>
+          </tr>
           </thead>
 
           <tbody>
             {sortedUploads.map(upload => (
-              <tr key={upload.uuid}>
-                <td>{upload.uuid}</td>
-                <td>{upload.days}</td>
+                <tr key={upload.upload_id}>
+                    <td>{upload.filename}</td>
 
-                <td>
-                  <button
-                    className="link-submit-button"
-                    onClick={() => extendUpload(upload.uuid)}
-                  >
-                    Extend
-                  </button>
-                </td>
-              </tr>
+                    <td>
+                        {(upload.size / 1024).toFixed(1)} KB
+                    </td>
+
+                    <td>{upload.content_type}</td>
+
+                    <td>
+                        {new Date(upload.date_uploaded).toLocaleString()}
+                    </td>
+
+                    <td>
+                        <button
+                            className="link-submit-button"
+                            onClick={() => extendUpload(upload.upload_id)}
+                        >
+                            Extend
+                        </button>
+                    </td>
+                </tr>
             ))}
-          </tbody>
+        </tbody>
         </table>
       </div>
     </section>

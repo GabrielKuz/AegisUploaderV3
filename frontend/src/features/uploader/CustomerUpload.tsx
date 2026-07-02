@@ -8,6 +8,7 @@ import { useParams } from "react-router-dom";
 import "../../styles/SupportTheme.css";
 import "./CustomerUpload.css";
 
+
 type SelectedFile = {
     file: File;
     preview: string;
@@ -121,12 +122,12 @@ const uploadFiles = async () => {
                 const response = await fetch(`/api/uploadfile/${uuid}`, {
                     method: "POST",
                     headers: {
-                        Region: "US",
                         "X-File-Hash": sha256,
+                        "X-User-Location": "US",
+                        
                     },
                     body: formData,
                 });
-
                 if (!response.ok) {
                     throw new Error("upload failed");
                 }

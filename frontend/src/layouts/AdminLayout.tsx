@@ -1,7 +1,7 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { getDevUser, signOutDevUser } from "../features/auth/devAuth";
 import { ThemeToggle } from "../theme/ThemeToggle";
-import "./Layout.css";
+import "./AppLayout.css";
 
 export function AdminLayout() {
   const navigate = useNavigate();
