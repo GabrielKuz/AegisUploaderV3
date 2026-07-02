@@ -3,6 +3,7 @@ from fastapi import HTTPException, status
 from fastapi.responses import RedirectResponse
 from sqlalchemy import text
 from modules import Session
+from modules.HubSpotIntegration import is_caseExpirable
 from modules.models import UploadRecord, LinkRecord
 
 session = Session()
@@ -21,7 +22,19 @@ def downloadData(upload_id: str, currentUser: User) -> RedirectResponse:
         headers={"WWW-Authenticate": "Bearer"},
     )
 
-    if not currentUser or currentUser.disabled: #Check authentication
+    caseID = session.execute("""SELECT case_id FROM "LinkDB".uploads WHERE upload_id = :upload_id""", {"upload_id": upload_id}).scalar()
+    if caseID is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Upload not found",
+        )
+    if is_caseExpirable(caseID):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="This upload has expired and is no longer available for download.",
+        )
+
+    if not currentUser or currentUser.disabled:
         raise unauthenticated
 
     if not upload_id: # Check if upload_id is provided

@@ -16,6 +16,8 @@ services:
       TENANT_ID: ${TENANT_ID}
       CLIENT_ID: ${CLIENT_ID}
       BACKEND_URL: ${BACKEND_URL}
+      AZURE_STORAGE_CONNECTION_STRING: DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://azurite:10000/devstoreaccount1;QueueEndpoint=http://azurite:10001/devstoreaccount1;
+      AZURE_CONTAINER_NAME: ${AZURE_CONTAINER_NAME}
       HUBSPOT_ACCESS_TOKEN: ${HUBSPOT_ACCESS_TOKEN}
 
       AZURE_STORAGE_CONTAINER: mycontainer
@@ -130,8 +132,10 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
-    ports: # change to expose only to backend in prod
-      - "5432:5432"
+    #ports:
+      #- "5432:5432"
+    expose:
+      - "5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     restart: unless-stopped

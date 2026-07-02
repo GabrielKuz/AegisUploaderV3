@@ -101,6 +101,11 @@ def get_caseStatus(ais_id: str) -> Optional[str]:
 
     return stage_lookup.get((pipeline_id, stage_id))
 
+def is_caseExpirable(ais_id: str) -> Optional[bool]:
+    status = get_caseStatus(ais_id)
+    if status is None:
+        return None
+    return status.lower() == "closed"
 
 #=======================================================================================================
 # Miscellaneous functions 

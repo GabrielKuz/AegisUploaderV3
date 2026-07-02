@@ -163,7 +163,13 @@ async def create_upload_file(
         original_link = blob_client.url
         sas_retrieval_link = None
 
-        if link_entry: # attempt to populate the db with the link entry info if it exists
+        if link_entry:
+            if link_entry.expired:
+                raise HTTPException(
+                    status_code=410,
+                    detail="This link has expired and is no longer available for uploads",
+                    headers={"WWW-Authenticate": "Bearer"},
+                )
             case_id = link_entry.case_id
             users_with_access = link_entry.users_with_access or []
             original_link = link_entry.link or original_link
