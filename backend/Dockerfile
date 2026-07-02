@@ -1,5 +1,5 @@
 # python 3.14 with minimal packages on debian
-FROM python:3.14.0-slim-bookworm 
+FROM python:3.14.6-slim-bookworm 
 
 #prevent python from writing bytecode to disk and buffer stdout/stderr
 ENV PYTHONDONTWRITEBYTECODE=1 \
