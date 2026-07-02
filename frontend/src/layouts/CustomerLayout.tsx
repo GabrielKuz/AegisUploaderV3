@@ -1,8 +1,12 @@
-import "./Layout.css";
-import { ThemeToggle } from "../theme/ThemeToggle";
-import { NavLink, Outlet } from "react-router-dom";
-import { useParams, Navigate } from "react-router-dom";
+import {
+    Navigate,
+    NavLink,
+    Outlet,
+    useParams,
+} from "react-router-dom";
 
+import { ThemeToggle } from "../theme/ThemeToggle";
+import "./AppLayout.css";
 
 export function CustomerLayout() {
     const { uuid } = useParams();
@@ -10,6 +14,7 @@ export function CustomerLayout() {
     if (!uuid) {
         return <Navigate to="/" replace />;
     }
+
     return (
         <div className="layout">
             <header className="header">
@@ -20,9 +25,8 @@ export function CustomerLayout() {
                         className="logo"
                     />
 
-                    <div className="divide">
-                        |
-                    </div>
+                    <div className="divide" aria-hidden="true" />
+
                     <div className="title">
                         <span className="product-name">
                             Customer Upload
@@ -32,6 +36,7 @@ export function CustomerLayout() {
                         </span>
                     </div>
                 </div>
+
                 <div className="header-actions">
                     <ThemeToggle />
                 </div>

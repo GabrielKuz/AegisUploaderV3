@@ -39,7 +39,10 @@ const urgencyOptions = [
 ] as const;
 
 /**
- * Form for creating a new customer-support request.
+ * Creates a new customer-support link request.
+ *
+ * This page is rendered inside the shared SupportLayout, so it should only
+ * control the form content and not the full app layout.
  */
 export function CreateSupportLinkPage() {
   const navigate = useNavigate();
@@ -48,7 +51,7 @@ export function CreateSupportLinkPage() {
   const [error, setError] = useState<string | null>(null);
 
   /**
-   * Updates a single form value while preserving the remaining fields.
+   * Updates one form field and clears stale validation errors.
    */
   const updateField = (
     field: LinkFormField,
@@ -59,16 +62,13 @@ export function CreateSupportLinkPage() {
       [field]: value,
     }));
 
-    // Clear stale validation feedback after the user resumes editing.
     if (error) {
       setError(null);
     }
   };
 
   /**
-   * Handles standard input, select, and textarea changes.
-   *
-   * Each field's `name` must match a property in LinkForm.
+   * Handles input, select, and textarea changes.
    */
   const handleFieldChange = (
     event: ChangeEvent<
@@ -80,10 +80,10 @@ export function CreateSupportLinkPage() {
   };
 
   /**
-   * Validates and submits the form.
+   * Validates the form before submitting.
    *
-   * Replace the console statement with the API request when the
-   * support-link endpoint is available.
+   * Replace the console statement with the real API request once the
+   * backend endpoint is available.
    */
   const handleSubmit = (
     event: FormEvent<HTMLFormElement>,
@@ -110,7 +110,7 @@ export function CreateSupportLinkPage() {
 
   return (
     <section
-      className="create-link-page"
+      className="create-support-link-page"
       aria-labelledby="create-link-heading"
     >
       <header className="create-link-header">
@@ -123,8 +123,8 @@ export function CreateSupportLinkPage() {
         </h1>
 
         <p className="create-link-description">
-          Inform the team of the situation and describe the
-          assistance they can provide.
+          Describe the customer request and provide enough detail for
+          the support team to follow up.
         </p>
       </header>
 
@@ -230,4 +230,3 @@ export function CreateSupportLinkPage() {
     </section>
   );
 }
-

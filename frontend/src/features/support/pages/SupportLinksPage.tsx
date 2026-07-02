@@ -4,12 +4,6 @@ import { mockLinks } from "../data/mockLinks";
 import "../../../styles/SupportTheme.css";
 import "./SupportLinksPage.css";
 
-/**
- * Converts a display status into a CSS-friendly modifier.
- *
- * Example:
- * "In Progress" becomes "in-progress".
- */
 function getStatusClassName(status: string): string {
   return status
     .trim()
@@ -17,9 +11,6 @@ function getStatusClassName(status: string): string {
     .replace(/\s+/g, "-");
 }
 
-/**
- * Displays previously created support links in a responsive table.
- */
 export function SupportLinksPage() {
   return (
     <section
@@ -51,7 +42,6 @@ export function SupportLinksPage() {
 
       <div className="links-table-wrapper">
         <table className="links-table">
-
           <thead>
             <tr>
               <th scope="col">Link</th>
@@ -74,12 +64,7 @@ export function SupportLinksPage() {
                   <td>{supportLink.subject}</td>
                   <td>{supportLink.category}</td>
                   <td>
-                    <span
-                      className={
-                        `link - status` +
-                        `link - status - ${statusClassName} `
-                      }
-                    >
+                    <span className={`link-status link-status-${statusClassName}`} >
                       {supportLink.status}
                     </span>
                   </td>

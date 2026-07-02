@@ -1,4 +1,9 @@
+/* ==========================================================================
+   CUSTOMER UPLOAD PAGE
+   Child page rendered inside the shared app layout
+   ========================================================================== */
 
+<<<<<<< HEAD
 html, body {
     height: 100%;
     margin: 0;
@@ -24,12 +29,17 @@ html, body {
 
 .support-layout {
   min-height: 100vh;
+=======
+.customer-upload-page {
+  width: 100%;
+  min-height: 100%;
+>>>>>>> c074d3d (Clean up frontend layout and responsive styling)
   display: grid;
-  grid-template-columns: 240px minmax(0, 1fr);
-  grid-template-rows: 76px minmax(0, 1fr);
-  background: var(--theme-page);
+  place-items: center;
+  color: var(--theme-text);
 }
 
+<<<<<<< HEAD
 .support-header {
   display: flex;
   align-items: center;
@@ -68,32 +78,34 @@ html, body {
 }
 
 .support-brand > div {
+=======
+.upload-panel {
+  width: min(100%, 760px);
+>>>>>>> c074d3d (Clean up frontend layout and responsive styling)
   display: grid;
-  gap: 3px;
-  
+  gap: 22px;
 }
- 
-.support-product-name {
-  font-size: 14px;
-  font-weight: 600;
-  display: block;
-}
- 
-.support-section-name {
-  color: var(--theme-page);
+
+.upload-eyebrow {
+  margin: 0;
+  color: var(--support-accent);
   font-family: var(--font-mono, monospace);
-  font-size: 11px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.13em;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
-  display: block;
-  margin-top: 2px;
 }
- 
-.support-user-menu {
-  display: flex;
-  align-items: center;
-  gap: 20px;
+
+.upload-panel h1 {
+  margin: 0;
+  color: var(--theme-text);
+  font-family: var(--font-heading);
+  font-size: clamp(42px, 6vw, 64px);
+  font-weight: 400;
+  line-height: 1.02;
+  letter-spacing: -0.06em;
 }
+<<<<<<< HEAD
  
 .support-user-menu > div {
   display: grid;
@@ -140,32 +152,18 @@ html, body {
   display: flex;
   align-items: center;
   padding: 0 16px;
+=======
+
+.upload-note {
+  max-width: 680px;
+  margin: 0;
+>>>>>>> c074d3d (Clean up frontend layout and responsive styling)
   color: var(--theme-text-secondary);
-  border-left: 3px solid transparent;
-  text-decoration: none;
-}
- 
-.support-nav-link:hover {
-  color: var(--theme-text);
-  background: var(--support-row-hover);
-}
- 
-.support-nav-link-active {
-  color: var(--theme-text);
-  background: var(--support-row-hover);
-  border-left-color: #ef3b32;
-}
- 
-.support-main {
-  grid-column: 2;
-  grid-row: 2;
-  min-width: 0;
-  padding: 48px;
-  overflow: auto;
-  background: transparent;
-  color: var(--theme-text);
+  font-size: 16px;
+  line-height: 1.65;
 }
 
+<<<<<<< HEAD
 .support-title{
     display: flex;
     flex-direction: column;
@@ -209,16 +207,23 @@ html, body {
 }
 
 /*UPLOAD BOX */
+=======
+>>>>>>> c074d3d (Clean up frontend layout and responsive styling)
 .upload-box {
-    background: var(--theme-surface);
-    border: 2px dashed var(--theme-border);
-    border-radius: 10px;
-    padding: 50px;
-    text-align: center;
-    width: 100%;
-    max-width: 500px;
-    color: var(--theme-text);
+  width: 100%;
+  min-height: 260px;
+  padding: clamp(28px, 5vw, 50px);
+  display: grid;
+  place-items: center;
+  gap: 18px;
+  text-align: center;
+  color: var(--theme-text);
+  background: var(--theme-surface);
+  border: 2px dashed var(--theme-border-strong);
+  border-radius: 10px;
+  box-shadow: var(--theme-card-shadow);
 }
+<<<<<<< HEAD
 /*UPLOAD BUTTON*/
 .browse-button{
     margin-top: 15px;
@@ -228,21 +233,35 @@ html, body {
     border: none;
     border-radius: 5px;
     cursor: pointer;
+=======
+
+.upload-box p {
+  margin: 0;
+  color: var(--theme-text-secondary);
+  font-size: 16px;
+>>>>>>> c074d3d (Clean up frontend layout and responsive styling)
 }
 
-a {
-    text-decoration: none;
-    color: inherit;
+.browse-button {
+  min-height: 44px;
+  padding: 0 20px;
+  color: #ffffff;
+  background: var(--support-accent);
+  border: 0;
+  border-radius: 5px;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background-color 160ms ease,
+    transform 160ms ease;
 }
 
-.upload-content {
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 24px;
+.browse-button:hover {
+  background: var(--color-aegis-red);
+  transform: translateY(-1px);
 }
+<<<<<<< HEAD
 /*UPLOAD TEXT*/
 .note {
     width: 100%;
@@ -289,4 +308,30 @@ a {
 .delete-button:hover {
     background: #ef3b32;
     color: white;
+=======
+
+.browse-button:active {
+  transform: translateY(0);
+}
+
+@media (max-width: 760px) {
+  .customer-upload-page {
+    place-items: start;
+  }
+
+  .upload-box {
+    min-height: 220px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .browse-button {
+    transition: none;
+  }
+
+  .browse-button:hover,
+  .browse-button:active {
+    transform: none;
+  }
+>>>>>>> c074d3d (Clean up frontend layout and responsive styling)
 }

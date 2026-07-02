@@ -1,5 +1,8 @@
 @import url("https://fonts.googleapis.com/css2?family=Epilogue:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap");
-@import url('https://fonts.googleapis.com/css2?family=Epilogue:ital,wght@0,100..900;1,100..900&family=Geist+Mono:ital,wght@0,100..900;1,100..900&display=swap');
+
+/* ==========================================================================
+   GLOBAL RESET
+   ========================================================================== */
 
 *,
 *::before,
@@ -16,13 +19,25 @@ body,
 }
 
 body {
+  margin: 0;
   font-family: var(--font-body);
-  background: var(--color-page-dark);
-  color: var(--color-text-dark);
+  background: var(--theme-page);
+  color: var(--theme-text);
+  transition:
+    color 180ms ease,
+    background-color 180ms ease;
 }
 
+
+/* ==========================================================================
+   BASE ELEMENTS
+   ========================================================================== */
+
 button,
-a {
+a,
+input,
+select,
+textarea {
   font: inherit;
 }
 
@@ -32,34 +47,47 @@ button {
 
 a {
   color: inherit;
+  text-decoration: none;
 }
+
+img,
+svg {
+  display: block;
+  max-width: 100%;
+}
+
+
+/* ==========================================================================
+   THEME TOKENS
+   ========================================================================== */
 
 :root {
   color-scheme: light;
 
-  /* Existing brand colors can remain unchanged. */
   --color-aegis-red: #ef3b32;
   --color-blue: #083446;
 
-  /* Theme-aware semantic colors. */
   --theme-page: #f3f5f6;
   --theme-surface: rgba(255, 255, 255, 0.74);
   --theme-surface-secondary: rgba(255, 255, 255, 0.68);
   --theme-text: #101214;
   --theme-text-secondary: #4f5960;
   --theme-muted: #687279;
+
   --theme-border: rgba(0, 0, 0, 0.1);
   --theme-border-strong: rgba(0, 0, 0, 0.2);
   --theme-divider: rgba(0, 0, 0, 0.12);
+
   --theme-pattern: rgba(8, 52, 70, 0.045);
   --theme-pattern-secondary: rgba(8, 52, 70, 0.035);
   --theme-panel-gradient: rgba(8, 52, 70, 0.06);
-  --theme-button: #000;
-  --theme-button-text: #fff;
-  --theme-heading-border: transparent;
+
+  --theme-button: #000000;
+  --theme-button-text: #ffffff;
 
   --theme-card-shadow:
     0 24px 60px rgba(8, 24, 31, 0.12);
+
   --theme-control-shadow:
     0 8px 20px rgba(8, 24, 31, 0.08);
 }
@@ -75,31 +103,29 @@ a {
   --theme-text: #f4f6f7;
   --theme-text-secondary: #c0c9ce;
   --theme-muted: #929da4;
+
   --theme-border: rgba(255, 255, 255, 0.12);
   --theme-border-strong: rgba(255, 255, 255, 0.22);
   --theme-divider: rgba(255, 255, 255, 0.12);
+
   --theme-pattern: rgba(255, 255, 255, 0.035);
   --theme-pattern-secondary: rgba(255, 255, 255, 0.025);
   --theme-panel-gradient: rgba(35, 137, 176, 0.08);
+
   --theme-button: #f4f6f7;
   --theme-button-text: #080d10;
-  --theme-heading-border: #ffffff;
 
   --theme-card-shadow:
     0 28px 70px rgba(0, 0, 0, 0.42);
+
   --theme-control-shadow:
     0 8px 24px rgba(0, 0, 0, 0.3);
 }
 
-/* Give color changes a subtle transition. */
-body {
-  margin: 0;
-  background: var(--theme-page);
-  color: var(--theme-text);
-  transition:
-    color 180ms ease,
-    background-color 180ms ease;
-}
+
+/* ==========================================================================
+   REDUCED MOTION
+   ========================================================================== */
 
 @media (prefers-reduced-motion: reduce) {
   body {
