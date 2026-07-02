@@ -65,6 +65,12 @@ jobs:
         if: failure()
         run: docker compose logs
 
+      - name: Inspect backend
+        if: failure()
+        run: |
+          docker inspect $(docker compose ps -q backend) \
+            --format='OOMKilled={{.State.OOMKilled}} ExitCode={{.State.ExitCode}}'
+
       - name: Tear down stack
         if: always()
         run: docker compose down -v

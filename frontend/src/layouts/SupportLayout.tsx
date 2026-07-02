@@ -64,6 +64,7 @@ export function SupportLayout() {
 
           <NavLink
             to="/support/links"
+            end
             className={({ isActive }) =>
               isActive
                 ? "nav-link nav-link-active"
