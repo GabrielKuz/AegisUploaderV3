@@ -25,6 +25,9 @@ url = f"http://{os.getenv('FRONTEND_URL')}/links/" # base url to be concatenated
 
 
 def generate_links(link_request: LinkRequest, current_user: User):
+    """
+    Creates a new link with a unique UUID and stores it in the database.
+    """
     if not current_user or current_user.disabled: # Check user authentication
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -54,6 +57,9 @@ def generate_links(link_request: LinkRequest, current_user: User):
 
 
 def store_link(link_request: LinkRequest, uuid_str: str, current_user: User):
+    """
+    Stores generated link in the SQL database with metadata.
+    """
     with Session() as session: # Open db session
         record = LinkRecord( # Create new link record for "LinkDB".links table
             uuid=uuid_str,
@@ -76,7 +82,7 @@ def store_link(link_request: LinkRequest, uuid_str: str, current_user: User):
 
 @deprecated("This doesn't work in all cases. alternative will be merged into main branch soon.")
 def expire_old_links(expiry_days: int = 2) -> bool:
-    record_expiry: bool = False
+     record_expiry: bool = False
 
 #         for record in records:
 #             if not record.timestamp:
@@ -130,6 +136,9 @@ def expire_old_links(expiry_days: int = 2) -> bool:
 #         session.commit()
 
 def _serialize_link_record(record: LinkRecord):
+    """
+    Organizes link data into a dictionary format for API response.
+    """
     expiration_date = None
     if record.timestamp is not None:
         expiration_date = (record.timestamp + timedelta(days=2))
@@ -154,39 +163,42 @@ def extend_link_expiration(uuid_str: str, current_user: User, extension: int):
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="User not authenticated"
         )
-    if not uuid_str:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Link UUID not found"
-        )
+    # if not uuid_str:
+    #     raise HTTPException(
+    #         status_code=status.HTTP_404_NOT_FOUND,
+    #         detail="Link UUID not found"
+    #     )
 
-    with Session() as session:
-        stmt = select(LinkRecord).where(LinkRecord.uuid == uuid_str)
-        record = session.scalar(stmt)
-        if record is None:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Link not found"
-            )
-        return _serialize_link_record(record)
+    # with Session() as session:
+    #     stmt = select(LinkRecord).where(LinkRecord.uuid == uuid_str)
+    #     record = session.scalar(stmt)
+    #     if record is None:
+    #         raise HTTPException(
+    #             status_code=status.HTTP_404_NOT_FOUND,
+    #             detail="Link not found"
+    #         )
+    #     return _serialize_link_record(record)
 
-        if record.creator != current_user.username:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="You do not have permission to extend this link"
-            )
+    #     if record.creator != current_user.username:
+    #         raise HTTPException(
+    #             status_code=status.HTTP_403_FORBIDDEN,
+    #             detail="You do not have permission to extend this link"
+    #         )
         
-        if extension <= 0 or not isinstance(extension, int):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Extension must be a positive integer"
-            )
+    #     if extension <= 0 or not isinstance(extension, int):
+    #         raise HTTPException(
+    #             status_code=status.HTTP_400_BAD_REQUEST,
+    #             detail="Extension must be a positive integer"
+    #         )
 
-        record.expiration_date += timedelta(days=extension)
-        record.expired = False
-        session.commit()
+    #     record.expiration_date += timedelta(days=extension)
+    #     record.expired = False
+    #     session.commit()
 
 def get_link(uuid_str: str): # get a link record from the db by uuid
+    """
+    Retrieves a link record from the database by its UUID.
+    """
     with Session() as session:
         stmt = select(LinkRecord).where(LinkRecord.uuid == uuid_str) # Select the matching record
         record = session.scalar(stmt)# Get the first matching record (Should at most be one)
@@ -206,6 +218,9 @@ def get_link(uuid_str: str): # get a link record from the db by uuid
         }
 
 def get_all_links(current_user: User): 
+    """
+    Gets all link records by UUID from the database.
+    """
     if not current_user or current_user.disabled:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

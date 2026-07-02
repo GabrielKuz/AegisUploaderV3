@@ -28,7 +28,7 @@ services:
 
       AZURE_STORAGE_CONNECTION_STRING_ITAR: DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://azurite-itar:10000/devstoreaccount1;QueueEndpoint=http://azurite-itar:10001/devstoreaccount1;
 
-    command: ["sh", "-c", "python create_tables.py && uvicorn main:app --host 0.0.0.0 --port 8000 --proxy-headers --forwarded-allow-ips=172.29.0.0/16"]
+    command: ["sh", "-c", "alembic upgrade head && uvicorn main:app --host 0.0.0.0 --port 8000 --proxy-headers --forwarded-allow-ips=172.29.0.0/16"]
 
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
