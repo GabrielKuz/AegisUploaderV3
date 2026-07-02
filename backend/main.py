@@ -1,5 +1,8 @@
 from fastapi import FastAPI, Depends, HTTPException
 from modules.LinkGenerator import LinkRequest, generate_links, get_all_links
+from modules.LinkGenerator import LinkRequest, generate_links, get_all_links, get_all_files_for_link
+from modules.auth import getCurrentActiveUser, getCurrentUser, User, userAuthenticated
+from modules.LinkGenerator import LinkRequest, generate_links, get_all_links, get_link
 from modules.auth import getCurrentActiveUser, getCurrentUser, User
 from modules.LinkGenerator import LinkRequest, generate_links, get_all_links
 from modules.auth import getCurrentActiveUser, getCurrentUser, User, userAuthenticated
@@ -15,6 +18,9 @@ from zoneinfo import ZoneInfo
 from modules.DataCleaner import expireAndDeleteOldData
 from sqlalchemy import text
 from contextlib import asynccontextmanager
+import logging
+
+logging.basicConfig(level=logging.INFO) # setup logging server. TODO: change to file and add more logging
 
 scheduler = AsyncIOScheduler(timezone=ZoneInfo("America/New_York"))
 
@@ -47,6 +53,10 @@ def create_link(link_request: LinkRequest, current_user: Annotated[User, Depends
 def get_links(current_user: Annotated[User, Depends(getCurrentActiveUser)]):  # TODO: Change to getCurrentActiveUser after testing
     return get_all_links(current_user)
 
+@app.get("/links/{uuid}")
+def get_link_endpoint(uuid: str, current_user: Annotated[User, Depends(getCurrentActiveUser)]):  # TODO: Change to getCurrentActiveUser after testing
+    return get_link(uuid)
+
 
 @app.get("/")
 def read_root():
@@ -56,7 +66,12 @@ def read_root():
 def health_check():
     return {"status": "healthy"}
 
-def main():
+@app.on_event("startup")
+async def startup():
+    logging.info("Server started on http://localhost:8000")
+    logging.info(f"Frontend accessible at http://{__import__('socket').gethostbyname(__import__('socket').gethostname())}.sslip.io")
+
+def main(): # start the app when run directly and not through docker
     import uvicorn
 
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=False)
@@ -83,6 +98,6 @@ def getLinkInfo(uuid: str, currentUser: Annotated[User, Depends(getCurrentActive
 def download_upload(upload_id: str, currentUser: Annotated[User, Depends(getCurrentActiveUser)]):
     return downloadData(upload_id, currentUser)
 
-if __name__ == "__main__":
+if __name__ == "__main__": # Doesnt get run by docker
     main()
 

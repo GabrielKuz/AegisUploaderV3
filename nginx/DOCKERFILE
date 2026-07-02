@@ -1,23 +1,33 @@
-# build react
+#build
 FROM node:24-alpine3.22 AS builder
 
 WORKDIR /app
 
 COPY frontend/package.json frontend/package-lock.json ./
-
-RUN --mount=type=cache,target=/root/.npm npm ci
+# install dependencies from package-lock.json and use cache
+RUN --mount=type=cache,target=/root/.npm \
+npm ci
 
 COPY frontend/ .
-
+# build the frontend
 RUN npm run build
 
-# runtime
+#runtime
 FROM nginx:1.31-alpine
-
+# copy the nginx config file to the container
 COPY nginx/nginx.conf /etc/nginx/nginx.conf
-
-COPY --from=builder /app/dist /usr/share/nginx/html
-
-EXPOSE 80
-
+# copy the built frontend to nginx's directory and set ownership to nginx user
+COPY --from=builder \
+    --chown=nginx:nginx \
+    /app/dist \
+    /usr/share/nginx/html
+# transfer ownership of nginx cache and run directories to nginx user
+RUN chown -R nginx:nginx \
+    /var/cache/nginx \
+    /var/run
+# set user to be non root
+USER nginx
+# use port 8080 since 80 is priveleged, docker can map 8080 to 80 on the host machine 
+EXPOSE 8080 
+# run nginx in the foreground to keep the container running
 CMD ["nginx", "-g", "daemon off;"]

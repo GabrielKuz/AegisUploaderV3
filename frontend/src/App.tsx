@@ -5,11 +5,14 @@ import {
   Routes,
 } from "react-router-dom";
 import { LoginPage } from "./features/auth/LoginPage";
-import { RequireSupportUser } from "./features/auth/RequireSupportUser";
+import { RequireDevUser } from "./features/auth/RequireDevUser";
 import { SupportHomePage } from "./features/support/pages/SupportHomePage";
 import { SupportLinksPage } from "./features/support/pages/SupportLinksPage";
 import { CreateSupportLinkPage } from "./features/support/pages/CreateSupportLinkPage";
 import { SupportLayout } from "./layouts/SupportLayout";
+import { CustomerLayout } from "./layouts/CustomerLayout";
+import { CustomerUpload } from "./features/uploader/CustomerUpload";
+import { UploadDetails } from "./features/uploader/UploadDetails";
 
 export default function App() {
   return (
@@ -17,25 +20,33 @@ export default function App() {
       <Routes>
         <Route path="/" element={<LoginPage />} />
 
+        <Route path="/upload/:uuid" element={<CustomerUpload />} />
+
+        <Route
+          path="/upload"
+          element={
+            <RequireDevUser>
+              <CustomerLayout />
+            </RequireDevUser>
+          }
+        >
+          <Route index element={<CustomerUpload />} />
+          <Route path="details" element={<UploadDetails />} />
+        </Route>
+
+
+
         <Route
           path="/support"
           element={
-            <RequireSupportUser>
+            <RequireDevUser>
               <SupportLayout />
-            </RequireSupportUser>
+            </RequireDevUser>
           }
         >
           <Route index element={<SupportHomePage />} />
-
-          <Route
-            path="links"
-            element={<SupportLinksPage />}
-          />
-
-          <Route
-            path="links/new"
-            element={<CreateSupportLinkPage />}
-          />
+          <Route path="links" element={<SupportLinksPage />} />
+          <Route path="links/new" element={<CreateSupportLinkPage />} />
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />

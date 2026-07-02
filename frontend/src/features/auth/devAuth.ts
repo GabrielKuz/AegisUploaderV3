@@ -12,10 +12,10 @@ export function signInDevUser(
 ): DevUser {
   const users: Record<DevUser["role"], DevUser> = {
     support: {
-      id: "dev-support-user",
-      name: "Support User",
-      email: "support.user@aegissoftware.com",
-      role: "support",
+    id: "dev-support-user",
+    name: "Support User",
+    email: "support.user@aegissoftware.com",
+    role: "support",
     },
     customer: {
       id: "dev-customer-user",

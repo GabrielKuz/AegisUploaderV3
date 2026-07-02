@@ -69,7 +69,7 @@ def test_NoAuthNotPresent():
     for pyfile in PROJECT_ROOT.rglob("*.py"):
         if pyfile.name == "auth.py" or pyfile.name == "test_main.py": # allow the definition of the function in auth.py and test_main.py
             continue
-        if any(part in {"venv", ".venv", "__pycache__"} for part in pyfile.parts): # skip venv
+        if any(part in {"venv", ".venv", "__pycache__", ".cache"} for part in pyfile.parts):
             continue
 
         tree = ast.parse(pyfile.read_text(encoding="utf-8"), filename=str(pyfile))
