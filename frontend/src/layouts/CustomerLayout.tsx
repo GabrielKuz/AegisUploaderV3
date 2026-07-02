@@ -1,7 +1,20 @@
-import "./Layout.css";
+import {
+    Navigate,
+    NavLink,
+    Outlet,
+    useParams,
+} from "react-router-dom";
+
 import { ThemeToggle } from "../theme/ThemeToggle";
-import { NavLink, Outlet } from "react-router-dom";
+import "./AppLayout.css";
+
 export function CustomerLayout() {
+    const { uuid } = useParams();
+
+    if (!uuid) {
+        return <Navigate to="/" replace />;
+    }
+
     return (
         <div className="layout">
             <header className="header">
@@ -12,9 +25,8 @@ export function CustomerLayout() {
                         className="logo"
                     />
 
-                    <div className="divide">
-                        |
-                    </div>
+                    <div className="divide" aria-hidden="true" />
+
                     <div className="title">
                         <span className="product-name">
                             Customer Upload
@@ -24,6 +36,7 @@ export function CustomerLayout() {
                         </span>
                     </div>
                 </div>
+
                 <div className="header-actions">
                     <ThemeToggle />
                 </div>
@@ -32,7 +45,7 @@ export function CustomerLayout() {
             <aside className="sidebar">
                 <nav aria-label="Customer Upload">
                     <NavLink
-                        to="/upload"
+                        to={`/upload/${uuid}`}
                         end
                         className={({ isActive }) =>
                             isActive
@@ -44,7 +57,7 @@ export function CustomerLayout() {
                     </NavLink>
 
                     <NavLink
-                        to="/upload/details"
+                        to={`/upload/${uuid}/details`}
                         className={({ isActive }) =>
                             isActive
                                 ? "nav-link nav-link-active"

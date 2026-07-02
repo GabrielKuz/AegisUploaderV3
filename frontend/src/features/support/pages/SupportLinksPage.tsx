@@ -38,6 +38,7 @@ function getSortIcon(
   if (column !== sortKey) return "⇅";
   return sortDirection === "asc" ? "▲" : "▼";
 }
+
 /**
  * Displays previously created support links in a responsive table.
  */
@@ -164,12 +165,7 @@ export function SupportLinksPage() {
                   <td>{supportLink.subject}</td>
                   <td>{supportLink.category}</td>
                   <td>
-                    <span
-                      className={
-                        `link - status` +
-                        `link - status - ${statusClassName} `
-                      }
-                    >
+                    <span className={`link-status link-status-${statusClassName}`} >
                       {supportLink.status}
                     </span>
                   </td>
