@@ -1,87 +1,18 @@
 /* ==========================================================================
    CUSTOMER UPLOAD PAGE
-   Child page rendered inside the shared app layout
+   Child page rendered inside the shared app layout.
    ========================================================================== */
 
-<<<<<<< HEAD
-html, body {
-    height: 100%;
-    margin: 0;
-}
-.customer-upload{
-    max-width:1080px;
-    margin: 0 auto;
-    padding: 40px;
-    background: var(--theme-page);
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-}
-
-/*BODY*/
-.central-container{
-    display: flex;
-    align-items: stretch;
-    flex: 1;
-}
-
-/*HEADER*/
-
-.support-layout {
-  min-height: 100vh;
-=======
 .customer-upload-page {
   width: 100%;
   min-height: 100%;
->>>>>>> c074d3d (Clean up frontend layout and responsive styling)
   display: grid;
   place-items: center;
   color: var(--theme-text);
 }
 
-<<<<<<< HEAD
-.support-header {
-  display: flex;
-  align-items: center;
-  height: 76px; 
-  padding: 0 30px;
-  box-sizing: border-box;
-  background: #000000;
-  color: #ffffff;
-  border-top: 4px solid #ef3b32;
-} 
-
-.support-header-divider {
-  width: 4px;      
-  background: var(--theme-border-strong);
-  margin: 0 28px;
-  align-self: stretch;
-  flex-shrink: 0;
-  border-radius: 2px;
-}
-.support-header-actions {
-  margin-left: auto;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.support-brand {
-  display: flex;
-  align-items: center;
-  
-}
-/*AEGIS LOGO*/
-.support-logo {
-  width: 260px;
-  height: auto;
-}
-
-.support-brand > div {
-=======
 .upload-panel {
   width: min(100%, 760px);
->>>>>>> c074d3d (Clean up frontend layout and responsive styling)
   display: grid;
   gap: 22px;
 }
@@ -105,110 +36,27 @@ html, body {
   line-height: 1.02;
   letter-spacing: -0.06em;
 }
-<<<<<<< HEAD
- 
-.support-user-menu > div {
-  display: grid;
-  gap: 3px;
-  text-align: right;
-}
- 
-.support-user-menu strong {
-  font-size: 13px;
-}
- 
-.support-user-menu span {
-  color: rgba(255, 255, 255, 0.62);
-  font-size: 11px;
-}
-/*MENU BUTTON*/
-.support-user-menu button {
-  min-height: 38px;
-  padding: 0 16px;
-  color: #ffffff;
-  background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.28);
-  cursor: pointer;
-}
- 
-.support-user-menu button:hover {
-  border-color: #ef3b32;
-}
-/*SIDEBAR*/
-.support-sidebar {
-  grid-column: 1;
-  grid-row: 2;
-  padding: 28px 16px;
-  background: var(--theme-surface-secondary);
-}
- 
-.support-sidebar nav {
-  display: grid;
-  gap: 8px;
-}
-/*SIDEBAR LINKS*/ 
-.support-nav-link {
-  min-height: 46px;
-  display: flex;
-  align-items: center;
-  padding: 0 16px;
-=======
 
+.upload-link-id,
 .upload-note {
   max-width: 680px;
   margin: 0;
->>>>>>> c074d3d (Clean up frontend layout and responsive styling)
   color: var(--theme-text-secondary);
   font-size: 16px;
   line-height: 1.65;
 }
 
-<<<<<<< HEAD
-.support-title{
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    margin-left: 0;
-}
-@media (max-width: 760px) {
-  .support-layout {
-    grid-template-columns: 1fr;
-    grid-template-rows: auto auto minmax(0, 1fr);
-  }
- 
-  .support-header {
-    grid-column: 1;
-    padding: 18px 20px;
-  }
- 
-  .support-sidebar {
-    grid-column: 1;
-    grid-row: 2;
-  }
- 
-  .support-sidebar nav {
-    grid-template-columns: repeat(3, 1fr);
-  }
- 
-  .support-main {
-    grid-column: 1;
-    grid-row: 3;
-    padding: 28px 20px;
-  }
+.upload-link-id {
+  color: var(--theme-muted);
+  font-family: var(--font-mono, monospace);
+  font-size: 13px;
 }
 
-/*MAIN*/
-.main-content {
-    min-height: 100%;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-}
 
-/*UPLOAD BOX */
-=======
->>>>>>> c074d3d (Clean up frontend layout and responsive styling)
+/* ==========================================================================
+   UPLOAD BOX
+   ========================================================================== */
+
 .upload-box {
   width: 100%;
   min-height: 260px;
@@ -223,24 +71,21 @@ html, body {
   border-radius: 10px;
   box-shadow: var(--theme-card-shadow);
 }
-<<<<<<< HEAD
-/*UPLOAD BUTTON*/
-.browse-button{
-    margin-top: 15px;
-    padding: 10px 20px;
-    background-color: #1d5a83;
-    color: white;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-=======
 
 .upload-box p {
   margin: 0;
   color: var(--theme-text-secondary);
   font-size: 16px;
->>>>>>> c074d3d (Clean up frontend layout and responsive styling)
 }
+
+.file-input {
+  display: none;
+}
+
+
+/* ==========================================================================
+   BUTTONS
+   ========================================================================== */
 
 .browse-button {
   min-height: 44px;
@@ -254,65 +99,111 @@ html, body {
   cursor: pointer;
   transition:
     background-color 160ms ease,
-    transform 160ms ease;
+    transform 160ms ease,
+    opacity 160ms ease;
 }
 
 .browse-button:hover {
   background: var(--color-aegis-red);
   transform: translateY(-1px);
 }
-<<<<<<< HEAD
-/*UPLOAD TEXT*/
-.note {
-    width: 100%;
-    max-width: 800px;
-    text-align: center;
-    margin: 0;
-    color: var(--theme-text-secondary);
-}
-
-/*FILE DISPLAY*/
-.selected-files {
-    margin-top: 24px;
-    width: 100%;
-    max-width: 500px;
-}
-
-.selected-file {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 10px 0;
-    border-bottom: 1px solid var(--theme-border);
-}
-.selected-file span {
-  min-width: 0;
-  word-break: break-word;
-  overflow-wrap: anywhere;
-}
-.selected-file a {
-    color: #1d5a83;
-    text-decoration: underline;
-}
-
-/*DELETE FILE BUTTON*/
-.delete-button {
-    background: transparent;
-    border: 1px solid #ef3b32;
-    color: #ef3b32;
-    padding: 4px 10px;
-    border-radius: 4px;
-    cursor: pointer;
-}
-
-.delete-button:hover {
-    background: #ef3b32;
-    color: white;
-=======
 
 .browse-button:active {
   transform: translateY(0);
 }
+
+.browse-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.68;
+  transform: none;
+}
+
+
+/* ==========================================================================
+   SELECTED FILES
+   ========================================================================== */
+
+.selected-files {
+  width: 100%;
+  display: grid;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.selected-file {
+  width: 100%;
+  padding: 12px 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border-bottom: 1px solid var(--theme-border);
+  text-align: left;
+}
+
+.selected-file:last-child {
+  border-bottom: 0;
+}
+
+.selected-file-info {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.selected-file-info span {
+  min-width: 0;
+  color: var(--theme-text);
+  font-size: 14px;
+  font-weight: 600;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+.selected-file-info small {
+  color: var(--theme-muted);
+  font-size: 12px;
+}
+
+.selected-file-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 0 0 auto;
+}
+
+.selected-file-actions a {
+  color: var(--support-accent);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: underline;
+}
+
+.delete-button {
+  min-height: 34px;
+  padding: 0 12px;
+  color: var(--color-aegis-red);
+  background: transparent;
+  border: 1px solid var(--color-aegis-red);
+  border-radius: 4px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    color 160ms ease,
+    background-color 160ms ease;
+}
+
+.delete-button:hover {
+  color: #ffffff;
+  background: var(--color-aegis-red);
+}
+
+
+/* ==========================================================================
+   RESPONSIVE
+   ========================================================================== */
 
 @media (max-width: 760px) {
   .customer-upload-page {
@@ -324,8 +215,27 @@ html, body {
   }
 }
 
+@media (max-width: 560px) {
+  .selected-file {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .selected-file-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+}
+
+
+/* ==========================================================================
+   REDUCED MOTION
+   ========================================================================== */
+
 @media (prefers-reduced-motion: reduce) {
-  .browse-button {
+
+  .browse-button,
+  .delete-button {
     transition: none;
   }
 
@@ -333,5 +243,4 @@ html, body {
   .browse-button:active {
     transform: none;
   }
->>>>>>> c074d3d (Clean up frontend layout and responsive styling)
 }
