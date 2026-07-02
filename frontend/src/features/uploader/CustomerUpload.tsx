@@ -13,6 +13,36 @@ type SelectedFile = {
     preview: string;
 };
 
+async function runWithConcurrency<T>(
+    items: T[],
+    limit: number,
+    worker: (item: T) => Promise<void>
+) {
+    const queue = [...items];
+    const active: Promise<void>[] = [];
+
+    const runNext = async () => {
+        if (queue.length === 0) return;
+
+        const item = queue.shift()!;
+        const p = worker(item).finally(() => {
+            active.splice(active.indexOf(p), 1);
+        });
+
+        active.push(p);
+
+        if (active.length < limit) {
+            await runNext();
+        }
+    };
+
+    // start initial batch
+    const starters = Array.from({ length: limit }, runNext);
+
+    await Promise.all(starters);
+    await Promise.all(active);
+}
+
 export function CustomerUpload() {
     const { uuid } = useParams();
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -63,30 +93,30 @@ export function CustomerUpload() {
             currentFiles.filter((_, index) => index !== indexToRemove),
         );
     };
+const uploadFiles = async () => {
+    setUploading(true);
 
-    const uploadFiles = async () => {
-        setUploading(true);
+    try {
+        await runWithConcurrency(selectedFiles, 3, async (item) => {
+            setUploadStatus((s) => ({
+                ...s,
+                [item.file.name]: "uploading",
+            }));
 
-        try {
-            for (const item of selectedFiles) {
-                setUploadStatus((currentStatus) => ({
-                    ...currentStatus,
-                    [item.file.name]: "uploading",
-                }));
+            try {
+                const fileBuffer = await item.file.arrayBuffer();
+
+                const hashBuffer = await crypto.subtle.digest(
+                    "SHA-256",
+                    fileBuffer
+                );
+
+                const sha256 = Array.from(new Uint8Array(hashBuffer))
+                    .map((b) => b.toString(16).padStart(2, "0"))
+                    .join("");
 
                 const formData = new FormData();
                 formData.append("file", item.file);
-
-                const fileBuffer = await item.file.arrayBuffer();
-                const hashBuffer = await crypto.subtle.digest(
-                    "SHA-256",
-                    fileBuffer,
-                );
-
-                const hashArray = Array.from(new Uint8Array(hashBuffer));
-                const sha256 = hashArray
-                    .map((byte) => byte.toString(16).padStart(2, "0"))
-                    .join("");
 
                 const response = await fetch(`/api/uploadfile/${uuid}`, {
                     method: "POST",
@@ -98,24 +128,25 @@ export function CustomerUpload() {
                 });
 
                 if (!response.ok) {
-                    setUploadStatus((currentStatus) => ({
-                        ...currentStatus,
-                        [item.file.name]: "error",
-                    }));
-                    continue;
+                    throw new Error("upload failed");
                 }
 
-                setUploadStatus((currentStatus) => ({
-                    ...currentStatus,
+                setUploadStatus((s) => ({
+                    ...s,
                     [item.file.name]: "done",
                 }));
+            } catch {
+                setUploadStatus((s) => ({
+                    ...s,
+                    [item.file.name]: "error",
+                }));
             }
-        } finally {
-            setUploading(false);
-        }
-    };
-
-    return (
+        });
+    } finally {
+        setUploading(false);
+    }
+};
+        return (
         <section
             className="customer-upload-page"
             aria-labelledby="customer-upload-heading"
