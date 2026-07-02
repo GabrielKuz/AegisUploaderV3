@@ -108,8 +108,8 @@ def test_quikAtrbt_returns_none_for_missing_attribute(monkeypatch):
 
 
 def test_get_caseStatus_returns_pipeline_stage(monkeypatch):
-    monkeypatch.setattr(hs, "get_pipeline_stage", lambda value: "stage-1")
-    monkeypatch.setattr(hs, "get_pipeline", lambda value: "pipeline-1")
+    monkeypatch.setattr(hs, "get_pipeline_stage_id", lambda value: "stage-1")
+    monkeypatch.setattr(hs, "get_pipeline_id", lambda value: "pipeline-1")
 
     class DummyStage:
         def __init__(self, stage_id, label):
@@ -131,14 +131,14 @@ def test_get_caseStatus_returns_pipeline_stage(monkeypatch):
         lambda self, object_type="tickets": DummyResponse([DummyPipeline("pipeline-1", "stage-1", "Closed Won")]),
     )
 
-    assert hs.get_caseStatus("AIS-0000") == "Closed Won"
+    assert hs.search_pipeline("AIS-0000",1) == "Closed Won"
 
 
 def test_get_caseStatus_returns_none_when_ticket_missing(monkeypatch):
-    monkeypatch.setattr(hs, "get_pipeline_stage", lambda value: None)
-    monkeypatch.setattr(hs, "get_pipeline", lambda value: None)
+    monkeypatch.setattr(hs, "get_pipeline_stage_id", lambda value: None)
+    monkeypatch.setattr(hs, "get_pipeline_id", lambda value: None)
 
-    assert hs.get_caseStatus("AIS-0000") is None
+    assert hs.search_pipeline("AIS-0000",1) is None
 
 
 def test_get_caseITARstatus_returns_itar_value(monkeypatch):
