@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-
+import { useParams } from "react-router-dom";
 import "../../styles/SupportTheme.css";
 import "./AdminUploadPage.css";
 import { getDevToken } from "../auth/devAuth";
@@ -22,13 +22,15 @@ function getSortIcon(
 }
 
 export function AdminUploadPage() {
+  const { uuid } = useParams<{ uuid: string }>();
   const [uploads, setUploads] = useState<Upload[]>([]);
   const [sortKey, setSortKey] = useState<SortKey>("uuid");
   const [sortDirection, setSortDirection] =
     useState<SortDirection>("asc");
 
   async function loadUploads() {
-    const response = await fetch("/api/upload/", {
+    if (!uuid) {return;}
+    const response = await fetch(`/api/upload/${uuid}`, {
       headers: {
         Authorization: `Bearer ${getDevToken()}`
       }
@@ -45,7 +47,7 @@ export function AdminUploadPage() {
 
   useEffect(() => {
     loadUploads();
-  }, []);
+  }, [uuid]);
 
   function handleSort(key: SortKey) {
     if (key === sortKey) {
@@ -81,7 +83,7 @@ export function AdminUploadPage() {
     return copy;
   }, [uploads, sortKey, sortDirection]);
 
-  async function extendUpload(uuid: string) {
+  async function extendUpload(uploadUuid: string) {
     const input = prompt("Extend retention by how many days?");
 
     if (!input) return;
@@ -93,14 +95,14 @@ export function AdminUploadPage() {
       return;
     }
 
-    const response = await fetch(`/api/upload/extend/${uuid}`, {
+    const response = await fetch(`/api/upload/extend/${uploadUuid}`, {
       method: "PATCH",
       headers: {
         Authorization: `Bearer ${getDevToken()}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        uuid,
+        uuid: uploadUuid,
         days,
       }),
     });
