@@ -18,7 +18,7 @@ from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.backends import default_backend
 from fastapi import APIRouter, Depends, File, Header, HTTPException, UploadFile
 from modules import Session
-from modules.auth import getCurrentActiveUser, User, getCurrentUserNoAuthForTest
+from modules.auth import getCurrentActiveUser, User
 from modules.models import Base, UploadRecord, LinkRecord
 
 router = APIRouter()
