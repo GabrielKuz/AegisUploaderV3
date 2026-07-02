@@ -4,8 +4,13 @@ import {
   Route,
   Routes,
 } from "react-router-dom";
+
 import { LoginPage } from "./features/auth/LoginPage";
 import { RequireDevUser } from "./features/auth/RequireDevUser";
+
+import { SupportLayout } from "./layouts/SupportLayout";
+import { CustomerLayout } from "./layouts/CustomerLayout";
+
 import { SupportHomePage } from "./features/support/pages/SupportHomePage";
 import { SupportLinksPage } from "./features/support/pages/SupportLinksPage";
 import { CreateSupportLinkPage } from "./features/support/pages/CreateSupportLinkPage";
@@ -25,21 +30,13 @@ export default function App() {
       <Routes>
         <Route path="/" element={<LoginPage />} />
 
-        <Route path="/upload/:uuid" element={<CustomerUpload />} />
-
         <Route
-          path="/upload"
-          element={
-            <RequireDevUser>
-              <CustomerLayout />
-            </RequireDevUser>
-          }
+          path="/upload/:uuid"
+          element={<CustomerLayout />}
         >
           <Route index element={<CustomerUpload />} />
           <Route path="details" element={<UploadDetails />} />
         </Route>
-
-
 
         <Route
           path="/support"

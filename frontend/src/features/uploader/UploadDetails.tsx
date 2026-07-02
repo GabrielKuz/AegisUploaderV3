@@ -1,44 +1,51 @@
-import "./UploadDetails.css";
-//import { useState } from "react";
+import { useParams } from "react-router-dom";
+
 import "../../styles/SupportTheme.css";
+import "./UploadDetails.css";
 
 export function UploadDetails() {
-    //const [mode, setMode] = useState<"USA" | "EU">("USA");
-    return (
+    const { uuid } = useParams();
 
-        <main className="support-main">
+    return (
+        <section
+            className="upload-details-page"
+            aria-labelledby="upload-details-heading"
+        >
+            <header className="upload-details-header">
+                <p className="upload-details-eyebrow">
+                    Upload details
+                </p>
+
+                <h1 id="upload-details-heading">
+                    Link information
+                </h1>
+
+                <p>
+                    Review the current upload link settings and ticket details.
+                </p>
+            </header>
+
             <div className="details-panel">
                 <div className="details-row">
-                    <div className="details-label">Ticket ID</div>
-                    <div className="details-value">AES12345</div>
+                    <span className="details-label">
+                        UUID
+                    </span>
+
+                    <span className="details-value">
+                        {uuid ?? "No upload session found"}
+                    </span>
                 </div>
+
                 <div className="details-row">
-                    <div className="details-label">Is ITAR?</div>
-                    <div className="details-value">No</div>
+                    <span className="details-label">
+                        ITAR controlled
+                    </span>
+
+                    <span className="details-value">
+                        No
+                    </span>
                 </div>
-
-                {/*</div><div className="details-row">
-                    <div className="details-label">Server Location</div>
-
-                    <div className="details-toggle">
-                        <button
-                            className={mode === "USA" ? "toggle-btn active" : "toggle-btn"}
-                            onClick={() => setMode("USA")}
-                        >
-                            USA
-                        </button>
-
-                        <button
-                            className={mode === "EU" ? "toggle-btn active" : "toggle-btn"}
-                            onClick={() => setMode("EU")}
-                        >
-                            EU
-                        </button>
-                    </div>
-                </div>
-                */}
             </div>
-        </main>
+        </section>
     );
-
 }
