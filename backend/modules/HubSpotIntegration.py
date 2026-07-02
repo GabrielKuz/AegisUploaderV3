@@ -126,6 +126,12 @@ def search_pipeline(ais_id: str, operationProtocolNumber: int) -> Optional[str]:
 # Miscellaneous functions 
 #=======================================================================================================
 
+def is_caseExpirable(ais_id: str) -> Optional[bool]:
+    status = get_caseStatus(ais_id)
+    if status is None:
+        return None
+    return status.lower() == "Closed"
+
 def advancedSearchThroughHubSpot(searchTerm: str, searchTermHS_name: str):
     if not searchTerm:
         return None
