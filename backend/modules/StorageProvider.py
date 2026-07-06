@@ -1,99 +1,205 @@
-import logging
-from datetime import datetime, timedelta, timezone
-from sqlalchemy import select
+from abc import ABC, abstractmethod
+from io import BufferedReader, BytesIO
+from pathlib import Path
+from typing import BinaryIO
+from azure.core.exceptions import ResourceExistsError, ResourceNotFoundError
+from azure.storage.fileshare import ShareDirectoryClient,ShareFileClient
 
-from modules import Session
-from modules.models import LinkRecord, UploadRecord
-from modules.HubSpotIntegration import is_caseExpirable
-from modules.StorageProvider import StorageProvider  # adjust import to your structure
+class StorageProvider(ABC):
+    def __init__(self, base_path: str):
+        self.base_path = base_path
 
-logger = logging.getLogger(__name__)
+    @abstractmethod
+    def upload_file(self, file: bytes, destination_path: str) -> None:
+        pass
 
-LINK_EXPIRY_DAYS = 2
+    @abstractmethod
+    def download_file(self, source_path: str) -> bytes:
+        pass
 
+    @abstractmethod
+    def delete_file(self, file_path: str) -> None:
+        pass
 
-def expire_uploads():
-    now = datetime.now(timezone.utc)
+    @abstractmethod
+    def exists(self, file_path: str) -> bool:
+        pass
 
-    with Session() as session:
-        uploads = session.scalars(
-            select(UploadRecord)
-            .where(UploadRecord.upload_complete.is_(True))
-            .where(UploadRecord.for_deletion.is_(False))
-        ).all()
+    @abstractmethod
+    def get_file_url(self, file_path: str) -> str:
+        pass
 
-        case_cache: dict[str, bool] = {}
+    @abstractmethod
+    def get_file(self, file_path: str) -> BinaryIO:
+        pass
 
-        for upload in uploads:
-            if not upload.timestamp:
-                continue
+    @abstractmethod
+    def ls(self, directory_path: str) -> list[str]:
+        pass
 
-            if upload.timestamp + timedelta(days=upload.max_days_in_storage) <= now:
-                upload.for_deletion = True
-                continue
+    def _resolve_path(self, relative_path: str) -> Path: # prevent traversal outside the abse path
+        base = Path(self.base_path).resolve()
+        full_path = (base / relative_path).resolve()
 
-            case_id = upload.case_id
-            if case_id not in case_cache:
-                case_cache[case_id] = is_caseExpirable(case_id)
+        if not full_path.is_relative_to(base):
+            raise ValueError("Attempted to access a path outside of the base path.")
 
-            if case_cache[case_id]:
-                upload.for_deletion = True
-
-        session.commit()
-
-def expire_links():
-    cutoff = datetime.now(timezone.utc) - timedelta(days=LINK_EXPIRY_DAYS)
-
-    with Session() as session:
-        links = session.scalars(
-            select(LinkRecord).where(LinkRecord.expired.is_(False))
-        ).all()
-
-        for link in links:
-            if link.timestamp and link.timestamp <= cutoff:
-                link.expired = True
-
-        session.commit()
+        return full_path
 
 
-def delete_expired_uploads(storage: StorageProvider):
-    with Session() as session:
-        uploads = session.scalars(
-            select(UploadRecord).where(UploadRecord.for_deletion.is_(True))
-        ).all()
+class LocalStorageProvider(StorageProvider):
+    def __init__(self, base_path: str):
+        super().__init__(base_path)
 
-        for upload in uploads:
-            try:
-                if upload.blob_name:
-                    storage.delete_file(upload.blob_name)
+    def upload_file(self, file: bytes, destination_path: str) -> None:
+        destination = self._resolve_path(destination_path)
 
-                session.delete(upload)
+        destination.parent.mkdir(parents=True, exist_ok=True)
 
-            except Exception as e:
-                logger.error(
-                    f"Failed deleting file for upload {upload.id} ({upload.blob_name}): {e}"
-                )
+        with open(destination, "wb") as f:
+            f.write(file)
 
-        session.commit()
+    def download_file(self, source_path: str) -> bytes:
+        source = self._resolve_path(source_path)
 
-def delete_expired_links():
-    with Session() as session:
-        session.query(LinkRecord).filter(LinkRecord.expired.is_(True)).delete(
-            synchronize_session=False
+        try:
+            with open(source, "rb") as f:
+                return f.read()
+        except FileNotFoundError:
+            raise FileNotFoundError(f"File '{source_path}' does not exist.") from None
+
+    def delete_file(self, file_path: str) -> None:
+        path = self._resolve_path(file_path)
+
+        try:
+            path.unlink()
+        except FileNotFoundError:
+            raise FileNotFoundError(f"File '{file_path}' does not exist.") from None
+
+    def exists(self, file_path: str) -> bool:
+        return self._resolve_path(file_path).exists()
+
+    def get_file_url(self, file_path: str) -> str:
+        return str(self._resolve_path(file_path))
+
+    def get_file(self, file_path: str) -> BinaryIO:
+        try:
+            return open(self._resolve_path(file_path), "rb")
+        except FileNotFoundError:
+            raise FileNotFoundError(f"File '{file_path}' does not exist.") from None
+
+    def ls(self, directory_path: str) -> list[str]:
+        directory = self._resolve_path(directory_path)
+
+        if not directory.exists() or not directory.is_dir():
+            return []
+
+        return [str(path.relative_to(self.base_path)) for path in directory.rglob("*") if path.is_file()]
+
+class AzureFileStorageProvider(StorageProvider):
+
+
+    def __init__(self, connection_string: str, share_name: str, base_path: str = "",):
+        super().__init__(base_path)
+
+        self.connection_string = connection_string
+        self.share_name = share_name
+
+    def _get_client(self, path: str) -> ShareFileClient:
+        remote_path = str(Path(self.base_path) / path).replace("\\", "/")
+
+        return ShareFileClient.from_connection_string(
+            conn_str=self.connection_string,
+            share_name=self.share_name,
+            file_path=remote_path,
         )
-        session.commit()
 
-def expire_and_delete_old_data(storage: StorageProvider):
-    try:
-        logger.info("Starting cleanup job")
+    def _ensure_directory_exists(self, directory: str) -> None:
+        if directory in ("", "."):
+            return
 
-        expire_uploads()
-        expire_links()
+        current = ""
 
-        delete_expired_uploads(storage)
-        delete_expired_links()
+        for part in directory.split("/"):
+            current = f"{current}/{part}" if current else part
 
-        logger.info("Cleanup completed successfully")
+            directory_client = ShareDirectoryClient.from_connection_string(
+                conn_str=self.connection_string,
+                share_name=self.share_name,
+                directory_path=current,
+            )
 
-    except Exception as e:
-        logger.exception(f"Cleanup job failed: {e}")
+            try:
+                directory_client.create_directory()
+            except ResourceExistsError:
+                pass
+
+    def upload_file(self, file: bytes, destination_path: str) -> None:
+        directory = str(Path(self.base_path) / Path(destination_path).parent).replace("\\", "/")
+
+        self._ensure_directory_exists(directory)
+
+        client = self._get_client(destination_path)
+
+        client.upload_file(file)
+
+    def download_file(self, source_path: str) -> bytes:
+        client = self._get_client(source_path)
+
+        try:
+            return client.download_file().readall()
+        except ResourceNotFoundError:
+            raise FileNotFoundError(f"File '{source_path}' does not exist.") from None
+
+    def delete_file(self, file_path: str) -> None:
+        client = self._get_client(file_path)
+
+        try:
+            client.delete_file()
+        except ResourceNotFoundError:
+            raise FileNotFoundError(f"File '{file_path}' does not exist.") from None
+
+    def exists(self, file_path: str) -> bool:
+        try:
+            self._get_client(file_path).get_file_properties()
+            return True
+        except ResourceNotFoundError:
+            return False
+
+    def get_file_url(self, file_path: str) -> str:
+        return self._get_client(file_path).url
+
+    def get_file(self, file_path: str) -> BinaryIO:
+        client = self._get_client(file_path)
+
+        try:
+            return BytesIO(client.download_file().readall())
+        except ResourceNotFoundError:
+            raise FileNotFoundError(f"File '{file_path}' does not exist.") from None
+
+    def ls(self, directory_path: str) -> list[str]:
+        directory = str(Path(self.base_path) / directory_path).replace("\\", "/")
+
+        directory_client = ShareDirectoryClient.from_connection_string(
+            conn_str=self.connection_string,
+            share_name=self.share_name,
+            directory_path=directory,
+        )
+
+        files: list[str] = []
+
+        def recurse(client: ShareDirectoryClient,relative_path: str) -> None:
+            for item in client.list_directories_and_files():
+                path = (f"{relative_path}/{item['name']}" if relative_path else item["name"])
+
+                if item["is_directory"]:
+                    recurse(client.get_subdirectory_client(item["name"]), path)
+                else:
+                    files.append(path)
+
+        try:
+            recurse(directory_client, "")
+        except ResourceNotFoundError:
+            return []
+
+        return files
