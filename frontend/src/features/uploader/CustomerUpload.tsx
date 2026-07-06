@@ -1,77 +1,215 @@
-import "./CustomerUpload.css";
-import "../../styles/SupportTheme.css";
-import { useRef, useState } from "react";
+import {
+    useRef,
+    useState,
+    type ChangeEvent,
+} from "react";
 import { useParams } from "react-router-dom";
+
+import "../../styles/SupportTheme.css";
+import "./CustomerUpload.css";
+
+type SelectedFile = {
+    file: File;
+    preview: string;
+};
+
+async function runWithConcurrency<T>(
+    items: T[],
+    limit: number,
+    worker: (item: T) => Promise<void>
+) {
+    const queue = [...items];
+    const active: Promise<void>[] = [];
+
+    const runNext = async () => {
+        if (queue.length === 0) return;
+
+        const item = queue.shift()!;
+        const p = worker(item).finally(() => {
+            active.splice(active.indexOf(p), 1);
+        });
+
+        active.push(p);
+
+        if (active.length < limit) {
+            await runNext();
+        }
+    };
+
+    // start initial batch
+    const starters = Array.from({ length: limit }, runNext);
+
+    await Promise.all(starters);
+    await Promise.all(active);
+}
 
 export function CustomerUpload() {
     const { uuid } = useParams();
     const fileInputRef = useRef<HTMLInputElement>(null);
 
+    const [selectedFiles, setSelectedFiles] = useState<SelectedFile[]>([]);
+    const [uploading, setUploading] = useState(false);
+    const [uploadStatus, setUploadStatus] = useState<Record<string, string>>({});
+
+    if (!uuid) {
+        return <p>Invalid upload link.</p>;
+    }
+
     const handleBrowseClick = () => {
         fileInputRef.current?.click();
     };
 
-    type SelectedFile = {
-        file: File;
-        preview: string;
-    };
-
-    const [selectedFiles, setSelectedFiles] = useState<SelectedFile[]>([]);
-
-    const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileChange = (
+        event: ChangeEvent<HTMLInputElement>,
+    ) => {
         const files = event.target.files;
-        console.log("selectedFiles:", selectedFiles);
 
-        if (!files) return;
+        if (!files) {
+            return;
+        }
 
-        const newFiles = Array.from(files).map(file => ({
+        const newFiles = Array.from(files).map((file) => ({
             file,
-            preview: URL.createObjectURL(file)
+            preview: URL.createObjectURL(file),
         }));
 
-        setSelectedFiles(prev => {
-            const existingNames = new Set(prev.map(f => f.file.name));
-            const filteredNew = newFiles.filter(
-                f => !existingNames.has(f.file.name)
+        setSelectedFiles((currentFiles) => {
+            const existingNames = new Set(
+                currentFiles.map((item) => item.file.name),
             );
-            return [...prev, ...filteredNew];
+
+            const uniqueNewFiles = newFiles.filter(
+                (item) => !existingNames.has(item.file.name),
+            );
+
+            return [...currentFiles, ...uniqueNewFiles];
         });
+
+        event.target.value = "";
     };
 
     const removeFile = (indexToRemove: number) => {
-        setSelectedFiles(prev => prev.filter((_, index) => index !== indexToRemove));
+        setSelectedFiles((currentFiles) =>
+            currentFiles.filter((_, index) => index !== indexToRemove),
+        );
     };
+const uploadFiles = async () => {
+    setUploading(true);
 
-    return (
-        <main className="support-main">
-            <div className="upload-content">
-                {uuid && (
-                    <p className="note">
-                        Upload link ID: {uuid}
-                    </p>
-                )}
+    try {
+        await runWithConcurrency(selectedFiles, 3, async (item) => {
+            setUploadStatus((s) => ({
+                ...s,
+                [item.file.name]: "uploading",
+            }));
 
-                <p className="note">
-                    <b>Note:</b> This link is temporary and will cease
-                    working after (insert time here). Please ensure that
-                    you upload your files by the given time remaining.
+            try {
+                const fileBuffer = await item.file.arrayBuffer();
+
+                const hashBuffer = await crypto.subtle.digest(
+                    "SHA-256",
+                    fileBuffer
+                );
+
+                const sha256 = Array.from(new Uint8Array(hashBuffer))
+                    .map((b) => b.toString(16).padStart(2, "0"))
+                    .join("");
+
+                const formData = new FormData();
+                formData.append("file", item.file);
+
+                const response = await fetch(`/api/uploadfile/${uuid}`, {
+                    method: "POST",
+                    headers: {
+                        Region: "US",
+                        "X-File-Hash": sha256,
+                    },
+                    body: formData,
+                });
+
+                if (!response.ok) {
+                    throw new Error("upload failed");
+                }
+
+                setUploadStatus((s) => ({
+                    ...s,
+                    [item.file.name]: "done",
+                }));
+            } catch {
+                setUploadStatus((s) => ({
+                    ...s,
+                    [item.file.name]: "error",
+                }));
+            }
+        });
+    } finally {
+        setUploading(false);
+    }
+};
+        return (
+        <section
+            className="customer-upload-page"
+            aria-labelledby="customer-upload-heading"
+        >
+            <div className="upload-panel">
+                <p className="upload-eyebrow">
+                    Secure upload
+                </p>
+
+                <h1 id="customer-upload-heading">
+                    Upload your files
+                </h1>
+
+                <p className="upload-link-id">
+                    Upload link ID: {uuid}
+                </p>
+
+                <p className="upload-note">
+                    This link is temporary and will stop working after the
+                    assigned expiration time. Please upload your files before
+                    the link expires.
                 </p>
 
                 <div className="upload-box">
-                    <p>Choose file(s) or drag and drop here</p>
-                    <button className="browse-button" onClick={handleBrowseClick}>
-                        Browse Files
+                    <p>Choose files or drag and drop here.</p>
+
+                    <button
+                        className="browse-button"
+                        type="button"
+                        onClick={handleBrowseClick}
+                    >
+                        Browse files
                     </button>
+
+                    <input
+                        ref={fileInputRef}
+                        type="file"
+                        multiple
+                        className="file-input"
+                        onChange={handleFileChange}
+                    />
 
                     {selectedFiles.length > 0 && (
                         <div className="selected-files">
-
-
                             {selectedFiles.map((item, index) => (
-                                <div key={index} className="selected-file">
-                                    <span>{item.file.name}</span>
+                                <div
+                                    key={`${item.file.name}-${index}`}
+                                    className="selected-file"
+                                >
+                                    <div className="selected-file-info">
+                                        <span>{item.file.name}</span>
 
-                                    <div style={{ display: "flex", gap: "10px" }}>
+                                        <small>
+                                            {uploadStatus[item.file.name] === "uploading" &&
+                                                "Uploading..."}
+                                            {uploadStatus[item.file.name] === "done" &&
+                                                "Uploaded"}
+                                            {uploadStatus[item.file.name] === "error" &&
+                                                "Failed"}
+                                        </small>
+                                    </div>
+
+                                    <div className="selected-file-actions">
                                         <a
                                             href={item.preview}
                                             target="_blank"
@@ -81,8 +219,9 @@ export function CustomerUpload() {
                                         </a>
 
                                         <button
-                                            onClick={() => removeFile(index)}
                                             className="delete-button"
+                                            type="button"
+                                            onClick={() => removeFile(index)}
                                         >
                                             Delete
                                         </button>
@@ -91,23 +230,19 @@ export function CustomerUpload() {
                             ))}
                         </div>
                     )}
-                    <input
-                        type="file"
-                        ref={fileInputRef}
-                        multiple style={{ display: "none" }}
-                        onChange={handleFileChange}
-                    />
 
                     {selectedFiles.length > 0 && (
-                        <button className="browse-button">
-                            Upload Files
+                        <button
+                            className="browse-button"
+                            type="button"
+                            onClick={uploadFiles}
+                            disabled={uploading}
+                        >
+                            {uploading ? "Uploading..." : "Upload files"}
                         </button>
                     )}
                 </div>
-
             </div>
-
-        </main>
+        </section>
     );
-
 }

@@ -1,7 +1,7 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { getDevUser, signOutDevUser } from "../features/auth/devAuth";
 import { ThemeToggle } from "../theme/ThemeToggle";
-import "./Layout.css";
+import "./AppLayout.css";
 
 export function SupportLayout() {
   const navigate = useNavigate();
@@ -22,9 +22,7 @@ export function SupportLayout() {
             className="logo"
           />
 
-          <div className="divide">
-            |
-          </div>
+          <div className="divide" aria-hidden="true" />
 
           <div>
             <span className="product-name">
@@ -66,6 +64,7 @@ export function SupportLayout() {
 
           <NavLink
             to="/support/links"
+            end
             className={({ isActive }) =>
               isActive
                 ? "nav-link nav-link-active"

@@ -1,6 +1,7 @@
 import { useLocation, useNavigate } from "react-router-dom";
 import { ThemeToggle } from "../../theme/ThemeToggle";
 import { signInDevUser } from "./devAuth";
+
 import "./LoginPage.css";
 
 /**
@@ -104,7 +105,7 @@ export function LoginPage() {
   const handleSsoLogin = () => {
     const destination = getSafeDestination(location.state);
 
-    const role = destination.startsWith("/upload")
+    const role = destination.startsWith("/upload/")
       ? "customer"
       : "support";
 

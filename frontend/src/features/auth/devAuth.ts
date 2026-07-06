@@ -3,6 +3,7 @@ export type DevUser = {
   name: string;
   email: string;
   role: "support" | "customer" | "admin";
+  token: string;
 };
 
 const DEV_USER_KEY = "aegis-dev-user";
@@ -16,18 +17,21 @@ export function signInDevUser(
     name: "Support User",
     email: "support.user@aegissoftware.com",
     role: "support",
+    token: "dev-support-token",
     },
     customer: {
       id: "dev-customer-user",
       name: "Customer User",
       email: "customer.user@example.com",
       role: "customer",
+      token: "dev-customer-token",
     },
     admin: {
       id: "dev-admin-user",
       name: "Admin User",
       email: "admin.user@aegissoftware.com",
       role: "admin",
+      token: "dev-admin-token",
     },
   };
 
@@ -58,4 +62,9 @@ export function getDevUser(): DevUser | null {
 
 export function signOutDevUser(): void {
   window.localStorage.removeItem(DEV_USER_KEY);
+}
+
+export function getDevToken(): string | null {
+  const user = getDevUser();
+  return user?.token ?? null;
 }

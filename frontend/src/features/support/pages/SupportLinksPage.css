@@ -129,8 +129,14 @@
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
+  cursor: pointer;
+  user-select: none;
+  transition: color 0.15s ease;
 }
 
+.links-table th:hover {
+  color: var(--theme-text);
+}
 .links-table td {
   color: var(--theme-text-secondary);
   font-size: 14px;
