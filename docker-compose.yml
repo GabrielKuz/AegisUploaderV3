@@ -43,12 +43,6 @@ services:
       - no-new-privileges:true
 
     depends_on:
-      azurite-us:
-        condition: service_healthy
-      azurite-eu:
-        condition: service_healthy
-      azurite-itar:
-        condition: service_healthy
       postgres:
         condition: service_healthy
 
