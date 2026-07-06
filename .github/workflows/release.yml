@@ -76,10 +76,10 @@ jobs:
         env:
           COSIGN_EXPERIMENTAL: "1"
         run: |
-          DIGEST="${{ steps.backend-build.outputs.digest }}"
-          DIGEST=$(echo "$DIGEST" | tr -d '\n' | tr -d ' ')
-          IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/backend@$DIGEST"
-          cosign sign --yes "$IMAGE"
+          IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/backend:${{ github.ref_name }}"
+          DIGEST=$(docker buildx imagetools inspect "$IMAGE" --format '{{.Digest}}')
+          IMAGE_REF="${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/backend@$DIGEST"
+          cosign sign --yes "$IMAGE_REF"
 
       - name: Nginx metadata
         id: nginx-meta
@@ -116,10 +116,10 @@ jobs:
 
       - name: Sign nginx image
         run: |
-          DIGEST="${{ steps.nginx-build.outputs.digest }}"
-          DIGEST=$(echo "$DIGEST" | tr -d '\n' | tr -d ' ')
-          IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/nginx@$DIGEST"
-          cosign sign --yes "$IMAGE"
+          IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/nginx:${{ github.ref_name }}"
+          DIGEST=$(docker buildx imagetools inspect "$IMAGE" --format '{{.Digest}}')
+          IMAGE_REF="${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/nginx@$DIGEST"
+          cosign sign --yes "$IMAGE_REF"
 
       - name: Create release assets
         run: |
