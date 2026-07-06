@@ -11,7 +11,7 @@ from sqlalchemy import Column, String, Integer, DateTime, Boolean, Text, JSON
 from sqlalchemy import or_
 from modules.StorageProvider import StorageProvider, AzureFileStorageProvider, LocalStorageProvider
 from warnings import warn, deprecated
-from modules import usFileStorageProvider, euFileStorageProvider, itarFileStorageProvider
+from modules import usFileStorageProvider, euFileStorageProvider, itarFileStorageProvider, STORAGE_ROOT
 from azure.core.exceptions import ResourceExistsError
 from azure.storage.blob import BlobSasPermissions, BlobServiceClient, generate_blob_sas
 from cryptography.hazmat.primitives import padding
