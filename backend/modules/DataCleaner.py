@@ -6,7 +6,7 @@ from modules import Session
 from modules.models import LinkRecord, UploadRecord
 from modules.HubSpotIntegration import is_caseExpirable
 from modules.StorageProvider import StorageProvider  # adjust import to your structure
-
+from modules import usFileStorageProvider, euFileStorageProvider, itarFileStorageProvider
 logger = logging.getLogger(__name__)
 
 LINK_EXPIRY_DAYS = 2
@@ -84,13 +84,14 @@ def _deleteExpiredLinks():
 
 
 
-def expireAndDeleteOldData(storage: StorageProvider):
+def expireAndDeleteOldData():
     try:
         logger.info("Starting cleanup job")
 
         _expireUploads()
         _expireLinks()
-        _deleteExpiredUploads(storage)
+        for storage in [usFileStorageProvider, euFileStorageProvider, itarFileStorageProvider]:
+            _deleteExpiredUploads(storage)
         _deleteExpiredLinks()
 
         logger.info("Cleanup completed successfully")

@@ -11,7 +11,7 @@ from sqlalchemy import Column, String, Integer, DateTime, Boolean, Text, JSON
 from sqlalchemy import or_
 from modules.StorageProvider import StorageProvider, AzureFileStorageProvider, LocalStorageProvider
 from warnings import warn, deprecated
-
+from modules import usFileStorageProvider, euFileStorageProvider, itarFileStorageProvider
 from azure.core.exceptions import ResourceExistsError
 from azure.storage.blob import BlobSasPermissions, BlobServiceClient, generate_blob_sas
 from cryptography.hazmat.primitives import padding
@@ -83,10 +83,6 @@ if not ITAR_CONNECTION_STRING:
 #         container.create_container() 
 #     except ResourceExistsError:
 #         pass
-STORAGE_ROOT = os.getenv("STORAGE_ROOT", ".storage") # Default to .storage if not set
-usFileStorageProvider = LocalStorageProvider(base_path=STORAGE_ROOT + "/us")
-euFileStorageProvider = LocalStorageProvider(base_path=STORAGE_ROOT + "/eu")
-itarFileStorageProvider = LocalStorageProvider(base_path=STORAGE_ROOT + "/itar")
 
 @router.post("/uploadfile/{link_uuid}")
 async def create_upload_file(
