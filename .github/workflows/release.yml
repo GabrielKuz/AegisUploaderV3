@@ -76,7 +76,10 @@ jobs:
         env:
           COSIGN_EXPERIMENTAL: "1"
         run: |
-          cosign sign --yes ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/backend@${{ steps.backend-build.outputs.digest }}
+          DIGEST="${{ steps.backend-build.outputs.digest }}"
+          DIGEST=$(echo "$DIGEST" | tr -d '\n' | tr -d ' ')
+          IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/backend@$DIGEST"
+          cosign sign --yes "$IMAGE"
 
       - name: Nginx metadata
         id: nginx-meta
@@ -113,7 +116,10 @@ jobs:
 
       - name: Sign nginx image
         run: |
-          cosign sign --yes ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/nginx@${{ steps.nginx-build.outputs.digest }}
+          DIGEST="${{ steps.nginx-build.outputs.digest }}"
+          DIGEST=$(echo "$DIGEST" | tr -d '\n' | tr -d ' ')
+          IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/nginx@$DIGEST"
+          cosign sign --yes "$IMAGE"
 
       - name: Create release assets
         run: |
