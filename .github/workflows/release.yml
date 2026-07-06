@@ -40,11 +40,15 @@ jobs:
       - name: Install Cosign
         uses: sigstore/cosign-installer@v3
 
+      - name: Compute lowercase repo
+        id: repo
+        run: echo "lower=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
+
       - name: Backend metadata
         id: backend-meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/backend
+          images: ${{ env.REGISTRY }}/${{ steps.repo.outputs.lower }}/backend
           tags: |
             type=ref,event=tag
             type=semver,pattern={{version}}
@@ -68,24 +72,20 @@ jobs:
       - name: Attest backend image
         uses: actions/attest-build-provenance@v2
         with:
-          subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/backend
+          subject-name: ${{ env.REGISTRY }}/${{ steps.repo.outputs.lower }}/backend
           subject-digest: ${{ steps.backend-build.outputs.digest }}
           push-to-registry: true
 
       - name: Sign backend image
-        env:
-          COSIGN_EXPERIMENTAL: "1"
         run: |
-          IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/backend:${{ github.ref_name }}"
-          DIGEST=$(docker buildx imagetools inspect "$IMAGE" --format '{{.Digest}}')
-          IMAGE_REF="${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/backend@$DIGEST"
-          cosign sign --yes "$IMAGE_REF"
+          IMAGE="${{ env.REGISTRY }}/${{ steps.repo.outputs.lower }}/backend@${{ steps.backend-build.outputs.digest }}"
+          cosign sign --yes "$IMAGE"
 
       - name: Nginx metadata
         id: nginx-meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/nginx
+          images: ${{ env.REGISTRY }}/${{ steps.repo.outputs.lower }}/nginx
           tags: |
             type=ref,event=tag
             type=semver,pattern={{version}}
@@ -110,22 +110,20 @@ jobs:
       - name: Attest nginx image
         uses: actions/attest-build-provenance@v2
         with:
-          subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/nginx
+          subject-name: ${{ env.REGISTRY }}/${{ steps.repo.outputs.lower }}/nginx
           subject-digest: ${{ steps.nginx-build.outputs.digest }}
           push-to-registry: true
 
       - name: Sign nginx image
         run: |
-          IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/nginx:${{ github.ref_name }}"
-          DIGEST=$(docker buildx imagetools inspect "$IMAGE" --format '{{.Digest}}')
-          IMAGE_REF="${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/nginx@$DIGEST"
-          cosign sign --yes "$IMAGE_REF"
+          IMAGE="${{ env.REGISTRY }}/${{ steps.repo.outputs.lower }}/nginx@${{ steps.nginx-build.outputs.digest }}"
+          cosign sign --yes "$IMAGE"
 
       - name: Create release assets
         run: |
           mkdir -p dist
-          echo "backend=${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/backend@${{ steps.backend-build.outputs.digest }}" > dist/images.txt
-          echo "nginx=${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/nginx@${{ steps.nginx-build.outputs.digest }}" >> dist/images.txt
+          echo "backend=${{ env.REGISTRY }}/${{ steps.repo.outputs.lower }}/backend@${{ steps.backend-build.outputs.digest }}" > dist/images.txt
+          echo "nginx=${{ env.REGISTRY }}/${{ steps.repo.outputs.lower }}/nginx@${{ steps.nginx-build.outputs.digest }}" >> dist/images.txt
           echo "${{ github.ref_name }}" > dist/version.txt
 
       - name: Upload release artifacts
