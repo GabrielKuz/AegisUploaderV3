@@ -1,12 +1,11 @@
 /* ==========================================================================
-   SUPPORT PAGE
+   SUPPORT HOME PAGE
    ========================================================================== */
 
 .support-home {
   width: 100%;
-  max-width: 1130px;
+  max-width: 1180px;
   margin-inline: auto;
-  padding: 54px 46px 72px;
   color: var(--theme-text);
 }
 
@@ -17,13 +16,13 @@
 
 .support-page-heading {
   max-width: 760px;
-  margin-bottom: 56px;
+  margin-bottom: clamp(32px, 5vw, 56px);
 }
 
 .support-page-eyebrow {
   margin: 0 0 14px;
   color: var(--support-accent);
-  font-family: var(--font-mono, "Geist Mono", monospace);
+  font-family: var(--font-mono, monospace);
   font-size: 12px;
   font-weight: 600;
   line-height: 1.4;
@@ -34,8 +33,8 @@
 .support-page-heading h1 {
   margin: 0;
   color: var(--theme-text);
-  font-family: "Epilogue", sans-serif;
-  font-size: clamp(48px, 5vw, 68px);
+  font-family: var(--font-heading);
+  font-size: clamp(44px, 6vw, 68px);
   font-weight: 400;
   line-height: 1.02;
   letter-spacing: -0.065em;
@@ -57,7 +56,7 @@
 .support-home-actions {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 40px;
+  gap: clamp(22px, 3vw, 40px);
 }
 
 
@@ -67,23 +66,18 @@
 
 .link-action-card {
   position: relative;
-  min-height: 365px;
-  padding: 36px 34px 32px;
+  min-height: 340px;
+  padding: clamp(28px, 3vw, 36px);
   display: flex;
   flex-direction: column;
-  overflow: hidden;
-
   color: var(--theme-text);
   text-decoration: none;
-
   background: var(--support-card-background);
-  border: 1px solid var(--support-accent-focus);
+  border: 1px solid var(--support-card-border);
   border-radius: 8px;
   box-shadow: var(--support-card-shadow);
   backdrop-filter: blur(16px);
-
   transition:
-    color 220ms ease,
     transform 220ms ease,
     box-shadow 220ms ease,
     border-color 220ms ease,
@@ -97,11 +91,10 @@
 }
 
 .link-action-card:focus-visible {
-  outline: 3px solid var(--support-accent-focus);
+  outline: 3px solid var(--support-focus-ring);
   outline-offset: 5px;
 }
 
-/* Decorative accent line positioned at the top of each card. */
 .link-action-accent {
   position: absolute;
   top: 0;
@@ -111,11 +104,6 @@
   background: var(--support-accent);
 }
 
-
-/* ==========================================================================
-   CARD HEADER
-   ========================================================================== */
-
 .link-action-top {
   display: flex;
   align-items: center;
@@ -124,11 +112,10 @@
 
 .link-action-number {
   color: var(--support-accent);
-  font-family: var(--font-mono, "Geist Mono", monospace);
+  font-family: var(--font-mono, monospace);
   font-size: 25px;
   font-weight: 500;
   line-height: 1;
-  letter-spacing: -0.02em;
 }
 
 .link-action-icon {
@@ -137,11 +124,9 @@
   display: grid;
   place-items: center;
   flex: 0 0 auto;
-
   color: var(--support-accent);
   background: var(--support-accent-soft);
   border-radius: 50%;
-
   transition:
     color 220ms ease,
     background-color 220ms ease,
@@ -149,7 +134,7 @@
 }
 
 .link-action-card:hover .link-action-icon {
-  color: #fff;
+  color: #ffffff;
   background: var(--support-accent);
   transform: translateY(-2px);
 }
@@ -161,11 +146,6 @@
   background: var(--support-divider);
 }
 
-
-/* ==========================================================================
-   CARD CONTENT
-   ========================================================================== */
-
 .link-action-content {
   max-width: 420px;
   margin-top: 42px;
@@ -174,8 +154,8 @@
 .link-action-content h2 {
   margin: 0 0 16px;
   color: var(--theme-text);
-  font-family: "Epilogue", sans-serif;
-  font-size: clamp(27px, 2.2vw, 34px);
+  font-family: var(--font-heading);
+  font-size: clamp(27px, 2.4vw, 34px);
   font-weight: 400;
   line-height: 1.14;
   letter-spacing: -0.055em;
@@ -188,11 +168,6 @@
   line-height: 1.65;
 }
 
-
-/* ==========================================================================
-   CARD FOOTER
-   ========================================================================== */
-
 .link-action-footer {
   position: relative;
   z-index: 2;
@@ -201,7 +176,6 @@
   display: flex;
   align-items: center;
   gap: 14px;
-
   color: var(--support-accent);
   font-size: 15px;
   font-weight: 600;
@@ -215,11 +189,6 @@
   transform: translateX(5px);
 }
 
-
-/* ==========================================================================
-   DECORATIVE DOT PATTERN
-   ========================================================================== */
-
 .link-action-dots {
   position: absolute;
   right: 26px;
@@ -228,13 +197,11 @@
   height: 52px;
   pointer-events: none;
   opacity: 0.55;
-
   background-image:
     radial-gradient(circle,
       var(--support-dot-color) 1.2px,
       transparent 1.4px);
   background-size: 13px 13px;
-
   mask-image:
     linear-gradient(to left,
       rgba(0, 0, 0, 1),
@@ -242,69 +209,27 @@
 }
 
 
-
-
 /* ==========================================================================
-   MEDIUM SCREENS
+   RESPONSIVE
    ========================================================================== */
 
-@media (max-width: 1000px) {
-  .support-home {
-    padding-inline: 34px;
-  }
-
-  .support-home-actions {
-    gap: 24px;
-  }
-
-  .link-action-card {
-    min-height: 350px;
-  }
-}
-
-
-/* ==========================================================================
-   TABLET AND MOBILE
-   ========================================================================== */
-
-@media (max-width: 760px) {
-  .support-home {
-    padding: 40px 22px 54px;
-  }
-
-  .support-page-heading {
-    margin-bottom: 36px;
-  }
-
-  .support-page-heading h1 {
-    font-size: clamp(42px, 11vw, 56px);
-  }
-
+@media (max-width: 900px) {
   .support-home-actions {
     grid-template-columns: 1fr;
   }
 
   .link-action-card {
-    min-height: 320px;
+    min-height: 280px;
   }
 }
 
-
-/* ==========================================================================
-   SMALL MOBILE
-   ========================================================================== */
-
 @media (max-width: 480px) {
-  .support-home {
-    padding-inline: 16px;
-  }
-
   .support-page-description {
     font-size: 15px;
   }
 
   .link-action-card {
-    min-height: 300px;
+    min-height: 280px;
     padding: 28px 24px 26px;
   }
 
@@ -334,11 +259,6 @@
     width: 135px;
   }
 }
-
-
-/* ==========================================================================
-   REDUCED MOTION
-   ========================================================================== */
 
 @media (prefers-reduced-motion: reduce) {
 
