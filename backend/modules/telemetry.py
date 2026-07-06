@@ -9,7 +9,7 @@ from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 
 def setup_telemetry(app):
     resource = Resource.create({
-        "service.name": "fastapi-demo",
+        "service.name": "aegis-backend",
         "service.version": "1.0.0",
     })
 

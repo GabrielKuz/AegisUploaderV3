@@ -8,6 +8,7 @@ from modules import Session, engine
 from typing import Annotated
 from warnings import deprecated
 from sqlalchemy import text
+from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from modules.telemetry import setup_telemetry
 from contextlib import asynccontextmanager
 import logging
@@ -24,7 +25,7 @@ logging.basicConfig(level=logging.INFO) # setup logging server. TODO: change to 
 app = FastAPI(title="Aegis Backend", root_path="/api")
 app.include_router(uploader_router)
 app.include_router(deletionRequest_router)
-
+FastAPIInstrumentor.instrument_app(app)
 setup_telemetry(app)  # init opentelemetry
 @app.post("/links/create/")
 def create_link(link_request: LinkRequest, current_user: Annotated[User, Depends(getCurrentActiveUser)]):  # TODO: Change to getCurrentActiveUser after testing
