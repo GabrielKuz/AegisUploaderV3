@@ -16,7 +16,7 @@ RUN groupadd --system app \
     && chown app:app /app
 
 # Copy dependency files first for better layer caching
-COPY --chown=app:app pyproject.toml uv.lock ./
+COPY --chown=app:app pyproject.toml uv.lock startup.sh ./
 
 # Switch to the non-root user
 USER app
@@ -34,4 +34,4 @@ RUN chmod +x /app/startup.sh
 EXPOSE 8000
 
 # Run the startup script
-ENTRYPOINT ["/app/startup.sh"]
+CMD ["/bin/sh", "/app/startup.sh"]
