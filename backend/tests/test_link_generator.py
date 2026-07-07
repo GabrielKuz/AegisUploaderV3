@@ -203,7 +203,7 @@ def test_updating_link_case_id_propagates_to_uploads():
             blob_name="report.txt",
             content_type="text/plain",
             sha256="1234567890abcdef",
-            date_uploaded=datetime.now(),
+            date_uploaded=datetime.now() - timedelta(days=1),
             itar_status=False,
             combined_file_size=42,
             timestamp=datetime.now(),
@@ -216,7 +216,9 @@ def test_updating_link_case_id_propagates_to_uploads():
         session.add_all([link, upload])
         session.commit()
 
+        uuid1 = str(uuid.uuid4())
         link.update_and_propagate(session, case_id="AIS-999")
+        link.update_and_propagate(session, timestamp=datetime.now() + timedelta(days=1))
 
         session.expire_all()
         refreshed_link = session.get(LinkRecord, link.uuid)
@@ -227,3 +229,7 @@ def test_updating_link_case_id_propagates_to_uploads():
         assert refreshed_link.case_id == "AIS-999"
         assert refreshed_upload.case_id == "AIS-999"
         assert refreshed_link.case_id == refreshed_upload.case_id
+        # assert refreshed_link.uuid == refreshed_upload.link_uuid
+        assert refreshed_link.timestamp == refreshed_upload.timestamp
+
+        # TODO make sure that attributes with different names (link_uuid vs uuid, itar vs itar_status) are also propagated correctly

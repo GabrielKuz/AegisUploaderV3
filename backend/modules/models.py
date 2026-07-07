@@ -52,6 +52,7 @@ class LinkRecord(Base): # "LinkDB".links table
     expired = Column(Boolean)
 
     SHARED_FIELD_MAP = {
+        "uuid": "link_uuid",
         "case_id": "case_id",
         "timestamp": "timestamp",
         "itar": "itar_status",
