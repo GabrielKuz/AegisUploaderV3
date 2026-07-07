@@ -25,12 +25,12 @@ else:
     JWKS_URL = OPENID_CONFIG["jwks_uri"]
     ISSUER = OPENID_CONFIG["issuer"]
 
-if not CLIENT_ID:
-    raise ValueError("CLIENT_ID environment variable is required for Entra ID SSO")
+    if not CLIENT_ID:
+        raise ValueError("CLIENT_ID environment variable is required for Entra ID SSO")
 
-jwks_client = PyJWKClient(JWKS_URL)
+    jwks_client = PyJWKClient(JWKS_URL)
 
-scheme = OAuth2PasswordBearer(tokenUrl="token")
+    scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 class Token(BaseModel): # structure of a token response from entra
     access_token: str = Field(..., description="The access token issued by Entra ID")
@@ -46,6 +46,7 @@ class User(BaseModel): # structure of a user object
 async def getCurrentUser(token: Annotated[str, Depends(scheme)]): # get the current user from the token
     if os.getenv("TESTING", "false").lower() == "true":
         return User(username="testuser", disabled=False)
+    
     credentialsException = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
