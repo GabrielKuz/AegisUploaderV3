@@ -78,7 +78,8 @@ def store_link(link_request: LinkRequest, uuid_str: str, current_user: User):
         # print("FULLNAME:", LinkRecord.__table__.fullname)
 
         session.add(record) # add new reccord to session
-        session.commit() # commit session to db so it persists 
+        session.commit() # commit session to db so it persists
+        record.propagate_shared_fields(session, field_names=["case_id", "timestamp", "itar", "users_with_access"])
 
 @deprecated("This doesn't work in all cases. alternative will be merged into main branch soon.")
 def expire_old_links(expiry_days: int = 2) -> bool:
