@@ -21,7 +21,6 @@ class UploadRecord(Base): # "LinkDB".uploads table
 
     parent: Mapped["LinkRecord"] = relationship(
         back_populates="child",
-        foreign_keys=[link_uuid],
         primaryjoin="UploadRecord.link_uuid == LinkRecord.uuid",
     )
     upload_id = Column(UUID(as_uuid=False), primary_key=True, default=lambda: str(uuid.uuid4()))
@@ -46,11 +45,7 @@ class LinkRecord(Base): # "LinkDB".links table
     timestamp: Mapped[object | None] = mapped_column(DateTime)
     itar: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     users_with_access: Mapped[object | None] = mapped_column(JSON)
-    child: Mapped[list["UploadRecord"]] = relationship(
-        back_populates="parent",
-        foreign_keys="[UploadRecord.link_uuid]",
-        primaryjoin="UploadRecord.link_uuid == LinkRecord.uuid",
-    )
+    child: Mapped[list["UploadRecord"]] = relationship(back_populates="parent")
     link = Column(String)
     creator = Column(String) # From entra token
     expiration_date = Column(DateTime, nullable=False)# 48 hours from creation

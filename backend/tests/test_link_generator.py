@@ -180,3 +180,50 @@ def test_get_files_for_link():
         item["filename"] == "report.txt" and item["size"] == 42
         for item in data
     )
+
+
+def test_updating_link_case_id_propagates_to_uploads():
+    with Session() as session:
+        link = LinkRecord(
+            uuid=str(uuid.uuid4()),
+            link="https://example.test/link",
+            case_id="AIS-100",
+            itar=False,
+            creator=current_user.username,
+            timestamp=datetime.now(),
+            expiration_date=datetime.now() + timedelta(days=2),
+            users_with_access=[current_user.username],
+            expired=False,
+        )
+        upload = UploadRecord(
+            upload_id=uuid.uuid4(),
+            link_uuid=link.uuid,
+            case_id="old-case",
+            original_filename="report.txt",
+            blob_name="report.txt",
+            content_type="text/plain",
+            sha256="1234567890abcdef",
+            date_uploaded=datetime.now(),
+            itar_status=False,
+            combined_file_size=42,
+            timestamp=datetime.now(),
+            max_days_in_storage=30,
+            original_link=f"http://example.test/{link.uuid}",
+            sas_retrieval_link=None,
+            upload_complete=True,
+            users_with_access=[current_user.username],
+        )
+        session.add_all([link, upload])
+        session.commit()
+
+        link.update_and_propagate(session, case_id="AIS-999")
+
+        session.expire_all()
+        refreshed_link = session.get(LinkRecord, link.uuid)
+        refreshed_upload = session.query(UploadRecord).filter(UploadRecord.upload_id == upload.upload_id).one()
+
+        assert refreshed_link is not None
+        assert refreshed_upload is not None
+        assert refreshed_link.case_id == "AIS-999"
+        assert refreshed_upload.case_id == "AIS-999"
+        assert refreshed_link.case_id == refreshed_upload.case_id
