@@ -14,10 +14,12 @@ load_dotenv()
 #All from entraid sso
 TENANT_ID = os.getenv("TENANT_ID")
 CLIENT_ID = os.getenv("CLIENT_ID") 
-if os.getenv("TESTING") == "true":
+if os.getenv("TESTING", "false") == "true":
+    print("TESTING"+"\n"*3)
     JWKS_URL = ""
     ISSUER = ""
 else:
+    print("ENTRA"+"\n"*3)
     OPENID_CONFIG = requests.get(f"https://login.microsoftonline.com/{TENANT_ID}/v2.0/.well-known/openid-configuration").json()
 
     JWKS_URL = OPENID_CONFIG["jwks_uri"]

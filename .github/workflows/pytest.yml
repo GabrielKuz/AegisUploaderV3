@@ -22,7 +22,7 @@ env:
   CLIENT_ID: test-client-id
   BACKEND_URL: http://backend:8000
   SECRET_KEY: test-secret-key
-  TESTING: "true"
+  TESTING: true
 
 jobs:
   build:
