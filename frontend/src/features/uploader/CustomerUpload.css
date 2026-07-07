@@ -77,7 +77,11 @@
   color: var(--theme-text-secondary);
   font-size: 16px;
 }
-
+.upload-box.drag-active {
+  background: var(--theme-surface-hover);
+  border-color: var(--support-accent);
+  box-shadow: var(--theme-card-shadow-hover);
+}
 .file-input {
   display: none;
 }

@@ -51,7 +51,8 @@ export function CustomerUpload() {
     const [selectedFiles, setSelectedFiles] = useState<SelectedFile[]>([]);
     const [uploading, setUploading] = useState(false);
     const [uploadStatus, setUploadStatus] = useState<Record<string, string>>({});
-
+    const [dragActive, setDragActive] = useState(false);
+    
     if (!uuid) {
         return <p>Invalid upload link.</p>;
     }
@@ -59,16 +60,7 @@ export function CustomerUpload() {
     const handleBrowseClick = () => {
         fileInputRef.current?.click();
     };
-
-    const handleFileChange = (
-        event: ChangeEvent<HTMLInputElement>,
-    ) => {
-        const files = event.target.files;
-
-        if (!files) {
-            return;
-        }
-
+    const addFiles = (files: FileList | File[]) => {
         const newFiles = Array.from(files).map((file) => ({
             file,
             preview: URL.createObjectURL(file),
@@ -76,15 +68,26 @@ export function CustomerUpload() {
 
         setSelectedFiles((currentFiles) => {
             const existingNames = new Set(
-                currentFiles.map((item) => item.file.name),
+                currentFiles.map((item) => item.file.name)
             );
 
             const uniqueNewFiles = newFiles.filter(
-                (item) => !existingNames.has(item.file.name),
+                (item) => !existingNames.has(item.file.name)
             );
 
             return [...currentFiles, ...uniqueNewFiles];
         });
+    };
+    const handleFileChange = (
+        event: ChangeEvent<HTMLInputElement>,
+    ) => {
+        
+
+        if (!event.target.files) {
+            return;
+        }
+
+        addFiles(event.target.files);
 
         event.target.value = "";
     };
@@ -94,59 +97,83 @@ export function CustomerUpload() {
             currentFiles.filter((_, index) => index !== indexToRemove),
         );
     };
-const uploadFiles = async () => {
-    setUploading(true);
+    const handleDragOver = (
+        event: React.DragEvent<HTMLDivElement>
+    ) => {
+        event.preventDefault();
+        setDragActive(true);
+    };
 
-    try {
-        await runWithConcurrency(selectedFiles, 3, async (item) => {
-            setUploadStatus((s) => ({
-                ...s,
-                [item.file.name]: "uploading",
-            }));
+    const handleDragLeave = (
+        event: React.DragEvent<HTMLDivElement>
+    ) => {
+        event.preventDefault();
+        setDragActive(false);
+    };
 
-            try {
-                const fileBuffer = await item.file.arrayBuffer();
+    const handleDrop = (
+        event: React.DragEvent<HTMLDivElement>
+    ) => {
+        event.preventDefault();
+        setDragActive(false);
 
-                const hashBuffer = await crypto.subtle.digest(
-                    "SHA-256",
-                    fileBuffer
-                );
+        if (event.dataTransfer.files.length > 0) {
+            addFiles(event.dataTransfer.files);
+        }
+    };
+    const uploadFiles = async () => {
+        setUploading(true);
 
-                const sha256 = Array.from(new Uint8Array(hashBuffer))
-                    .map((b) => b.toString(16).padStart(2, "0"))
-                    .join("");
+        try {
+            await runWithConcurrency(selectedFiles, 3, async (item) => {
+                setUploadStatus((s) => ({
+                    ...s,
+                    [item.file.name]: "uploading",
+                }));
 
-                const formData = new FormData();
-                formData.append("file", item.file);
+                try {
+                    const fileBuffer = await item.file.arrayBuffer();
 
-                const response = await fetch(`/api/uploadfile/${uuid}`, {
-                    method: "POST",
-                    headers: {
-                        "X-File-Hash": sha256,
-                        "X-User-Location": "US",
-                        
-                    },
-                    body: formData,
-                });
-                if (!response.ok) {
-                    throw new Error("upload failed");
+                    const hashBuffer = await crypto.subtle.digest(
+                        "SHA-256",
+                        fileBuffer
+                    );
+
+                    const sha256 = Array.from(new Uint8Array(hashBuffer))
+                        .map((b) => b.toString(16).padStart(2, "0"))
+                        .join("");
+
+                    const formData = new FormData();
+                    formData.append("file", item.file);
+
+                    const response = await fetch(`/api/uploadfile/${uuid}`, {
+                        method: "POST",
+                        headers: {
+                            "X-File-Hash": sha256,
+                            "X-User-Location": "US",
+                            
+                        },
+                        body: formData,
+                    });
+                    if (!response.ok) {
+                        throw new Error("upload failed");
+                    }
+
+                    setUploadStatus((s) => ({
+                        ...s,
+                        [item.file.name]: "done",
+                    }));
+                } catch {
+                    setUploadStatus((s) => ({
+                        ...s,
+                        [item.file.name]: "error",
+                    }));
                 }
-
-                setUploadStatus((s) => ({
-                    ...s,
-                    [item.file.name]: "done",
-                }));
-            } catch {
-                setUploadStatus((s) => ({
-                    ...s,
-                    [item.file.name]: "error",
-                }));
-            }
-        });
-    } finally {
-        setUploading(false);
-    }
-};
+            });
+        } finally {
+            setUploading(false);
+        }
+    };
         return (
         <section
             className="customer-upload-page"
@@ -171,7 +198,12 @@ const uploadFiles = async () => {
                     the link expires.
                 </p>
 
-                <div className="upload-box">
+                <div
+                    className={`upload-box ${dragActive ? "drag-active" : ""}`}
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
+                >
                     <p>Choose files or drag and drop here.</p>
 
                     <button
