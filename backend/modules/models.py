@@ -10,13 +10,17 @@ import uuid
 class UploadRecord(Base): # "LinkDB".uploads table
     __tablename__ = "uploads"
     __table_args__ = {"schema": "LinkDB"}
-    upload_id: Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True, default=lambda: str(uuid.uuid4()))
+    upload_id = Column(UUID(as_uuid=False), primary_key=True, default=lambda: str(uuid.uuid4()))
     link_uuid: Mapped[str] = mapped_column(UUID(as_uuid=False), ForeignKey("LinkDB.links.uuid"), nullable=False, index=True)
     case_id: Mapped[str | None] = mapped_column(String, nullable=True)
     timestamp: Mapped[object | None] = mapped_column(DateTime)
     itar_status: Mapped[bool | None] = mapped_column(Boolean, default=False)
     users_with_access: Mapped[object | None] = mapped_column(JSON, nullable=True)
-    link: Mapped["LinkRecord"] = relationship(back_populates="uploads")
+    parent: Mapped["LinkRecord"] = relationship(
+        back_populates="child",
+        foreign_keys=[link_uuid],
+        primaryjoin="UploadRecord.link_uuid == LinkRecord.uuid",
+    )
     original_filename = Column(Text, nullable=True)
     blob_name = Column(Text, nullable=True) # Azure
     content_type = Column(Text, nullable=True) # MIME
@@ -34,12 +38,16 @@ class LinkRecord(Base): # "LinkDB".links table
     __tablename__ = "links"
     __table_args__ = {"schema": "LinkDB"}
     uuid: Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True, default=lambda: str(uuid.uuid4()))
-    link: Mapped[str | None] = mapped_column(String)
     case_id: Mapped[str | None] = mapped_column(String)
     timestamp: Mapped[object | None] = mapped_column(DateTime)
     itar: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     users_with_access: Mapped[object | None] = mapped_column(JSON)
-    uploads: Mapped[list["UploadRecord"]] = relationship(back_populates="link")
+    child: Mapped[list["UploadRecord"]] = relationship(
+        back_populates="parent",
+        foreign_keys="[UploadRecord.link_uuid]",
+        primaryjoin="UploadRecord.link_uuid == LinkRecord.uuid",
+    )
+    link = Column(String)
     creator = Column(String) # From entra token
     expiration_date = Column(DateTime, nullable=False)# 48 hours from creation
     expired = Column(Boolean)
