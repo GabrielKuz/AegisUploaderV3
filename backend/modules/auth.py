@@ -30,7 +30,7 @@ else:
 
     jwks_client = PyJWKClient(JWKS_URL)
 
-    scheme = OAuth2PasswordBearer(tokenUrl="token")
+scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 class Token(BaseModel): # structure of a token response from entra
     access_token: str = Field(..., description="The access token issued by Entra ID")
