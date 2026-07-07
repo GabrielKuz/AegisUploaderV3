@@ -4,6 +4,7 @@ import ReactDOM from "react-dom/client";
 import App from "./App";
 import { ThemeProvider } from "./theme/ThemeContext";
 
+import "./styles/fonts.css";
 import "./styles/tokens.css";
 import "./styles/global.css";
 
