@@ -8,13 +8,17 @@ from jwt.exceptions import InvalidTokenError
 from jwt import PyJWKClient, decode
 from pydantic import BaseModel, Field
 from warnings import deprecated
+import requests
 
 load_dotenv()
 #All from entraid sso
 TENANT_ID = os.getenv("TENANT_ID")
 CLIENT_ID = os.getenv("CLIENT_ID") 
-JWKS_URL = f"https://login.microsoftonline.com/{TENANT_ID}/discovery/v2.0/keys"
-ISSUER = f"https://login.microsoftonline.com/{TENANT_ID}/v2.0"
+
+OPENID_CONFIG = requests.get(f"https://login.microsoftonline.com/{TENANT_ID}/v2.0/.well-known/openid-configuration").json()
+
+JWKS_URL = OPENID_CONFIG["jwks_uri"]
+ISSUER = OPENID_CONFIG["issuer"]
 
 if not CLIENT_ID:
     raise ValueError("CLIENT_ID environment variable is required for Entra ID SSO")
@@ -57,8 +61,12 @@ async def getCurrentUser(token: Annotated[str, Depends(scheme)]): # get the curr
         
         tokenData = TokenData(username=username) # create a token data object with the username
     except InvalidTokenError as e: # token is invalid or expired
+        print(f"Error in getCurrentUser: {e}")
+        print(ISSUER)
         raise credentialsException
     except Exception as e: # catch all
+        print(ISSUER)
+        print(f"Error in getCurrentUser: {e}")
         raise credentialsException
     
     return User(username=tokenData.username, disabled=False) # TODO: check users status from db later

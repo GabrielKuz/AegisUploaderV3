@@ -1,14 +1,39 @@
+import { useEffect } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { useMsal } from "@azure/msal-react";
+
+import { isEntraConfigured } from "../features/auth/authConfig";
+import {
+  getAccountDisplayName,
+  getAccountEmail,
+  getActiveAccount,
+} from "../features/auth/entraAuth";
 import { getDevUser, signOutDevUser } from "../features/auth/devAuth";
 import { ThemeToggle } from "../theme/ThemeToggle";
 import "./AppLayout.css";
 
 export function SupportLayout() {
   const navigate = useNavigate();
-  const user = getDevUser();
+  const { accounts, instance } = useMsal();
+  const account = getActiveAccount(instance);
+  const devUser = getDevUser();
+
+  useEffect(() => {
+    if (!instance.getActiveAccount() && accounts[0]) {
+      instance.setActiveAccount(accounts[0]);
+    }
+  }, [accounts, instance]);
 
   const handleSignOut = () => {
-    signOutDevUser();
+    if (!isEntraConfigured) {
+      signOutDevUser();
+      navigate("/", { replace: true });
+      return;
+    }
+
+    void instance.logoutRedirect({
+      postLogoutRedirectUri: "/",
+    });
     navigate("/", { replace: true });
   };
 
@@ -36,8 +61,16 @@ export function SupportLayout() {
 
         <div className="user-menu">
           <div>
-            <strong>{user?.name ?? "Support User"}</strong>
-            <span>{user?.email}</span>
+            <strong>
+              {isEntraConfigured
+                ? getAccountDisplayName(account)
+                : devUser?.name ?? "Support User"}
+            </strong>
+            <span>
+              {isEntraConfigured
+                ? getAccountEmail(account)
+                : devUser?.email ?? ""}
+            </span>
           </div>
 
           <ThemeToggle />

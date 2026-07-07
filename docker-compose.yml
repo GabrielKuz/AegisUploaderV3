@@ -141,9 +141,15 @@ services:
     restart: unless-stopped
 
   nginx:
+  
     build:
       context: .
       dockerfile: nginx/DOCKERFILE
+      args:
+        VITE_AZURE_TENANT_ID: ${TENANT_ID}
+        VITE_AZURE_CLIENT_ID: ${CLIENT_ID}
+        VITE_AZURE_API_SCOPE: ${AZURE_API_SCOPE}
+
     ports:
       - "80:8080" # avoid nginx running as root  
       # Switch to 443:8443 eventually

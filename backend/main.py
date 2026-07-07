@@ -12,6 +12,7 @@ from modules.downloadData import downloadData
 from modules import Session, engine
 from typing import Annotated
 from warnings import deprecated
+import os
 from contextlib import asynccontextmanager
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from zoneinfo import ZoneInfo
@@ -100,4 +101,3 @@ def download_upload(upload_id: str, currentUser: Annotated[User, Depends(getCurr
 
 if __name__ == "__main__": # Doesnt get run by docker
     main()
-
