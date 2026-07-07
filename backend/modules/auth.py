@@ -14,11 +14,14 @@ load_dotenv()
 #All from entraid sso
 TENANT_ID = os.getenv("TENANT_ID")
 CLIENT_ID = os.getenv("CLIENT_ID") 
+if os.getenv("TESTING") == "true":
+    JWKS_URL = ""
+    ISSUER = ""
+else:
+    OPENID_CONFIG = requests.get(f"https://login.microsoftonline.com/{TENANT_ID}/v2.0/.well-known/openid-configuration").json()
 
-OPENID_CONFIG = requests.get(f"https://login.microsoftonline.com/{TENANT_ID}/v2.0/.well-known/openid-configuration").json()
-
-JWKS_URL = OPENID_CONFIG["jwks_uri"]
-ISSUER = OPENID_CONFIG["issuer"]
+    JWKS_URL = OPENID_CONFIG["jwks_uri"]
+    ISSUER = OPENID_CONFIG["issuer"]
 
 if not CLIENT_ID:
     raise ValueError("CLIENT_ID environment variable is required for Entra ID SSO")
