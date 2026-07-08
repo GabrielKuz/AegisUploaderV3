@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 from sqlalchemy import create_engine, select, update
 from typing import Dict
 from modules.auth import User
-from modules.models import LinkRecord, UploadRecord
+from modules.models import LinkRecord, UploadRecord, update_other_from_self, update_similar_between_LinkDB_and_UploadDB
 import os
 from warnings import warn, deprecated
 from modules import Session, engine
@@ -79,7 +79,7 @@ def store_link(link_request: LinkRequest, uuid_str: str, current_user: User):
 
         session.add(record) # add new reccord to session
         session.commit() # commit session to db so it persists
-        record.propagate_shared_fields(session, field_names=["case_id", "timestamp", "itar", "users_with_access"])
+        update_similar_between_LinkDB_and_UploadDB(session)
 
 @deprecated("This doesn't work in all cases. alternative will be merged into main branch soon.")
 def expire_old_links(expiry_days: int = 2) -> bool:

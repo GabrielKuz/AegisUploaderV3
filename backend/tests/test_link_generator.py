@@ -6,7 +6,7 @@ from modules.LinkGenerator import LinkRequest, generate_links, get_all_links
 from datetime import datetime, timedelta
 from modules.auth import User, getCurrentActiveUser
 from modules import Session
-from modules.models import UploadRecord, LinkRecord
+from modules.models import UploadRecord, LinkRecord, update_other_from_self, update_similar_between_LinkDB_and_UploadDB
 from modules.uploader import ensure_uploads_table
 import os
 import uuid
@@ -182,13 +182,13 @@ def test_get_files_for_link():
     )
 
 
-def test_updating_link_case_id_propagates_to_uploads():
+def test_updating_link_update_other_from_self():
     with Session() as session:
         link = LinkRecord(
             uuid=str(uuid.uuid4()),
             link="https://example.test/link",
             case_id="AIS-100",
-            itar=False,
+            itar=True,
             creator=current_user.username,
             timestamp=datetime.now(),
             expiration_date=datetime.now() + timedelta(days=2),
@@ -217,19 +217,58 @@ def test_updating_link_case_id_propagates_to_uploads():
         session.commit()
 
         uuid1 = str(uuid.uuid4())
-        link.update_and_propagate(session, case_id="AIS-999")
-        link.update_and_propagate(session, timestamp=datetime.now() + timedelta(days=1))
+        #update itar
+        update_other_from_self(link, upload, session, "itar_status", "itar")
+        update_other_from_self(link, upload, session, "timestamp","timestamp")
+        update_other_from_self(link, upload, session, "link_uuid","uuid")
 
         session.expire_all()
-        refreshed_link = session.get(LinkRecord, link.uuid)
-        refreshed_upload = session.query(UploadRecord).filter(UploadRecord.upload_id == upload.upload_id).one()
 
-        assert refreshed_link is not None
-        assert refreshed_upload is not None
-        assert refreshed_link.case_id == "AIS-999"
-        assert refreshed_upload.case_id == "AIS-999"
-        assert refreshed_link.case_id == refreshed_upload.case_id
-        # assert refreshed_link.uuid == refreshed_upload.link_uuid
-        assert refreshed_link.timestamp == refreshed_upload.timestamp
+        assert upload.itar_status == link.itar
+        assert upload.timestamp == link.timestamp
+        assert upload.link_uuid == link.uuid
 
-        # TODO make sure that attributes with different names (link_uuid vs uuid, itar vs itar_status) are also propagated correctly
+def test_updating_link_update_similar_between_LinkDB_and_UploadDB():
+    with Session() as session:
+        link = LinkRecord(
+            uuid=str(uuid.uuid4()),
+            link="https://example.test/link",
+            case_id="AIS-6767",
+            itar=True,
+            creator=current_user.username,
+            timestamp=datetime.now(),
+            expiration_date=datetime.now() + timedelta(days=2),
+            users_with_access=[current_user.username],
+            expired=False,
+        )
+        upload = UploadRecord(
+            upload_id=uuid.uuid4(),
+            link_uuid=link.uuid,
+            case_id="AIS-6614",
+            original_filename="report.txt",
+            blob_name="report.txt",
+            content_type="text/plain",
+            sha256="1234567890abcdef",
+            date_uploaded=datetime.now() - timedelta(days=1),
+            itar_status=False,
+            combined_file_size=42,
+            timestamp=datetime.now(),
+            max_days_in_storage=30,
+            original_link=f"http://example.test/{link.uuid}",
+            sas_retrieval_link=None,
+            upload_complete=True,
+            users_with_access=[current_user.username],
+        )
+        session.add_all([link, upload])
+        session.commit()
+
+        uuid1 = str(uuid.uuid4())
+        #update itar
+        update_similar_between_LinkDB_and_UploadDB(session)
+        session.expire_all()
+
+        assert upload.itar_status == link.itar
+        assert upload.timestamp == link.timestamp
+        assert upload.link_uuid == link.uuid
+        assert upload.users_with_access == link.users_with_access
+        assert upload.case_id == link.case_id

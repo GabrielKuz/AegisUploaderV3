@@ -1,7 +1,5 @@
-from sqlalchemy import UUID, BigInteger, Column, String, Integer, DateTime, Boolean, Text, JSON, Table, ForeignKey
+from sqlalchemy import UUID, BigInteger, Column, String, Integer, DateTime, Boolean, Text, JSON, Table, ForeignKey, select, update
 from sqlalchemy.orm import declarative_base, Mapped, mapped_column, relationship
-from sqlalchemy import update
-
 
 
 
@@ -51,34 +49,30 @@ class LinkRecord(Base): # "LinkDB".links table
     expiration_date = Column(DateTime, nullable=False)# 48 hours from creation
     expired = Column(Boolean)
 
-    SHARED_FIELD_MAP = {
-        "uuid": "link_uuid",
-        "case_id": "case_id",
-        "timestamp": "timestamp",
-        "itar": "itar_status",
-        "users_with_access": "users_with_access",
-    }
 
-    def propagate_shared_fields(self, session, field_names: list[str] | None = None) -> None:
-        if field_names is None:
-            field_names = list(self.SHARED_FIELD_MAP.keys())
-        elif isinstance(field_names, str):
-            field_names = [field_names]
+#=======================================================================================================
+# Table update from other function
+#=======================================================================================================
 
-        for parent_field in field_names:
-            child_field = self.SHARED_FIELD_MAP.get(parent_field, parent_field)
-            value = getattr(self, parent_field)
-            session.execute(
-                update(UploadRecord)
-                .where(UploadRecord.link_uuid == self.uuid)
-                .values(**{child_field: value})
-            )
+def update_other_from_self(home, target, session, target_field_name, home_field_name) -> None:
+    if not hasattr(home, home_field_name):
+        raise AttributeError(f"{type(home).__name__} has no attribute '{home_field_name}'")
+    if not hasattr(target, target_field_name):
+        raise AttributeError(f"{type(target).__name__} has no attribute '{target_field_name}'")
 
-        session.commit()
+    value = getattr(home, home_field_name)
+    setattr(target, target_field_name, value)
+    if session is not None:
+        session.add(target)
+        session.flush()
 
-    def update_and_propagate(self, session, **updates) -> None:
-        for field_name, value in updates.items():
-            setattr(self, field_name, value)
+def update_similar_between_LinkDB_and_UploadDB(session):
+    linksimilar = ["uuid","case_id","timestamp","itar","users_with_access"]
+    uploadsimilar = ["link_uuid","case_id","timestamp","itar_status","users_with_access"]
 
-        session.add(self)
-        self.propagate_shared_fields(session, field_names=list(updates.keys()))
+    uploads = session.scalars(select(UploadRecord)).all()
+    for upload in uploads:
+        for link_field, upload_field in zip(linksimilar, uploadsimilar):
+            update_other_from_self(link, upload, session, upload_field, link_field)
+
+    session.commit()
