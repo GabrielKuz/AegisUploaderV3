@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
-import "../../styles/SupportTheme.css";
-import "./AdminUploadPage.css";
-import { getDevToken } from "../auth/devAuth";
+import "../../../styles/SupportTheme.css";
+import "./SupportUploadPage.css";
+import { getDevToken } from "../../auth/devAuth";
 
 type Upload = {
   upload_id: string;
@@ -25,7 +25,7 @@ function getSortIcon(
   return sortDirection === "asc" ? "▲" : "▼";
 }
 
-export function AdminUploadPage() {
+export function SupportUploadPage() {
   const { uuid } = useParams<{ uuid: string }>();
   const [uploads, setUploads] = useState<Upload[]>([]);
   const [sortKey, setSortKey] = useState<SortKey>("date_uploaded");
@@ -87,7 +87,7 @@ export function AdminUploadPage() {
     return copy;
   }, [uploads, sortKey, sortDirection]);
 
-  async function extendUpload(uploadUuid: string) {
+  /*async function extendUpload(uploadUuid: string) {
     const input = prompt("Extend retention by how many days?");
 
     if (!input) return;
@@ -121,7 +121,7 @@ export function AdminUploadPage() {
     alert(`Retention extended to ${data.totalPeriod} days.`);
 
     loadUploads();
-  }
+  }*/
 
   return (
     <section className="links-page">
@@ -136,7 +136,7 @@ export function AdminUploadPage() {
           </h1>
 
           <p className="links-page-description">
-            View uploads of a specific link and extend their retention period.
+            View uploads of a specific link.
           </p>
         </div>
       </header>
@@ -192,14 +192,14 @@ export function AdminUploadPage() {
                         {new Date(upload.date_uploaded).toLocaleString()}
                     </td>
 
-                    <td>
+                    {/*<td>
                         <button
                             className="link-submit-button"
                             onClick={() => extendUpload(upload.upload_id)}
                         >
                             Extend
                         </button>
-                    </td>
+                    </td>*/}
                 </tr>
             ))}
         </tbody>

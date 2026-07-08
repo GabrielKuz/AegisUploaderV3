@@ -1,22 +1,10 @@
-import { Link, /*useLocation*/ } from "react-router-dom";
-import { useEffect, useState, useMemo } from "react";
-//import { mockLinks } from "../data/mockLinks";
+import { Link } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+
 import "../../../styles/SupportTheme.css";
 import "./SupportLinksPage.css";
 import { getDevToken } from "../../auth/devAuth";
 
-/**
- * Converts a display status into a CSS-friendly modifier.
- *
- * Example:
- * "In Progress" becomes "in-progress".
- */
-/*function getStatusClassName(status: string): string {
-  return status
-    .trim()
-    .toLowerCase()
-    .replace(/\s+/g, "-");
-}*/
 type SupportLink = {
     uuid: string;
     case_id: string;
@@ -28,195 +16,289 @@ type SupportLink = {
     expired: boolean;
     expiration_date: string;
 };
+
 type SortKey = keyof SupportLink;
 type SortDirection = "asc" | "desc";
+
 function getSortIcon(
-  column: string,
-  sortKey: string,
-  sortDirection: SortDirection
+    column: SortKey,
+    sortKey: SortKey,
+    sortDirection: SortDirection
 ) {
-  if (column !== sortKey) return "⇅";
-  return sortDirection === "asc" ? "▲" : "▼";
+    if (column !== sortKey) return "⇅";
+    return sortDirection === "asc" ? "▲" : "▼";
 }
-/**
- * Displays previously created support links in a responsive table.
- */
+
 export function SupportLinksPage() {
-  const [links, setLinks] = useState<SupportLink[]>([]);
-  //const location = useLocation();
-  const [sortKey, setSortKey] = useState<SortKey>("timestamp");
-  const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
-  async function loadLinks() {
-    const response = await fetch("/api/links/", {headers: { Authorization: `Bearer ${getDevToken()}` }});
-    if(!response.ok) {
-      console.error("Failed to load support links.");
-      return;
+    const [links, setLinks] = useState<SupportLink[]>([]);
+    const [sortKey, setSortKey] = useState<SortKey>("timestamp");
+    const [sortDirection, setSortDirection] =
+        useState<SortDirection>("desc");
+
+    async function loadLinks() {
+        try {
+            const response = await fetch("/api/links/", {
+                headers: {
+                    Authorization: `Bearer ${getDevToken()}`
+                }
+            });
+
+            if (!response.ok) {
+                console.error("Failed to load support links.");
+                return;
+            }
+
+            const data: SupportLink[] = await response.json();
+            setLinks(data);
+        } catch (err) {
+            console.error(err);
+        }
     }
-    const data: SupportLink[] = await response.json();
-    if (!response.ok) {
-      console.error(await response.text());
-      return;
+
+    useEffect(() => {
+        loadLinks();
+    }, []);
+
+    function handleSort(key: SortKey) {
+        if (key === sortKey) {
+            setSortDirection((prev) =>
+                prev === "asc" ? "desc" : "asc"
+            );
+        } else {
+            setSortKey(key);
+
+            // Default newest first for dates.
+            if (key === "timestamp" || key === "expiration_date") {
+                setSortDirection("desc");
+            } else {
+                setSortDirection("asc");
+            }
+        }
     }
-    console.log(data);
-    setLinks(data);
-  }
-  useEffect(() => {
-    loadLinks();
-  }, [/*location.key*/]);
-  function handleSort(key: SortKey) {
-    if (key === sortKey) {
-      setSortDirection((prev) => ( prev === "asc" ? "desc" : "asc"));
-    } else {
-      setSortKey(key);
-      setSortDirection("asc");
-    }
-  }
-  
-  const sortedLinks = useMemo(() => {
-    const copy = [...links];
-    copy.sort((a, b) => {
-      if (sortKey === "timestamp") {
-        return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
-      }
-      const aVal = a[sortKey];
-      const bVal = b[sortKey];
 
-      if(typeof aVal === "boolean" && typeof bVal === "boolean") {
-        return sortDirection === "asc" ? Number(aVal) - Number(bVal) : Number(bVal) - Number(aVal);
-      }
+    const sortedLinks = useMemo(() => {
+        const copy = [...links];
 
-      const aStr = String(aVal);
-      const bStr = String(bVal);
+        copy.sort((a, b) => {
+            // Date sorting
+            if (
+                sortKey === "timestamp" ||
+                sortKey === "expiration_date"
+            ) {
+                const aTime = new Date(a[sortKey]).getTime();
+                const bTime = new Date(b[sortKey]).getTime();
 
-      const comparison = aStr.localeCompare(bStr);
-      return sortDirection === "asc" ? comparison : -comparison;
-    });
+                return sortDirection === "asc"
+                    ? aTime - bTime
+                    : bTime - aTime;
+            }
 
-    return copy;
-  }, [links, sortKey, sortDirection]);
-  return (
-    <section
-      className="links-page"
-      aria-labelledby="links-page-heading"
-    >
-      <header className="links-page-header">
-        <div className="links-page-heading">
-          <p className="links-page-eyebrow">
-            Customer support
-          </p>
+            const aVal = a[sortKey];
+            const bVal = b[sortKey];
 
-          <h1 id="links-page-heading">
-            Created links
-          </h1>
+            // Boolean sorting
+            if (
+                typeof aVal === "boolean" &&
+                typeof bVal === "boolean"
+            ) {
+                return sortDirection === "asc"
+                    ? Number(aVal) - Number(bVal)
+                    : Number(bVal) - Number(aVal);
+            }
 
-          <p className="links-page-description">
-            Review previous requests and their current status.
-          </p>
-        </div>
+            // String sorting
+            const comparison = String(aVal).localeCompare(String(bVal));
 
-        <Link
-          to="/support/links/new"
-          className="new-link-link"
-        >
-          Create link
-        </Link>
-      </header>
+            return sortDirection === "asc"
+                ? comparison
+                : -comparison;
+        });
 
-      <div className="links-table-wrapper">
-        <table className="links-table">
-          <thead>
-          <tr>
-            <th onClick={() => handleSort("uuid")} style={{ cursor: "pointer" }}>
-              UUID {getSortIcon("uuid", sortKey, sortDirection)}
-            </th>
+        return copy;
+    }, [links, sortKey, sortDirection]);
 
-            <th onClick={() => handleSort("case_id")} style={{ cursor: "pointer" }}>
-              Case ID {getSortIcon("case_id", sortKey, sortDirection)}
-            </th>
+    return (
+        <section className="links-page">
+            <header className="links-page-header">
+                <div className="links-page-heading">
+                    <p className="links-page-eyebrow">
+                        Customer Support
+                    </p>
 
-            <th onClick={() => handleSort("itar")} style={{ cursor: "pointer" }}>
-              ITAR {getSortIcon("itar", sortKey, sortDirection)}
-            </th>
+                    <h1 id="links-page-heading">
+                        Created Upload Links
+                    </h1>
 
-            <th onClick={() => handleSort("creator")} style={{ cursor: "pointer" }}>
-              Creator {getSortIcon("creator", sortKey, sortDirection)}
-            </th>
+                    <p className="links-page-description">
+                        Review previously created upload links and
+                        access uploaded files.
+                    </p>
+                </div>
 
-            <th onClick={() => handleSort("timestamp")} style={{ cursor: "pointer" }}>
-              Created (UTC) {getSortIcon("timestamp", sortKey, sortDirection)}
-            </th>
+                <Link
+                    to="/support/links/new"
+                    className="new-link-link"
+                >
+                    Create Link
+                </Link>
+            </header>
 
-            <th
-              onClick={() => handleSort("expiration_date")}
-              style={{ cursor: "pointer" }}
-            >
-              Expires (UTC) {getSortIcon("expiration_date", sortKey, sortDirection)}
-            </th>
-          </tr>
-        </thead>
+            <div className="links-table-wrapper">
+                <table className="links-table">
+                    <thead>
+                        <tr>
+                            <th
+                                onClick={() => handleSort("uuid")}
+                                style={{ cursor: "pointer" }}
+                            >
+                                UUID{" "}
+                                {getSortIcon(
+                                    "uuid",
+                                    sortKey,
+                                    sortDirection
+                                )}
+                            </th>
 
-          <tbody>
-            {/*{links.map((supportLink) => {
-              const statusClassName = getStatusClassName(
-                supportLink.status,
-              );
+                            <th
+                                onClick={() =>
+                                    handleSort("case_id")
+                                }
+                                style={{ cursor: "pointer" }}
+                            >
+                                Case ID{" "}
+                                {getSortIcon(
+                                    "case_id",
+                                    sortKey,
+                                    sortDirection
+                                )}
+                            </th>
 
-              return (
-                <tr key={supportLink.id}>
-                  <td>{supportLink.id}</td>
-                  <td>{supportLink.subject}</td>
-                  <td>{supportLink.category}</td>
-                  <td>
-                    <span
-                      className={
-                        `link - status` +
-                        `link - status - ${statusClassName} `
-                      }
-                    >
-                      {supportLink.status}
-                    </span>
-                  </td>
-                  <td>{supportLink.updatedAt}</td>
-                </tr>
-                
-              );
-            })}*/}
-            {sortedLinks.map((supportLink) => (
-              <tr key={supportLink.uuid}>
-                  <td>
-                      <Link to={`/upload/${supportLink.uuid}`}>
-                          /upload/{supportLink.uuid}
-                      </Link>
-                  </td>
+                            <th
+                                onClick={() => handleSort("itar")}
+                                style={{ cursor: "pointer" }}
+                            >
+                                ITAR{" "}
+                                {getSortIcon(
+                                    "itar",
+                                    sortKey,
+                                    sortDirection
+                                )}
+                            </th>
 
-                  <td>{supportLink.case_id}</td>
+                            <th
+                                onClick={() =>
+                                    handleSort("creator")
+                                }
+                                style={{ cursor: "pointer" }}
+                            >
+                                Creator{" "}
+                                {getSortIcon(
+                                    "creator",
+                                    sortKey,
+                                    sortDirection
+                                )}
+                            </th>
 
-                  <td>
-                      {supportLink.itar ? (
-                          <span
-                              style={{
-                                  fontWeight: "bold",
-                                  backgroundColor: "#ff4d4d",
-                                  color: "white",
-                                  padding: "4px 8px",
-                                  borderRadius: "6px"
-                              }}
-                          >
-                              ITAR
-                          </span>
-                      ) : (
-                          "No"
-                      )}
-                  </td>
-                 
-                  <td>{supportLink.creator}</td>
-                  <td>{new Date(supportLink.timestamp).toLocaleString()}</td>
-                  <td>{new Date(supportLink.expiration_date).toLocaleString()}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </section>
-  );
+                            <th
+                                onClick={() =>
+                                    handleSort("timestamp")
+                                }
+                                style={{ cursor: "pointer" }}
+                            >
+                                Created (UTC){" "}
+                                {getSortIcon(
+                                    "timestamp",
+                                    sortKey,
+                                    sortDirection
+                                )}
+                            </th>
+
+                            <th
+                                onClick={() =>
+                                    handleSort("expiration_date")
+                                }
+                                style={{ cursor: "pointer" }}
+                            >
+                                Expires (UTC){" "}
+                                {getSortIcon(
+                                    "expiration_date",
+                                    sortKey,
+                                    sortDirection
+                                )}
+                            </th>
+
+                            <th>Upload Link</th>
+
+                            <th>Uploads</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        {sortedLinks.map((link) => (
+                            <tr key={link.uuid}>
+                                <td>{link.uuid}</td>
+
+                                <td>{link.case_id}</td>
+
+                                <td>
+                                    {link.itar ? (
+                                        <span
+                                            style={{
+                                                fontWeight: "bold",
+                                                backgroundColor:
+                                                    "#ff4d4d",
+                                                color: "white",
+                                                padding:
+                                                    "4px 8px",
+                                                borderRadius:
+                                                    "6px"
+                                            }}
+                                        >
+                                            ITAR
+                                        </span>
+                                    ) : (
+                                        "No"
+                                    )}
+                                </td>
+
+                                <td>{link.creator}</td>
+
+                                <td>
+                                    {new Date(
+                                        link.timestamp
+                                    ).toLocaleString()}
+                                </td>
+
+                                <td>
+                                    {new Date(
+                                        link.expiration_date
+                                    ).toLocaleString()}
+                                </td>
+
+                                <td>
+                                    <Link
+                                        to={`/upload/${link.uuid}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="table-link-button"
+                                    >
+                                        Open Upload Page
+                                    </Link>
+                                </td>
+
+                                <td>
+                                    <Link
+                                        to={`/support/view-uploads/${link.uuid}`}
+                                        className="table-link-button"
+                                    >
+                                        View Uploads
+                                    </Link>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    );
 }

@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import "../../styles/SupportTheme.css";
 import "./AdminLinksPage.css";
@@ -20,7 +20,11 @@ type SupportLink = {
 type SortKey = keyof SupportLink;
 type SortDirection = "asc" | "desc";
 
-function getSortIcon(column: string, sortKey: string, sortDirection: SortDirection) {
+function getSortIcon(
+    column: SortKey,
+    sortKey: SortKey,
+    sortDirection: SortDirection
+) {
     if (column !== sortKey) return "⇅";
     return sortDirection === "asc" ? "▲" : "▼";
 }
@@ -28,22 +32,27 @@ function getSortIcon(column: string, sortKey: string, sortDirection: SortDirecti
 export function AdminLinksPage() {
     const [links, setLinks] = useState<SupportLink[]>([]);
     const [sortKey, setSortKey] = useState<SortKey>("timestamp");
-    const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
+    const [sortDirection, setSortDirection] =
+        useState<SortDirection>("desc");
 
     async function loadLinks() {
-        const response = await fetch("/api/links/", {
-            headers: {
-                Authorization: `Bearer ${getDevToken()}`
+        try {
+            const response = await fetch("/api/links/", {
+                headers: {
+                    Authorization: `Bearer ${getDevToken()}`
+                }
+            });
+
+            if (!response.ok) {
+                console.error("Failed to load support links.");
+                return;
             }
-        });
 
-        if (!response.ok) {
-            console.error("Failed to load support links.");
-            return;
+            const data: SupportLink[] = await response.json();
+            setLinks(data);
+        } catch (err) {
+            console.error(err);
         }
-
-        const data: SupportLink[] = await response.json();
-        setLinks(data);
     }
 
     useEffect(() => {
@@ -52,10 +61,18 @@ export function AdminLinksPage() {
 
     function handleSort(key: SortKey) {
         if (key === sortKey) {
-            setSortDirection(prev => (prev === "asc" ? "desc" : "asc"));
+            setSortDirection((prev) =>
+                prev === "asc" ? "desc" : "asc"
+            );
         } else {
             setSortKey(key);
-            setSortDirection("asc");
+
+            // Default newest first for dates.
+            if (key === "timestamp" || key === "expiration_date") {
+                setSortDirection("desc");
+            } else {
+                setSortDirection("asc");
+            }
         }
     }
 
@@ -63,21 +80,38 @@ export function AdminLinksPage() {
         const copy = [...links];
 
         copy.sort((a, b) => {
-            if (sortKey === "timestamp") {
-                return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
+            // Date sorting
+            if (
+                sortKey === "timestamp" ||
+                sortKey === "expiration_date"
+            ) {
+                const aTime = new Date(a[sortKey]).getTime();
+                const bTime = new Date(b[sortKey]).getTime();
+
+                return sortDirection === "asc"
+                    ? aTime - bTime
+                    : bTime - aTime;
             }
 
             const aVal = a[sortKey];
             const bVal = b[sortKey];
 
-            if (typeof aVal === "boolean" && typeof bVal === "boolean") {
+            // Boolean sorting
+            if (
+                typeof aVal === "boolean" &&
+                typeof bVal === "boolean"
+            ) {
                 return sortDirection === "asc"
                     ? Number(aVal) - Number(bVal)
                     : Number(bVal) - Number(aVal);
             }
 
+            // String sorting
             const comparison = String(aVal).localeCompare(String(bVal));
-            return sortDirection === "asc" ? comparison : -comparison;
+
+            return sortDirection === "asc"
+                ? comparison
+                : -comparison;
         });
 
         return copy;
@@ -87,17 +121,25 @@ export function AdminLinksPage() {
         <section className="links-page">
             <header className="links-page-header">
                 <div className="links-page-heading">
-                    <p className="links-page-eyebrow">Administrator</p>
+                    <p className="links-page-eyebrow">
+                        Administrator
+                    </p>
 
-                    <h1 id="links-page-heading">Created links</h1>
+                    <h1 id="links-page-heading">
+                        Created Upload Links
+                    </h1>
 
                     <p className="links-page-description">
-                        Review previous requests and their current status.
+                        Review previously created upload links and
+                        access uploaded files.
                     </p>
                 </div>
 
-                <Link to="/admin/links/new" className="new-link-link">
-                    Create link
+                <Link
+                    to="/admin/links/new"
+                    className="new-link-link"
+                >
+                    Create Link
                 </Link>
             </header>
 
@@ -105,42 +147,96 @@ export function AdminLinksPage() {
                 <table className="links-table">
                     <thead>
                         <tr>
-                            <th onClick={() => handleSort("uuid")} style={{ cursor: "pointer" }}>
-                                UUID {getSortIcon("uuid", sortKey, sortDirection)}
+                            <th
+                                onClick={() => handleSort("uuid")}
+                                style={{ cursor: "pointer" }}
+                            >
+                                UUID{" "}
+                                {getSortIcon(
+                                    "uuid",
+                                    sortKey,
+                                    sortDirection
+                                )}
                             </th>
 
-                            <th onClick={() => handleSort("case_id")} style={{ cursor: "pointer" }}>
-                                Case ID {getSortIcon("case_id", sortKey, sortDirection)}
+                            <th
+                                onClick={() =>
+                                    handleSort("case_id")
+                                }
+                                style={{ cursor: "pointer" }}
+                            >
+                                Case ID{" "}
+                                {getSortIcon(
+                                    "case_id",
+                                    sortKey,
+                                    sortDirection
+                                )}
                             </th>
 
-                            <th onClick={() => handleSort("itar")} style={{ cursor: "pointer" }}>
-                                ITAR {getSortIcon("itar", sortKey, sortDirection)}
+                            <th
+                                onClick={() => handleSort("itar")}
+                                style={{ cursor: "pointer" }}
+                            >
+                                ITAR{" "}
+                                {getSortIcon(
+                                    "itar",
+                                    sortKey,
+                                    sortDirection
+                                )}
                             </th>
 
-                            <th onClick={() => handleSort("creator")} style={{ cursor: "pointer" }}>
-                                Creator {getSortIcon("creator", sortKey, sortDirection)}
+                            <th
+                                onClick={() =>
+                                    handleSort("creator")
+                                }
+                                style={{ cursor: "pointer" }}
+                            >
+                                Creator{" "}
+                                {getSortIcon(
+                                    "creator",
+                                    sortKey,
+                                    sortDirection
+                                )}
                             </th>
 
-                            <th onClick={() => handleSort("timestamp")} style={{ cursor: "pointer" }}>
-                                Created (UTC) {getSortIcon("timestamp", sortKey, sortDirection)}
+                            <th
+                                onClick={() =>
+                                    handleSort("timestamp")
+                                }
+                                style={{ cursor: "pointer" }}
+                            >
+                                Created (UTC){" "}
+                                {getSortIcon(
+                                    "timestamp",
+                                    sortKey,
+                                    sortDirection
+                                )}
                             </th>
 
-                            <th onClick={() => handleSort("expiration_date")} style={{ cursor: "pointer" }}>
-                                Expires (UTC) {getSortIcon("expiration_date", sortKey, sortDirection)}
+                            <th
+                                onClick={() =>
+                                    handleSort("expiration_date")
+                                }
+                                style={{ cursor: "pointer" }}
+                            >
+                                Expires (UTC){" "}
+                                {getSortIcon(
+                                    "expiration_date",
+                                    sortKey,
+                                    sortDirection
+                                )}
                             </th>
 
-                            {/* <th>Actions</th> */}
+                            <th>Upload Link</th>
+
+                            <th>Uploads</th>
                         </tr>
                     </thead>
 
                     <tbody>
                         {sortedLinks.map((link) => (
                             <tr key={link.uuid}>
-                                <td>
-                                    <Link to={`/upload/${link.uuid}`}>
-                                        /upload/{link.uuid}
-                                    </Link>
-                                </td>
+                                <td>{link.uuid}</td>
 
                                 <td>{link.case_id}</td>
 
@@ -149,10 +245,13 @@ export function AdminLinksPage() {
                                         <span
                                             style={{
                                                 fontWeight: "bold",
-                                                backgroundColor: "#ff4d4d",
+                                                backgroundColor:
+                                                    "#ff4d4d",
                                                 color: "white",
-                                                padding: "4px 8px",
-                                                borderRadius: "6px"
+                                                padding:
+                                                    "4px 8px",
+                                                borderRadius:
+                                                    "6px"
                                             }}
                                         >
                                             ITAR
@@ -164,17 +263,37 @@ export function AdminLinksPage() {
 
                                 <td>{link.creator}</td>
 
-                                <td>{new Date(link.timestamp).toLocaleString()}</td>
-
-                                <td>{new Date(link.expiration_date).toLocaleString()}</td>
-
-                                {/* DELETE BUTTON REMOVED (intentionally disabled)
                                 <td>
-                                    <button onClick={() => deleteLink(link.uuid)}>
-                                        Delete
-                                    </button>
+                                    {new Date(
+                                        link.timestamp
+                                    ).toLocaleString()}
                                 </td>
-                                */}
+
+                                <td>
+                                    {new Date(
+                                        link.expiration_date
+                                    ).toLocaleString()}
+                                </td>
+
+                                <td>
+                                    <Link
+                                        to={`/upload/${link.uuid}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="table-link-button"
+                                    >
+                                        Open Upload Page
+                                    </Link>
+                                </td>
+
+                                <td>
+                                    <Link
+                                        to={`/admin/view-uploads/${link.uuid}`}
+                                        className="table-link-button"
+                                    >
+                                        View Uploads
+                                    </Link>
+                                </td>
                             </tr>
                         ))}
                     </tbody>
