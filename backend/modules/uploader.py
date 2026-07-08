@@ -18,7 +18,7 @@ from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.backends import default_backend
 from fastapi import APIRouter, Depends, File, Header, HTTPException, UploadFile
 from modules import Session
-from modules.auth import getCurrentActiveUser, User
+from modules.auth import getCurrentActiveUser, User, requiresRole
 from modules.models import Base, UploadRecord, LinkRecord
 
 router = APIRouter()
@@ -294,4 +294,17 @@ def listFiles(linkUUID: str, current_user: Annotated[User, Depends(getCurrentAct
             "date_uploaded": upload.date_uploaded.isoformat() if upload.date_uploaded else None,
         }
         for upload in authorized_uploads]
+
+@router.post("/uploads/{upload_id}/extend_expiration")
+def extendFileExpiration(upload_id: str, additional_days: int, current_user: Annotated[User, Depends(requiresRole("admin"))]):
+    upload_record: UploadRecord|None = session.query(UploadRecord).filter(UploadRecord.upload_id == upload_id).first()
+    if not upload_record:
+        raise HTTPException(status_code=404, detail="Upload record not found")
+
+    if upload_record.max_days_in_storage is None:
+        upload_record.max_days_in_storage = 0
+
+    upload_record.max_days_in_storage += additional_days
+    session.commit()
+    return {"message": f"File expiration extended by {additional_days} days", "newExpiration": upload_record.max_days_in_storage, "newExpirationDate": (upload_record.date_uploaded + datetime.timedelta(days=upload_record.max_days_in_storage)).isoformat() if upload_record.date_uploaded else None}
 
