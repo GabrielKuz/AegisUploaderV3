@@ -42,6 +42,7 @@ class TokenData(BaseModel): # data contained in the token once decoded
 class User(BaseModel): # structure of a user object
     username: str = Field(..., description="The username of the user")
     disabled: bool | None = Field(None, description="Indicates if the user is disabled")
+    roles: list[str] | list = Field([], description="List of roles assigned to the user")
 
 async def getCurrentUser(token: Annotated[str, Depends(scheme)]): # get the current user from the token
     if os.getenv("TESTING", "false").lower() == "true":
@@ -66,6 +67,7 @@ async def getCurrentUser(token: Annotated[str, Depends(scheme)]): # get the curr
         username: str = payload.get("preferred_username") or payload.get("upn") or payload.get("oid") # docs list all as possible username claims
         if username is None: # No user claim is found
             raise credentialsException
+        roles = payload.get("roles", [])
         
         tokenData = TokenData(username=username) # create a token data object with the username
     except InvalidTokenError as e: # token is invalid or expired
@@ -77,7 +79,7 @@ async def getCurrentUser(token: Annotated[str, Depends(scheme)]): # get the curr
         print(f"Error in getCurrentUser: {e}")
         raise credentialsException
     
-    return User(username=tokenData.username, disabled=False) # TODO: check users status from db later
+    return User(username=tokenData.username, disabled=False, roles=roles) # TODO: check users status from db later
 
 async def getCurrentActiveUser(current_user: Annotated[User, Depends(getCurrentUser)]): # get the current active user from the token and check if they are disabled
     if current_user.disabled:
@@ -93,3 +95,10 @@ async def getCurrentUserNoAuthForTest(): # for testing purposes only, returns a 
     return User(username="testuser", disabled=False)
 
 getCurrentUserNoAuthForTest.__doc__ = "use getCurrentActiveUser instead. This is insecure and only intended for testing"
+
+def requireRole(role: str):
+    async def checker(current_user: Annotated[User, Depends(getCurrentActiveUser)]):
+        if role not in current_user.roles:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,detail="Insufficient permissions",)
+        return current_user
+    return checker

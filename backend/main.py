@@ -5,7 +5,7 @@ from modules.auth import getCurrentActiveUser, getCurrentUser, User, userAuthent
 from modules.LinkGenerator import LinkRequest, generate_links, get_all_links, get_link
 from modules.auth import getCurrentActiveUser, getCurrentUser, User
 from modules.LinkGenerator import LinkRequest, generate_links, get_all_links
-from modules.auth import getCurrentActiveUser, getCurrentUser, User, userAuthenticated
+from modules.auth import getCurrentActiveUser, getCurrentUser, User, userAuthenticated, requireRole
 from modules.uploader import router as uploader_router, listFiles
 from modules.deletionRequest import router as deletionRequest_router
 from modules.downloadData import downloadData

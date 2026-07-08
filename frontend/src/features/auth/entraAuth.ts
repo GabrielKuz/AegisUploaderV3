@@ -69,3 +69,26 @@ export async function getApiAccessToken(
     throw error;
   }
 }
+export function getUserRoles(
+  account: AccountInfo | null = getActiveAccount(),
+): string[] {
+  if (!account) {
+    return [];
+  }
+
+  const claims = account.idTokenClaims as Record<string, unknown>;
+
+  const roles = claims["roles"];
+
+  if (!Array.isArray(roles)) {
+    return [];
+  }
+
+  return roles.filter((role): role is string => typeof role === "string");
+}
+
+export function isAdmin(
+  account: AccountInfo | null = getActiveAccount(),
+): boolean {
+  return getUserRoles(account).includes("Admin");
+}
