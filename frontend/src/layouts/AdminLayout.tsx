@@ -87,7 +87,7 @@ export function AdminLayout() {
             Create link
           </NavLink>
 
-          <NavLink
+          {/*<NavLink
             to="/admin/view-uploads"
             className={({ isActive }) =>
               isActive
@@ -96,7 +96,7 @@ export function AdminLayout() {
             }
           >
             View uploads
-          </NavLink>
+          </NavLink>*/}
         </nav>
       </aside>
 

@@ -18,7 +18,7 @@ from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.backends import default_backend
 from fastapi import APIRouter, Depends, File, Header, HTTPException, UploadFile
 from modules import Session
-from modules.auth import getCurrentActiveUser, User
+from modules.auth import getCurrentActiveUser, User, getCurrentUserNoAuthForTest
 from modules.models import Base, UploadRecord, LinkRecord
 
 router = APIRouter()
@@ -270,7 +270,7 @@ def get_uploads_for_link(link_uuid: str): # Get all uploads for a given link uui
 
 
 @router.get("/links/{linkUUID}/files") # Get all files for a given link uuid from the db. Only returns files the user has access to
-def listFiles(linkUUID: str, current_user: Annotated[User, Depends(getCurrentActiveUser)]):
+def listFiles(linkUUID: str, current_user: Annotated[User, Depends(getCurrentUserNoAuthForTest)]):
     uploads = get_uploads_for_link(linkUUID) # Get all uploads for the given link uuid
     authorized_uploads = [ # Filter the uploads to only include what the user can access
         upload for upload in uploads

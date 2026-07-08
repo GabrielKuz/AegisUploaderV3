@@ -173,7 +173,7 @@ export function SupportUploadPage() {
                   Uploaded {getSortIcon("date_uploaded", sortKey, sortDirection)}
               </th>
 
-              <th>Actions</th>
+              
           </tr>
           </thead>
 
