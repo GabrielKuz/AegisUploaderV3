@@ -6,7 +6,7 @@ import {
 import { useMsal } from "@azure/msal-react";
 import { useNavigate } from "react-router-dom";
 
-import "../../../styles/SupportTheme.css";
+import "../../../styles/PortalTheme.css";
 import "./CreateSupportLinkPage.css";
 import { isEntraConfigured } from "../../auth/authConfig";
 import {

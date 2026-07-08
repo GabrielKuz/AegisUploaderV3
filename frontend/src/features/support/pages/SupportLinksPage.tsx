@@ -2,7 +2,7 @@ import { Link, /*useLocation*/ } from "react-router-dom";
 import { useCallback, useEffect, useState, useMemo } from "react";
 import { useMsal } from "@azure/msal-react";
 //import { mockLinks } from "../data/mockLinks";
-import "../../../styles/SupportTheme.css";
+import "../../../styles/PortalTheme.css";
 import "./SupportLinksPage.css";
 import { isEntraConfigured } from "../../auth/authConfig";
 import {

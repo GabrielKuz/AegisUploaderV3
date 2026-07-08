@@ -18,7 +18,7 @@ from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.backends import default_backend
 from fastapi import APIRouter, Depends, File, Header, HTTPException, UploadFile
 from modules import Session
-from modules.auth import getCurrentActiveUser, User, requiresRole
+from modules.auth import getCurrentActiveUser, User, requireRole
 from modules.models import Base, UploadRecord, LinkRecord
 
 router = APIRouter()
@@ -296,7 +296,7 @@ def listFiles(linkUUID: str, current_user: Annotated[User, Depends(getCurrentAct
         for upload in authorized_uploads]
 
 @router.post("/uploads/{upload_id}/extend_expiration")
-def extendFileExpiration(upload_id: str, additional_days: int, current_user: Annotated[User, Depends(requiresRole("admin"))]):
+def extendFileExpiration(upload_id: str, additional_days: int, current_user: Annotated[User, Depends(requireRole("admin"))]):
     upload_record: UploadRecord|None = session.query(UploadRecord).filter(UploadRecord.upload_id == upload_id).first()
     if not upload_record:
         raise HTTPException(status_code=404, detail="Upload record not found")

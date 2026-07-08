@@ -12,7 +12,7 @@ export function RequireDevUser({ children }: RequireDevUserProps) {
  
   if (!user) {
     return (
-<Navigate
+    <Navigate
         to="/"
         replace
         state={{
