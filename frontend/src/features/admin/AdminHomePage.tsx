@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
-import "./SupportHomePage.css";
+import "../support/pages/SupportHomePage.css";
 
 type LinkActionCardProps = {
   to: string;
@@ -154,13 +154,17 @@ function CreateLinkIcon() {
 /**
  * Landing page for the customer-support workflow.
  */
-export function SupportHomePage() {
+export function AdminHomePage() {
   return (
     <section
       className="support-home"
       aria-labelledby="support-home-heading"
     >
       <header className="support-page-heading">
+        <p className="support-page-eyebrow">
+          Customer support
+        </p>
+
         <h1 id="support-home-heading">
           How can we help?
         </h1>
@@ -170,9 +174,9 @@ export function SupportHomePage() {
         </p>
       </header>
 
-      <div className="support-home-actions">
+      <div className="admin-home-actions">
         <LinkActionCard
-          to="/support/links"
+          to="/admin/links"
           number="01"
           title="View your links"
           description="Review link status, previous requests, and recent support activity."
@@ -181,12 +185,20 @@ export function SupportHomePage() {
         />
 
         <LinkActionCard
-          to="/support/links/new"
+          to="/admin/links/new"
           number="02"
           title="Create a link"
           description="Submit a new issue with a category, description, and supporting information."
           actionLabel="Create a new link"
           icon={<CreateLinkIcon />}
+        />
+        <LinkActionCard
+          to="/admin/view-uploads"
+          number="03"
+          title="View uploads"
+          description="Review uploaded files and their retention periods."
+          actionLabel="View uploads"
+          icon={<LinksIcon />}
         />
       </div>
     </section>

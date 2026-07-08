@@ -1,15 +1,13 @@
 /* ==========================================================================
-   CREATE SUPPORT LINK PAGE
-   Child page rendered inside the shared support layout.
+   ADMINCREATE SUPPORT LINK PAGE
+   Provides a focused form for creating a new customer-support request.
    ========================================================================== */
 
-.create-support-link-page {
+.create-link-page {
   width: 100%;
   max-width: 820px;
-  min-height: 100%;
   margin-inline: auto;
-  display: grid;
-  align-content: center;
+  padding: 54px 46px 72px;
   color: var(--theme-text);
 }
 
@@ -19,13 +17,13 @@
    ========================================================================== */
 
 .create-link-header {
-  margin-bottom: 24px;
+  margin-bottom: 34px;
 }
 
 .create-link-eyebrow {
   margin: 0 0 10px;
   color: var(--portal-accent);
-  font-family: var(--font-mono, monospace);
+  font-family: var(--font-mono, "Geist Mono", monospace);
   font-size: 12px;
   font-weight: 600;
   line-height: 1.4;
@@ -36,8 +34,8 @@
 .create-link-header h1 {
   margin: 0;
   color: var(--theme-text);
-  font-family: var(--font-heading);
-  font-size: clamp(38px, 4.5vw, 52px);
+  font-family: "Epilogue", sans-serif;
+  font-size: clamp(42px, 5vw, 56px);
   font-weight: 400;
   line-height: 1.04;
   letter-spacing: -0.055em;
@@ -45,10 +43,10 @@
 
 .create-link-description {
   max-width: 650px;
-  margin: 12px 0 0;
-  color: var(--portal-blue);
-  font-size: 15px;
-  line-height: 1.55;
+  margin: 14px 0 0;
+  color: var(--theme-text-secondary);
+  font-size: 16px;
+  line-height: 1.65;
 }
 
 
@@ -57,10 +55,10 @@
    ========================================================================== */
 
 .link-form {
-  padding: clamp(22px, 3vw, 28px);
+  padding: 32px;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 20px;
+  gap: 24px;
   border: 1px solid var(--theme-border);
   background: var(--theme-surface);
   box-shadow: var(--theme-card-shadow);
@@ -69,7 +67,7 @@
 .link-form-field {
   min-width: 0;
   display: grid;
-  gap: 8px;
+  gap: 9px;
 }
 
 .link-form-field>span {
@@ -82,6 +80,7 @@
 .link-form select,
 .link-form textarea {
   width: 100%;
+  padding: 12px 14px;
   border: 1px solid var(--portal-control-border);
   border-radius: 0;
   background: var(--portal-control-background);
@@ -95,13 +94,11 @@
 
 .link-form input,
 .link-form select {
-  min-height: 44px;
-  padding: 0 14px;
+  min-height: 46px;
 }
 
 .link-form textarea {
-  min-height: 130px;
-  padding: 12px 14px;
+  min-height: 180px;
   resize: vertical;
 }
 
@@ -116,31 +113,6 @@
   border-color: var(--portal-accent);
   outline: 3px solid var(--portal-focus-ring);
   outline-offset: 1px;
-}
-
-
-/* ==========================================================================
-   SELECT / DROPDOWN THEME FIX
-   ========================================================================== */
-
-.link-form select {
-  color-scheme: light;
-}
-
-.link-form option {
-  background: #ffffff;
-  color: #101214;
-}
-
-:root[data-theme="dark"] .link-form select {
-  color-scheme: dark;
-  background: rgba(255, 255, 255, 0.05);
-  color: var(--theme-text);
-}
-
-:root[data-theme="dark"] .link-form option {
-  background: #11191e;
-  color: #f4f6f7;
 }
 
 .link-description-field,
@@ -169,16 +141,15 @@
    ========================================================================== */
 
 .link-form-actions {
-  padding-top: 4px;
+  padding-top: 8px;
   display: flex;
   justify-content: flex-end;
   gap: 12px;
 }
 
 .link-form-actions button {
-  min-height: 44px;
+  min-height: 46px;
   padding: 0 20px;
-  border: 1px solid transparent;
   font: inherit;
   font-size: 14px;
   font-weight: 600;
@@ -206,7 +177,7 @@
 .link-cancel-button {
   color: var(--theme-text);
   background: transparent;
-  border-color: var(--portal-accent-border);
+  border: 1px solid var(--portal-accent-border);
 }
 
 .link-cancel-button:hover {
@@ -216,7 +187,7 @@
 }
 
 .link-submit-button {
-  color: #ffffff;
+  color: #fff;
   background: var(--portal-accent);
 }
 
@@ -226,57 +197,19 @@
 
 
 /* ==========================================================================
-   SHORT DESKTOP VIEWPORTS
-   ========================================================================== */
-
-@media (min-width: 761px) and (max-height: 760px) {
-  .create-support-link-page {
-    align-content: start;
-  }
-
-  .create-link-header {
-    margin-bottom: 18px;
-  }
-
-  .create-link-header h1 {
-    font-size: clamp(34px, 4vw, 46px);
-  }
-
-  .create-link-description {
-    margin-top: 10px;
-    font-size: 14px;
-    line-height: 1.45;
-  }
-
-  .link-form {
-    gap: 16px;
-    padding: 22px;
-  }
-
-  .link-form textarea {
-    min-height: 100px;
-  }
-
-  .link-form input,
-  .link-form select,
-  .link-form-actions button {
-    min-height: 42px;
-  }
-}
-
-
-/* ==========================================================================
    RESPONSIVE LAYOUT
    ========================================================================== */
 
-@media (max-width: 660px) {
-  .create-support-link-page {
-    min-height: auto;
-    align-content: start;
+@media (max-width: 760px) {
+  .create-link-page {
+    padding: 40px 22px 54px;
   }
+}
 
+@media (max-width: 660px) {
   .link-form {
     grid-template-columns: 1fr;
+    padding: 22px;
   }
 
   .link-description-field,
@@ -287,12 +220,12 @@
 }
 
 @media (max-width: 480px) {
-  .create-link-header h1 {
-    font-size: 40px;
+  .create-link-page {
+    padding-inline: 16px;
   }
 
-  .create-link-description {
-    font-size: 15px;
+  .create-link-header h1 {
+    font-size: 40px;
   }
 
   .link-form-actions {

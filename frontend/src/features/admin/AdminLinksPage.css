@@ -1,5 +1,5 @@
 /* ==========================================================================
-   SUPPORT LINKS PAGE
+   ADMIN LINKS PAGE
    Displays previously created support links and their current status.
    ========================================================================== */
 
@@ -53,7 +53,7 @@
   display: block;
   max-width: 650px;
   margin: 12px 0 0;
-  color: var(--portal-blue);
+  color: var(--theme-text-secondary);
   font-size: 16px;
   line-height: 1.6;
 }
@@ -102,7 +102,7 @@
 
 .links-table-wrapper {
   width: 100%;
-  overflow-x: hidden;
+  overflow-x: auto;
   border: 1px solid var(--theme-border-strong);
   background: var(--theme-surface);
   box-shadow: var(--theme-card-shadow);

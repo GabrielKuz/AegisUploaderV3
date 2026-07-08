@@ -3,15 +3,9 @@ import {
   //type ChangeEvent,
   type FormEvent,
 } from "react";
-import { useMsal } from "@azure/msal-react";
 import { useNavigate } from "react-router-dom";
-import "./CreateSupportLinkPage.css";
-import { isEntraConfigured } from "../../auth/authConfig";
-import {
-  getActiveAccount,
-  getApiAccessToken,
-} from "../../auth/entraAuth";
-import { getDevToken } from "../../auth/devAuth";
+import "./AdminCreateSupportLinkPage.css";
+import { getDevToken } from "../auth/devAuth";
 
 type LinkForm = {
   caseID: string;
@@ -23,27 +17,12 @@ const INITIAL_FORM: LinkForm = {
   ITAR: null,
 };
 
-/**
- * Creates a new customer-support link request.
- *
- * This page is rendered inside the shared SupportLayout, so it should only
- * control the form content and not the full app layout.
- */
-export function CreateSupportLinkPage() {
+export function AdminCreateSupportLinkPage() {
   const navigate = useNavigate();
-  const { instance } = useMsal();
-  const account = getActiveAccount(instance);
 
   const [form, setForm] = useState<LinkForm>(INITIAL_FORM);
   const [error, setError] = useState<string | null>(null);
 
-
-  /**
-   * Validates the form before submitting.
-   *
-   * Replace the console statement with the real API request once the
-   * backend endpoint is available.
-   */
   const handleSubmit = async (
     event: FormEvent<HTMLFormElement>,
   ) => {
@@ -60,29 +39,13 @@ export function CreateSupportLinkPage() {
     }
 
     setError(null);
-
-    if (isEntraConfigured && !account) {
-      setError("Please sign in before creating a support link.");
-      return;
-    }
-
-    //console.info("Support link submitted:", form);
-    const accessToken = isEntraConfigured
-      ? await getApiAccessToken(instance, account)
-      : getDevToken();
-
-    if (!accessToken) {
-      setError("Please sign in before creating a support link.");
-      return;
-    }
-
     const response = await fetch("/api/links/create/", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${accessToken}`,
-        "Content-Type": "application/json",
+        Authorization: `Bearer ${getDevToken()}`,
+        "Content-Type": "application/json"
       },
-      body: JSON.stringify({ case_id: form.caseID, itar: form.ITAR }),
+      body: JSON.stringify({ case_id: form.caseID, itar: form.ITAR })
     });
     if (!response.ok) {
       setError("Failed to create support link.");
@@ -91,22 +54,26 @@ export function CreateSupportLinkPage() {
     const data = await response.json();
     console.log(data.uuid);
     console.log(data.link);
-    navigate("/support/links", { state: { refresh: true } });
+    navigate("/admin/links", { state: { refresh: true } });
   };
 
   return (
     <section
-      className="create-support-link-page"
+      className="create-link-page"
       aria-labelledby="create-link-heading"
     >
       <header className="create-link-header">
+        <p className="create-link-eyebrow">
+          Customer support
+        </p>
+
         <h1 id="create-link-heading">
           Create a new link
         </h1>
 
         <p className="create-link-description">
-          Describe the customer request and provide enough detail for
-          the support team to follow up.
+          Inform the team of the situation and describe the
+          assistance they can provide.
         </p>
       </header>
 
@@ -123,7 +90,6 @@ export function CreateSupportLinkPage() {
             {error}
           </div>
         )}
-
         <label className="link-form-field">
           <span>Case ID</span>
 
@@ -165,7 +131,7 @@ export function CreateSupportLinkPage() {
           <button
             type="button"
             className="link-cancel-button"
-            onClick={() => navigate("/support")}
+            onClick={() => navigate("/admin")}
           >
             Cancel
           </button>

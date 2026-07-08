@@ -41,7 +41,7 @@
 }
 
 .logo {
-  width: clamp(180px, 18vw, 260px);
+  width: clamp(150px, 18vw, 185px);
   height: auto;
   flex: 0 1 auto;
 }
@@ -162,7 +162,7 @@
   min-width: 0;
   min-height: 0;
   padding: clamp(28px, 4vw, 48px);
-  overflow: auto;
+  overflow: hidden;
   background: var(--theme-page);
   color: var(--theme-text);
 }

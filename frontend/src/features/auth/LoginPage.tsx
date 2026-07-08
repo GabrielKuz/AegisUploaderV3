@@ -177,7 +177,7 @@ export function LoginPage() {
         <header className="brand-header">
           <img
             className="brand-logo"
-            src="/images/aegis-logo.svg"
+            src="/images/Aegis-Logo.svg"
             alt="Aegis Software"
           />
         </header>
@@ -244,10 +244,12 @@ export function LoginPage() {
 
         {/* Primary authentication card. */}
         <section className="auth-card">
-          <div
-            className="auth-icon"
-            aria-hidden="true"
-          >
+          <div aria-hidden="true">
+            <img
+              className="auth-icon"
+              src="/images/Aegis-Icon.png"
+              alt="Aegis Logo"
+            />
             <span />
           </div>
 
@@ -265,8 +267,15 @@ export function LoginPage() {
             type="button"
             onClick={handleSsoLogin}
           >
+
+            <img
+              className="sso-button-logo"
+              src="/images/Microsoft-Logo.png"
+              alt="Microsoft Logo"
+            />
+
             <span className="sso-button-label">
-              Continue with SSO
+              Continue with Microsoft Entra ID
             </span>
 
             <span
@@ -285,30 +294,6 @@ export function LoginPage() {
             </a>
           </div>
         </section>
-
-        {/* Identity-provider information. */}
-        <aside
-          className="identity-card"
-          aria-label="Identity provider information"
-        >
-          <div
-            className="identity-grid"
-            aria-hidden="true"
-          >
-            <span />
-            <span />
-            <span />
-            <span />
-          </div>
-
-          <div>
-            <h3>Microsoft Entra ID</h3>
-
-            <p>
-              Enterprise identity authentication for approved users.
-            </p>
-          </div>
-        </aside>
 
         {/* Security notice and legal navigation. */}
         <footer className="auth-footer">

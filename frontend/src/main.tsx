@@ -6,8 +6,8 @@ import App from "./App";
 import { initializeMsalInstance, msalInstance } from "./features/auth/authConfig";
 import { ThemeProvider } from "./theme/ThemeContext";
 
-import "./styles/tokens.css";
 import "./styles/global.css";
+import "./styles/PortalTheme.css";
 
 async function bootstrap() {
   await initializeMsalInstance();
