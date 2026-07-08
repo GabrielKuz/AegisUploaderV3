@@ -72,6 +72,11 @@ def update_similar_between_LinkDB_and_UploadDB(session):
 
     uploads = session.scalars(select(UploadRecord)).all()
     for upload in uploads:
+        #Next three lines are used so that the function can be passed into other files with no issue as link my not be defined before hand
+        link = session.scalar(select(LinkRecord).where(LinkRecord.uuid == upload.link_uuid))
+        if link is None:
+            continue
+
         for link_field, upload_field in zip(linksimilar, uploadsimilar):
             update_other_from_self(link, upload, session, upload_field, link_field)
 
