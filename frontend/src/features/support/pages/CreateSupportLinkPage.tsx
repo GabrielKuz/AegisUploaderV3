@@ -3,8 +3,14 @@ import {
   //type ChangeEvent,
   type FormEvent,
 } from "react";
+import { useMsal } from "@azure/msal-react";
 import { useNavigate } from "react-router-dom";
 import "./CreateSupportLinkPage.css";
+import { isEntraConfigured } from "../../auth/authConfig";
+import {
+  getActiveAccount,
+  getApiAccessToken,
+} from "../../auth/entraAuth";
 import { getDevToken } from "../../auth/devAuth";
 
 type LinkForm = {
@@ -25,6 +31,8 @@ const INITIAL_FORM: LinkForm = {
  */
 export function CreateSupportLinkPage() {
   const navigate = useNavigate();
+  const { instance } = useMsal();
+  const account = getActiveAccount(instance);
 
   const [form, setForm] = useState<LinkForm>(INITIAL_FORM);
   const [error, setError] = useState<string | null>(null);
@@ -52,13 +60,29 @@ export function CreateSupportLinkPage() {
     }
 
     setError(null);
+
+    if (isEntraConfigured && !account) {
+      setError("Please sign in before creating a support link.");
+      return;
+    }
+
+    //console.info("Support link submitted:", form);
+    const accessToken = isEntraConfigured
+      ? await getApiAccessToken(instance, account)
+      : getDevToken();
+
+    if (!accessToken) {
+      setError("Please sign in before creating a support link.");
+      return;
+    }
+
     const response = await fetch("/api/links/create/", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${getDevToken()}`,
-        "Content-Type": "application/json"
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
       },
-      body: JSON.stringify({ case_id: form.caseID, itar: form.ITAR })
+      body: JSON.stringify({ case_id: form.caseID, itar: form.ITAR }),
     });
     if (!response.ok) {
       setError("Failed to create support link.");

@@ -1,6 +1,14 @@
-import { Link } from "react-router-dom";
-import { useEffect, useState, useMemo } from "react";
+import { Link, /*useLocation*/ } from "react-router-dom";
+import { useCallback, useEffect, useState, useMemo } from "react";
+import { useMsal } from "@azure/msal-react";
+//import { mockLinks } from "../data/mockLinks";
+import "../../../styles/PortalTheme.css";
 import "./SupportLinksPage.css";
+import { isEntraConfigured } from "../../auth/authConfig";
+import {
+  getActiveAccount,
+  getApiAccessToken,
+} from "../../auth/entraAuth";
 import { getDevToken } from "../../auth/devAuth";
 type SupportLink = {
   uuid: string;
@@ -31,9 +39,34 @@ export function SupportLinksPage() {
   const [links, setLinks] = useState<SupportLink[]>([]);
   const [sortKey, setSortKey] = useState<SortKey>("timestamp");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
-  async function loadLinks() {
-    const response = await fetch("/api/links/", { headers: { Authorization: `Bearer ${getDevToken()}` } });
-    if (!response.ok) {
+  const { accounts, instance } = useMsal();
+  const account = getActiveAccount(instance);
+
+  useEffect(() => {
+    if (!instance.getActiveAccount() && accounts[0]) {
+      instance.setActiveAccount(accounts[0]);
+    }
+  }, [accounts, instance]);
+
+  const loadLinks = useCallback(async () => {
+    if (isEntraConfigured && !account) {
+      console.error("No signed-in account found.");
+      return;
+    }
+
+    const accessToken = isEntraConfigured
+      ? await getApiAccessToken(instance, account)
+      : getDevToken();
+
+    if (!accessToken) {
+      console.error("No access token available.");
+      return;
+    }
+
+    const response = await fetch("/api/links/", {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    if(!response.ok) {
       console.error("Failed to load support links.");
       return;
     }
@@ -44,10 +77,12 @@ export function SupportLinksPage() {
     }
     console.log(data);
     setLinks(data);
-  }
+  }, [account, instance]);
+
   useEffect(() => {
-    loadLinks();
-  }, []);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void loadLinks();
+  }, [loadLinks]);
   function handleSort(key: SortKey) {
     if (key === sortKey) {
       setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"));
