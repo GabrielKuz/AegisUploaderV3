@@ -5,13 +5,14 @@ from modules.auth import getCurrentActiveUser, getCurrentUser, User, userAuthent
 from modules.LinkGenerator import LinkRequest, generate_links, get_all_links, get_link
 from modules.auth import getCurrentActiveUser, getCurrentUser, User
 from modules.LinkGenerator import LinkRequest, generate_links, get_all_links
-from modules.auth import getCurrentActiveUser, getCurrentUser, User, userAuthenticated
+from modules.auth import getCurrentActiveUser, getCurrentUser, User, userAuthenticated, requireRole
 from modules.uploader import router as uploader_router, listFiles
 from modules.deletionRequest import router as deletionRequest_router
 from modules.downloadData import downloadData
 from modules import Session, engine
 from typing import Annotated
 from warnings import deprecated
+import os
 from contextlib import asynccontextmanager
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from zoneinfo import ZoneInfo
@@ -100,4 +101,3 @@ def download_upload(upload_id: str, currentUser: Annotated[User, Depends(getCurr
 
 if __name__ == "__main__": # Doesnt get run by docker
     main()
-

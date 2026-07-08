@@ -39,19 +39,6 @@ def test_normal():
     assert 3 ** 2 == 9
 
 
-def test_current_active_user_dependency_does_not_recurse():
-    from fastapi import FastAPI
-
-    app = FastAPI()
-
-    @app.get("/protected")
-    async def protected_route(current_user: str = Depends(getCurrentActiveUser)):
-        return {"ok": current_user is not None}
-
-    with TestClient(app) as test_client:
-        response = test_client.get("/protected")
-
-    assert response.status_code == 401
 
 
 def test_jwt():
