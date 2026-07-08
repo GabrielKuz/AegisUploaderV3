@@ -3,7 +3,7 @@ import { getDevUser, signOutDevUser } from "../features/auth/devAuth";
 import { ThemeToggle } from "../theme/ThemeToggle";
 import "./AppLayout.css";
 
-export function SupportLayout() {
+export function AdminLayout() {
   const navigate = useNavigate();
   const user = getDevUser();
 
@@ -17,7 +17,7 @@ export function SupportLayout() {
       <header className="header">
         <div className="brand">
           <img
-            src="/images/Aegis-Logo.svg"
+            src="/images/aegis-logo.svg"
             alt="Aegis Software"
             className="logo"
           />
@@ -29,14 +29,14 @@ export function SupportLayout() {
               Secure Data Portal
             </span>
             <span className="section-name">
-              Customer Support
+              Administrative Support
             </span>
           </div>
         </div>
 
         <div className="user-menu">
           <div>
-            <strong>{user?.name ?? "Support User"}</strong>
+            <strong>{user?.name ?? "Admin User"}</strong>
             <span>{user?.email}</span>
           </div>
 
@@ -51,7 +51,7 @@ export function SupportLayout() {
       <aside className="sidebar">
         <nav aria-label="Customer support">
           <NavLink
-            to="/support"
+            to="/admin"
             end
             className={({ isActive }) =>
               isActive
@@ -63,7 +63,7 @@ export function SupportLayout() {
           </NavLink>
 
           <NavLink
-            to="/support/links"
+            to="/admin/links"
             end
             className={({ isActive }) =>
               isActive
@@ -75,7 +75,7 @@ export function SupportLayout() {
           </NavLink>
 
           <NavLink
-            to="/support/links/new"
+            to="/admin/links/new"
             className={({ isActive }) =>
               isActive
                 ? "nav-link nav-link-active"
@@ -83,6 +83,17 @@ export function SupportLayout() {
             }
           >
             Create link
+          </NavLink>
+
+          <NavLink
+            to="/admin/view-uploads"
+            className={({ isActive }) =>
+              isActive
+                ? "nav-link nav-link-active"
+                : "nav-link"
+            }
+          >
+            View uploads
           </NavLink>
         </nav>
       </aside>

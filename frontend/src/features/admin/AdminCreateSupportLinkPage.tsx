@@ -4,8 +4,8 @@ import {
   type FormEvent,
 } from "react";
 import { useNavigate } from "react-router-dom";
-import "./CreateSupportLinkPage.css";
-import { getDevToken } from "../../auth/devAuth";
+import "./AdminCreateSupportLinkPage.css";
+import { getDevToken } from "../auth/devAuth";
 
 type LinkForm = {
   caseID: string;
@@ -17,25 +17,12 @@ const INITIAL_FORM: LinkForm = {
   ITAR: null,
 };
 
-/**
- * Creates a new customer-support link request.
- *
- * This page is rendered inside the shared SupportLayout, so it should only
- * control the form content and not the full app layout.
- */
-export function CreateSupportLinkPage() {
+export function AdminCreateSupportLinkPage() {
   const navigate = useNavigate();
 
   const [form, setForm] = useState<LinkForm>(INITIAL_FORM);
   const [error, setError] = useState<string | null>(null);
 
-
-  /**
-   * Validates the form before submitting.
-   *
-   * Replace the console statement with the real API request once the
-   * backend endpoint is available.
-   */
   const handleSubmit = async (
     event: FormEvent<HTMLFormElement>,
   ) => {
@@ -67,22 +54,26 @@ export function CreateSupportLinkPage() {
     const data = await response.json();
     console.log(data.uuid);
     console.log(data.link);
-    navigate("/support/links", { state: { refresh: true } });
+    navigate("/admin/links", { state: { refresh: true } });
   };
 
   return (
     <section
-      className="create-support-link-page"
+      className="create-link-page"
       aria-labelledby="create-link-heading"
     >
       <header className="create-link-header">
+        <p className="create-link-eyebrow">
+          Customer support
+        </p>
+
         <h1 id="create-link-heading">
           Create a new link
         </h1>
 
         <p className="create-link-description">
-          Describe the customer request and provide enough detail for
-          the support team to follow up.
+          Inform the team of the situation and describe the
+          assistance they can provide.
         </p>
       </header>
 
@@ -99,7 +90,6 @@ export function CreateSupportLinkPage() {
             {error}
           </div>
         )}
-
         <label className="link-form-field">
           <span>Case ID</span>
 
@@ -141,7 +131,7 @@ export function CreateSupportLinkPage() {
           <button
             type="button"
             className="link-cancel-button"
-            onClick={() => navigate("/support")}
+            onClick={() => navigate("/admin")}
           >
             Cancel
           </button>
