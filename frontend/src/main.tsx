@@ -7,7 +7,6 @@ import { initializeMsalInstance, msalInstance } from "./features/auth/authConfig
 import { ThemeProvider } from "./theme/ThemeContext";
 
 import "./styles/fonts.css";
-import "./styles/tokens.css";
 import "./styles/global.css";
 import "./styles/PortalTheme.css";
 
