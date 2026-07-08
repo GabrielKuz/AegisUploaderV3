@@ -10,17 +10,17 @@ import { RequireDevUser } from "./features/auth/RequireDevUser";
 
 import { SupportLayout } from "./layouts/SupportLayout";
 import { CustomerLayout } from "./layouts/CustomerLayout";
+import { AdminLayout } from "./layouts/AdminLayout";
 
 import { SupportHomePage } from "./features/support/pages/SupportHomePage";
 import { SupportLinksPage } from "./features/support/pages/SupportLinksPage";
 import { CreateSupportLinkPage } from "./features/support/pages/CreateSupportLinkPage";
+
 import { AdminHomePage } from "./features/admin/AdminHomePage";
 import { AdminLinksPage } from "./features/admin/AdminLinksPage";
 import { AdminCreateSupportLinkPage } from "./features/admin/AdminCreateSupportLinkPage";
 import { AdminUploadPage } from "./features/admin/AdminUploadPage";
-import { SupportLayout } from "./layouts/SupportLayout";
-import { CustomerLayout } from "./layouts/CustomerLayout";
-import { AdminLayout } from "./layouts/AdminLayout";
+
 import { CustomerUpload } from "./features/uploader/CustomerUpload";
 import { UploadDetails } from "./features/uploader/UploadDetails";
 
@@ -50,7 +50,7 @@ export default function App() {
           <Route path="links" element={<SupportLinksPage />} />
           <Route path="links/new" element={<CreateSupportLinkPage />} />
         </Route>
-        
+
         <Route
           path="/admin"
           element={

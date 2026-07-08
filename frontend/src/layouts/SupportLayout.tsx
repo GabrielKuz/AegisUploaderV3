@@ -17,7 +17,7 @@ export function SupportLayout() {
       <header className="header">
         <div className="brand">
           <img
-            src="/images/aegis-logo.svg"
+            src="/images/Aegis-Logo.svg"
             alt="Aegis Software"
             className="logo"
           />

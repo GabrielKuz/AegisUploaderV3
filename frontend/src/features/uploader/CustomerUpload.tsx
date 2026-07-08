@@ -4,8 +4,6 @@ import {
     type ChangeEvent,
 } from "react";
 import { useParams } from "react-router-dom";
-
-import "../../styles/SupportTheme.css";
 import "./CustomerUpload.css";
 
 type SelectedFile = {
@@ -93,60 +91,60 @@ export function CustomerUpload() {
             currentFiles.filter((_, index) => index !== indexToRemove),
         );
     };
-const uploadFiles = async () => {
-    setUploading(true);
+    const uploadFiles = async () => {
+        setUploading(true);
 
-    try {
-        await runWithConcurrency(selectedFiles, 3, async (item) => {
-            setUploadStatus((s) => ({
-                ...s,
-                [item.file.name]: "uploading",
-            }));
+        try {
+            await runWithConcurrency(selectedFiles, 3, async (item) => {
+                setUploadStatus((s) => ({
+                    ...s,
+                    [item.file.name]: "uploading",
+                }));
 
-            try {
-                const fileBuffer = await item.file.arrayBuffer();
+                try {
+                    const fileBuffer = await item.file.arrayBuffer();
 
-                const hashBuffer = await crypto.subtle.digest(
-                    "SHA-256",
-                    fileBuffer
-                );
+                    const hashBuffer = await crypto.subtle.digest(
+                        "SHA-256",
+                        fileBuffer
+                    );
 
-                const sha256 = Array.from(new Uint8Array(hashBuffer))
-                    .map((b) => b.toString(16).padStart(2, "0"))
-                    .join("");
+                    const sha256 = Array.from(new Uint8Array(hashBuffer))
+                        .map((b) => b.toString(16).padStart(2, "0"))
+                        .join("");
 
-                const formData = new FormData();
-                formData.append("file", item.file);
+                    const formData = new FormData();
+                    formData.append("file", item.file);
 
-                const response = await fetch(`/api/uploadfile/${uuid}`, {
-                    method: "POST",
-                    headers: {
-                        Region: "US",
-                        "X-File-Hash": sha256,
-                    },
-                    body: formData,
-                });
+                    const response = await fetch(`/api/uploadfile/${uuid}`, {
+                        method: "POST",
+                        headers: {
+                            Region: "US",
+                            "X-File-Hash": sha256,
+                        },
+                        body: formData,
+                    });
 
-                if (!response.ok) {
-                    throw new Error("upload failed");
+                    if (!response.ok) {
+                        throw new Error("upload failed");
+                    }
+
+                    setUploadStatus((s) => ({
+                        ...s,
+                        [item.file.name]: "done",
+                    }));
+                } catch {
+                    setUploadStatus((s) => ({
+                        ...s,
+                        [item.file.name]: "error",
+                    }));
                 }
-
-                setUploadStatus((s) => ({
-                    ...s,
-                    [item.file.name]: "done",
-                }));
-            } catch {
-                setUploadStatus((s) => ({
-                    ...s,
-                    [item.file.name]: "error",
-                }));
-            }
-        });
-    } finally {
-        setUploading(false);
-    }
-};
-        return (
+            });
+        } finally {
+            setUploading(false);
+        }
+    };
+    return (
         <section
             className="customer-upload-page"
             aria-labelledby="customer-upload-heading"

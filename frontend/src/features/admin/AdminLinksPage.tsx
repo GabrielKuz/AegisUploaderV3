@@ -1,8 +1,6 @@
 import { Link } from "react-router-dom";
 import { useEffect, useState, useMemo } from "react";
-
-import "../../styles/SupportTheme.css";
-import "./AdminLinksPage.css";
+import "../support/pages/SupportLinksPage.css";
 import { getDevToken } from "../auth/devAuth";
 
 type SupportLink = {

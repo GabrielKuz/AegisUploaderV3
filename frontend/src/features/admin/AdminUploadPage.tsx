@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
-import "../../styles/SupportTheme.css";
-import "./AdminUploadPage.css";
+import "../support/pages/SupportLinksPage.css";
 import { getDevToken } from "../auth/devAuth";
 
 type Upload = {
@@ -29,7 +28,7 @@ export function AdminUploadPage() {
     useState<SortDirection>("asc");
 
   async function loadUploads() {
-    if (!uuid) {return;}
+    if (!uuid) { return; }
     const response = await fetch(`/api/upload/${uuid}`, {
       headers: {
         Authorization: `Bearer ${getDevToken()}`

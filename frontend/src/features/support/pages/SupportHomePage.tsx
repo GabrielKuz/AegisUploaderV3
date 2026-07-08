@@ -1,7 +1,5 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
-
-import "../../../styles/SupportTheme.css";
 import "./SupportHomePage.css";
 
 type LinkActionCardProps = {
@@ -163,10 +161,6 @@ export function SupportHomePage() {
       aria-labelledby="support-home-heading"
     >
       <header className="support-page-heading">
-        <p className="support-page-eyebrow">
-          Customer support
-        </p>
-
         <h1 id="support-home-heading">
           How can we help?
         </h1>
