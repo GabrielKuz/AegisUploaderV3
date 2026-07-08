@@ -23,7 +23,6 @@ import { AdminUploadPage } from "./features/admin/AdminUploadPage";
 
 import { CustomerUpload } from "./features/uploader/CustomerUpload";
 import { UploadDetails } from "./features/uploader/UploadDetails";
-import { RequireDevUser } from "./features/auth/RequireDevUser";
 
 export default function App() {
   return (

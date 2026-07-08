@@ -296,7 +296,7 @@ def listFiles(linkUUID: str, current_user: Annotated[User, Depends(requireRoles(
         for upload in authorized_uploads]
 
 @router.post("/uploads/{upload_id}/extend_expiration")
-def extendFileExpiration(upload_id: str, additional_days: int, current_user: Annotated[User, Depends(requireRole("admin"))]):
+def extendFileExpiration(upload_id: str, additional_days: int, current_user: Annotated[User, Depends(requireRoles("admin", strict=True))]):  # Only admin can extend expiration
     upload_record: UploadRecord|None = session.query(UploadRecord).filter(UploadRecord.upload_id == upload_id).first()
     if not upload_record:
         raise HTTPException(status_code=404, detail="Upload record not found")
