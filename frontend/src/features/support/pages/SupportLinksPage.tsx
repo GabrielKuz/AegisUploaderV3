@@ -18,7 +18,7 @@ type SortDirection = "asc" | "desc";
 function getSortIcon(
   column: string,
   sortKey: string,
-  sortDirection: "asc" | "desc"
+  sortDirection: SortDirection
 ) {
   if (column !== sortKey) return "⇅";
   return sortDirection === "asc" ? "▲" : "▼";
@@ -60,6 +60,9 @@ export function SupportLinksPage() {
   const sortedLinks = useMemo(() => {
     const copy = [...links];
     copy.sort((a, b) => {
+      if (sortKey === "timestamp") {
+        return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
+      }
       const aVal = a[sortKey];
       const bVal = b[sortKey];
 
@@ -137,12 +140,35 @@ export function SupportLinksPage() {
           <tbody>
             {sortedLinks.map((supportLink) => (
               <tr key={supportLink.uuid}>
-                <td>{supportLink.uuid}</td>
-                <td>{supportLink.case_id}</td>
-                <td>{supportLink.itar ? "Yes" : "No"}</td>
-                <td>{supportLink.creator}</td>
-                <td>{new Date(supportLink.timestamp).toLocaleString()}</td>
-                <td>{new Date(supportLink.expiration_date).toLocaleString()}</td>
+                  <td>
+                      <Link to={`/upload/${supportLink.uuid}`}>
+                          /upload/{supportLink.uuid}
+                      </Link>
+                  </td>
+
+                  <td>{supportLink.case_id}</td>
+
+                  <td>
+                      {supportLink.itar ? (
+                          <span
+                              style={{
+                                  fontWeight: "bold",
+                                  backgroundColor: "#ff4d4d",
+                                  color: "white",
+                                  padding: "4px 8px",
+                                  borderRadius: "6px"
+                              }}
+                          >
+                              ITAR
+                          </span>
+                      ) : (
+                          "No"
+                      )}
+                  </td>
+                 
+                  <td>{supportLink.creator}</td>
+                  <td>{new Date(supportLink.timestamp).toLocaleString()}</td>
+                  <td>{new Date(supportLink.expiration_date).toLocaleString()}</td>
               </tr>
             ))}
           </tbody>
