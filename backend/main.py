@@ -9,6 +9,7 @@ from modules.auth import getCurrentActiveUser, getCurrentUser, User, userAuthent
 from modules.uploader import router as uploader_router, listFiles
 from modules.deletionRequest import router as deletionRequest_router
 from modules.downloadData import downloadData
+from Utils import IsUUID
 from modules import Session, engine
 from typing import Annotated
 from warnings import deprecated
@@ -56,6 +57,10 @@ def get_links(current_user: Annotated[User, Depends(requireRoles("User", "Admin"
 
 @app.get("/links/{uuid}")
 def get_link_endpoint(uuid: str, current_user: Annotated[User, Depends(requireRoles("User", "Admin"))]):  # TODO: Change to getCurrentActiveUser after testing
+    if not IsUUID(uuid):
+        badUUID = HTTPException(400,detail={"message": "Invalid uuid"})
+        raise badUUID
+        return None
     return get_link(uuid)
 
 
@@ -97,6 +102,10 @@ def getLinkInfo(uuid: str, currentUser: Annotated[User, Depends(requireRoles("Us
 
 @app.get("/uploads/{upload_id}/download")
 def download_upload(upload_id: str, currentUser: Annotated[User, Depends(requireRoles("User", "Admin"))]):
+    if not IsUUID(upload_id):
+        badUUID = HTTPException(400,detail={"message": "Invalid uuid"})
+        raise badUUID
+        return None
     return downloadData(upload_id, currentUser)
 
 if __name__ == "__main__": # Doesnt get run by docker
