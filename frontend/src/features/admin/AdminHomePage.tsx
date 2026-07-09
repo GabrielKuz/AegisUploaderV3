@@ -1,8 +1,6 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
-
-import "../../styles/SupportTheme.css";
-import "./AdminHomePage.css";
+import "../support/pages/SupportHomePage.css";
 
 type LinkActionCardProps = {
   to: string;
@@ -176,7 +174,7 @@ export function AdminHomePage() {
         </p>
       </header>
 
-      <div className="support-home-actions">
+      <div className="admin-home-actions">
         <LinkActionCard
           to="/admin/links"
           number="01"

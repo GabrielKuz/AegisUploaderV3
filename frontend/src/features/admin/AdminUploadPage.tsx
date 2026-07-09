@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
-import "../../styles/SupportTheme.css";
-import "./AdminUploadPage.css";
+import "../support/pages/SupportLinksPage.css";
 import { getDevToken } from "../auth/devAuth";
 
 type Upload = {

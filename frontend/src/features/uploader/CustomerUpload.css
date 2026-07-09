@@ -19,7 +19,7 @@
 
 .upload-eyebrow {
   margin: 0;
-  color: var(--support-accent);
+  color: var(--portal-accent);
   font-family: var(--font-mono, monospace);
   font-size: 12px;
   font-weight: 600;
@@ -95,7 +95,7 @@
   min-height: 44px;
   padding: 0 20px;
   color: #ffffff;
-  background: var(--support-accent);
+  background: var(--portal-accent);
   border: 0;
   border-radius: 5px;
   font: inherit;
@@ -177,7 +177,7 @@
 }
 
 .selected-file-actions a {
-  color: var(--support-accent);
+  color: var(--portal-accent);
   font-size: 13px;
   font-weight: 600;
   text-decoration: underline;

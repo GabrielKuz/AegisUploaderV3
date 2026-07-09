@@ -22,9 +22,7 @@ export function AdminLayout() {
             className="logo"
           />
 
-          <div className="divide">
-            |
-          </div>
+          <div className="divide" aria-hidden="true" />
 
           <div>
             <span className="product-name">

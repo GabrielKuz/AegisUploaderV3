@@ -8,6 +8,14 @@ COPY frontend/package.json frontend/package-lock.json ./
 RUN --mount=type=cache,target=/root/.npm \
 npm ci
 
+ARG VITE_AZURE_TENANT_ID
+ARG VITE_AZURE_CLIENT_ID
+ARG VITE_AZURE_API_SCOPE
+
+ENV VITE_AZURE_TENANT_ID=$VITE_AZURE_TENANT_ID
+ENV VITE_AZURE_CLIENT_ID=$VITE_AZURE_CLIENT_ID
+ENV VITE_AZURE_API_SCOPE=$VITE_AZURE_API_SCOPE
+
 COPY frontend/ .
 # build the frontend
 RUN npm run build
