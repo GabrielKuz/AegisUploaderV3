@@ -7,6 +7,5 @@
     "."
   ],
   "python.testing.unittestEnabled": false,
-  "python.testing.pytestEnabled": true,
-  "python-envs.defaultEnvManager": "ms-python.python:venv"
+  "python.testing.pytestEnabled": true
 }

@@ -4,17 +4,14 @@
 
 .login-page {
   width: 100%;
-  height: 100vh;
-  height: 100dvh;
-  max-height: 100vh;
-  max-height: 100dvh;
-
+  min-height: 100vh;
+  min-height: 100dvh;
   display: grid;
-  grid-template-columns: minmax(360px, 46%) minmax(0, 1fr);
-
+  grid-template-columns: minmax(440px, 46%) minmax(0, 1fr);
   overflow: hidden;
   background: var(--theme-page);
 }
+
 
 /* ==========================================================================
    LEFT BRAND PANEL
@@ -23,15 +20,11 @@
 .brand-side {
   position: relative;
   min-width: 0;
-  height: 100%;
-  min-height: 0;
+  min-height: 100%;
   overflow: hidden;
-
-  padding: clamp(14px, 2.2vw, 28px) clamp(28px, 3.5vw, 52px);
-
+  padding: clamp(28px, 3vw, 44px) clamp(28px, 3.5vw, 52px);
   display: flex;
   flex-direction: column;
-
   color: #ffffff;
   background:
     radial-gradient(circle at 18% 80%,
@@ -109,32 +102,26 @@
 }
 
 .brand-header {
-  min-height: 40px;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
 }
 
 .brand-logo {
-  width: clamp(125px, 10vw, 165px);
+  width: clamp(180px, 16vw, 250px);
   height: auto;
-  display: block;
-  object-fit: contain;
-  image-rendering: auto;
-
-  filter: none;
 }
 
 .brand-message {
   max-width: 620px;
   margin-top: auto;
-  padding-block: clamp(18px, 5vh, 64px) clamp(18px, 4vh, 42px);
+  padding-block: clamp(36px, 7vh, 76px) clamp(28px, 5vh, 48px);
 }
 
 .brand-message h1 {
   max-width: 640px;
   margin: 0;
   color: #ffffff;
-  font-size: clamp(34px, 4vw, 64px);
+  font-size: clamp(42px, 4.8vw, 72px);
   font-weight: 400;
   line-height: 0.98;
   letter-spacing: -0.07em;
@@ -146,11 +133,12 @@
 
 .brand-description {
   max-width: 500px;
-  margin: clamp(14px, 2.5vh, 28px) 0 0;
+  margin: 28px 0 0;
   color: rgba(255, 255, 255, 0.72);
-  font-size: clamp(13px, 1.05vw, 17px);
-  line-height: 1.55;
+  font-size: clamp(15px, 1.2vw, 17px);
+  line-height: 1.65;
 }
+
 
 /* ==========================================================================
    SECURITY HIGHLIGHTS
@@ -165,33 +153,34 @@
 }
 
 .security-item {
-  min-height: clamp(82px, 14vh, 128px);
-  padding: clamp(10px, 1.4vw, 16px);
+  min-height: 128px;
+  padding: 16px;
   background: rgba(0, 0, 0, 0.32);
   backdrop-filter: blur(14px);
 }
 
 .security-number {
   display: block;
-  margin-bottom: clamp(8px, 1.6vh, 18px);
+  margin-bottom: 18px;
   color: rgba(255, 255, 255, 0.42);
   font-family: var(--font-mono);
-  font-size: clamp(15px, 1.4vw, 20px);
+  font-size: 20px;
 }
 
 .security-item h2 {
-  margin: 0 0 6px;
+  margin: 0 0 8px;
   color: #ffffff;
-  font-size: clamp(12px, 1.05vw, 15px);
+  font-size: 15px;
   font-weight: 600;
 }
 
 .security-item p {
   margin: 0;
   color: rgba(255, 255, 255, 0.62);
-  font-size: clamp(10px, 0.9vw, 12px);
-  line-height: 1.4;
+  font-size: 12px;
+  line-height: 1.5;
 }
+
 
 /* ==========================================================================
    RIGHT AUTHENTICATION PANEL
@@ -200,22 +189,17 @@
 .auth-side {
   position: relative;
   min-width: 0;
-  height: 100%;
-  min-height: 0;
+  min-height: 100%;
   overflow: hidden;
-
-  padding: clamp(14px, 2.2vh, 28px) clamp(28px, 4vw, 56px);
-
+  padding: clamp(22px, 3vh, 32px) clamp(28px, 4vw, 56px);
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto;
-  row-gap: clamp(10px, 1.8vh, 20px);
-
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
+  row-gap: clamp(14px, 2.2vh, 24px);
   background:
     linear-gradient(90deg,
       var(--theme-panel-gradient),
       transparent 28%),
     var(--theme-page);
-
   transition: background-color 180ms ease;
 }
 
@@ -243,12 +227,12 @@
   z-index: 1;
 }
 
+
 /* ==========================================================================
    AUTH CONTROLS
    ========================================================================== */
 
 .auth-controls {
-  min-height: 40px;
   display: flex;
   align-items: center;
   justify-content: flex-end;
@@ -256,7 +240,7 @@
 }
 
 .support-link {
-  color: var(--portal-blue);
+  color: var(--color-blue);
   font-size: 14px;
   font-weight: 600;
   text-decoration: none;
@@ -275,25 +259,20 @@
   outline-offset: 4px;
 }
 
+
 /* ==========================================================================
    AUTHENTICATION CARD
    ========================================================================== */
 
 .auth-card {
-  width: min(58%, 560px);
-  max-height: 100%;
-  align-self: center;
+  width: min(520px, 100%);
+  align-self: end;
   justify-self: center;
-
-  padding: clamp(22px, 3vw, 42px);
-
-  border: 1px solid var(--theme-card-border);
-  background: var(--theme-card);
-  box-shadow:
-    0 24px 80px rgba(0, 0, 0, 0.45),
-    0 0 40px rgba(55, 179, 216, 0.05);
+  padding: clamp(30px, 3.6vw, 46px);
+  border: 1px solid var(--theme-border);
+  background: var(--theme-surface);
+  box-shadow: var(--theme-card-shadow);
   backdrop-filter: blur(20px);
-
   transition:
     color 180ms ease,
     border-color 180ms ease,
@@ -301,76 +280,74 @@
 }
 
 .auth-icon {
-  width: clamp(52px, 7vh, 86px);
-  height: auto;
-  margin: 0 auto clamp(14px, 2vh, 22px);
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 22px;
   display: grid;
   place-items: center;
+  border: 1px solid var(--theme-border-strong);
+  background: var(--theme-surface-secondary);
+}
+
+.auth-icon span {
+  display: block;
+  width: 24px;
+  height: 30px;
+  background: var(--color-aegis-red);
+  clip-path: polygon(0 0, 100% 50%, 0 100%);
 }
 
 .auth-card h2 {
   margin: 0;
   color: var(--theme-text);
-  font-size: clamp(30px, 3.8vw, 58px);
+  font-size: clamp(38px, 4vw, 58px);
   font-weight: 400;
   line-height: 1;
   text-align: center;
   letter-spacing: -0.06em;
 }
 
-.auth-card p {
-  color: var(--theme-muted);
-}
-
 .auth-copy {
   max-width: 470px;
-  margin: clamp(14px, 2vh, 22px) auto clamp(20px, 3vh, 32px);
+  margin: 22px auto 32px;
   color: var(--theme-text-secondary);
-  font-size: clamp(14px, 1.25vw, 20px);
-  line-height: 1.45;
+  font-size: clamp(16px, 1.35vw, 20px);
+  line-height: 1.55;
   text-align: center;
 }
+
 
 /* ==========================================================================
    SSO BUTTON
    ========================================================================== */
 
 .sso-button {
-  width: min(100%, 400px);
-  min-height: clamp(48px, 6vh, 58px);
-  padding: 0 clamp(14px, 2vw, 16px);
-
+  width: 100%;
+  min-height: 56px;
+  padding: 0 22px;
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  column-gap: clamp(8px, 1.4vw, 14px);
-
-  justify-self: center;
-
-  border: 1px solid var(--portal-primary-button-border);
+  border: 0;
   border-radius: 0;
-  background: var(--portal-primary-button-background);
-  box-shadow: var(--portal-primary-button-shadow);
-  color: var(--portal-primary-button-text);
-
+  background: var(--theme-button);
+  color: var(--theme-button-text);
   font: inherit;
   cursor: pointer;
-
   transition:
     color 160ms ease,
     transform 160ms ease,
-    background-color 160ms ease,
-    border-color 160ms ease;
+    background-color 160ms ease;
 }
 
 .sso-button:hover {
-  background: var(--portal-primary-button-background-hover);
-  border-color: rgba(255, 150, 150, 0.55);
+  background: var(--color-aegis-red);
+  color: #ffffff;
+  transform: translateY(-1px);
 }
 
 .sso-button:active {
-  background: var(--portal-primary-button-background-active);
-  transform: translateY(1px);
+  transform: translateY(0);
 }
 
 .sso-button:focus-visible {
@@ -378,51 +355,43 @@
   outline-offset: 4px;
 }
 
-.sso-button-logo {
-  width: clamp(28px, 4vh, 40px);
-  height: auto;
-  justify-self: start;
-}
-
 .sso-button-label {
-  min-width: 0;
   overflow: hidden;
-  text-align: center;
   font-family: var(--font-mono);
-  font-size: clamp(12px, 1.1vw, 14px);
+  font-size: 14px;
   font-weight: 500;
+  text-align: left;
+  text-overflow: ellipsis;
   letter-spacing: -0.02em;
+  white-space: nowrap;
 }
 
 .sso-button-arrow {
-  justify-self: end;
-  font-size: clamp(24px, 4vh, 35px);
-  line-height: 1;
+  font-size: 18px;
 }
+
 
 /* ==========================================================================
    ACCESS NOTE
    ========================================================================== */
 
 .access-note {
-  margin-top: clamp(18px, 3vh, 28px);
-  padding-top: clamp(18px, 3vh, 40px);
-
+  margin-top: 24px;
+  padding-top: 22px;
   display: grid;
-  gap: 8px;
-
+  gap: 10px;
   border-top: 1px solid var(--theme-divider);
   text-align: center;
 }
 
 .access-note span {
   color: var(--theme-muted);
-  font-size: clamp(13px, 1.2vw, 18px);
+  font-size: 12px;
 }
 
 .access-note a {
-  color: var(--portal-blue);
-  font-size: clamp(13px, 1.2vw, 18px);
+  color: var(--color-blue);
+  font-size: 12px;
   font-weight: 600;
   text-decoration: none;
   transition: color 160ms ease;
@@ -431,6 +400,67 @@
 .access-note a:hover {
   color: var(--color-aegis-red);
 }
+
+
+/* ==========================================================================
+   IDENTITY PROVIDER CARD
+   ========================================================================== */
+
+.identity-card {
+  width: min(430px, 100%);
+  align-self: start;
+  justify-self: center;
+  padding: 16px 18px;
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr);
+  gap: 16px;
+  align-items: center;
+  border: 1px solid var(--theme-border);
+  background: var(--theme-surface-secondary);
+  backdrop-filter: blur(16px);
+  transition:
+    color 180ms ease,
+    border-color 180ms ease,
+    background-color 180ms ease;
+}
+
+.identity-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 14px);
+  grid-template-rows: repeat(2, 14px);
+  gap: 3px;
+}
+
+.identity-grid span:nth-child(1) {
+  background: #f25022;
+}
+
+.identity-grid span:nth-child(2) {
+  background: #7fba00;
+}
+
+.identity-grid span:nth-child(3) {
+  background: #00a4ef;
+}
+
+.identity-grid span:nth-child(4) {
+  background: #ffb900;
+}
+
+.identity-card h3 {
+  margin: 0 0 4px;
+  color: var(--theme-text);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.identity-card p {
+  margin: 0;
+  color: var(--theme-muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
 
 /* ==========================================================================
    AUTHENTICATION FOOTER
@@ -441,9 +471,8 @@
   align-items: center;
   justify-content: space-between;
   gap: 18px;
-
   color: var(--theme-muted);
-  font-size: clamp(12px, 1.05vw, 18px);
+  font-size: 12px;
 }
 
 .auth-footer nav {
@@ -452,7 +481,7 @@
 }
 
 .auth-footer a {
-  color: var(--portal-blue);
+  color: var(--color-blue);
   text-decoration: none;
   transition: color 160ms ease;
 }
@@ -461,17 +490,14 @@
   color: var(--color-aegis-red);
 }
 
+
 /* ==========================================================================
    MEDIUM DESKTOPS
    ========================================================================== */
 
 @media (max-width: 1180px) {
   .login-page {
-    grid-template-columns: minmax(340px, 44%) minmax(0, 1fr);
-  }
-
-  .brand-logo {
-    width: clamp(115px, 16vw, 155px);
+    grid-template-columns: minmax(400px, 44%) minmax(0, 1fr);
   }
 
   .brand-side {
@@ -483,54 +509,76 @@
   }
 
   .security-number {
-    margin-bottom: 12px;
-  }
-
-  .auth-card {
-    width: min(72%, 520px);
+    margin-bottom: 16px;
   }
 }
 
+
 /* ==========================================================================
    TABLETS AND SMALL LAPTOPS
-   Keep the page locked to one viewport without scrolling.
    ========================================================================== */
 
 @media (max-width: 960px) {
   .login-page {
-    grid-template-columns: minmax(280px, 40%) minmax(0, 1fr);
-    height: 100vh;
-    height: 100dvh;
-    overflow: hidden;
+    grid-template-columns: 1fr;
+    overflow: visible;
   }
 
   .brand-side,
   .auth-side {
-    height: 100%;
-    min-height: 0;
-    overflow: hidden;
+    min-height: auto;
+    overflow: visible;
   }
 
   .brand-side {
-    padding: 24px;
-  }
-
-  .brand-logo {
-    width: clamp(105px, 18vw, 145px);
-    height: auto;
+    padding: 36px 32px;
   }
 
   .brand-message {
-    padding-block: 24px;
+    margin-top: 72px;
+    padding-block: 36px;
+  }
+
+  .auth-side {
+    padding: 40px 32px 32px;
+    grid-template-rows: auto auto auto auto;
+  }
+
+  .auth-card {
+    align-self: auto;
+  }
+
+  .identity-card {
+    align-self: auto;
+  }
+}
+
+
+/* ==========================================================================
+   MOBILE
+   ========================================================================== */
+
+@media (max-width: 720px) {
+  .brand-side {
+    padding: 30px 24px;
+  }
+
+  .brand-logo {
+    width: 210px;
+  }
+
+  .brand-message {
+    margin-top: 64px;
+    padding-block: 32px 36px;
   }
 
   .brand-message h1 {
-    font-size: clamp(30px, 5.2vw, 46px);
+    font-size: clamp(40px, 12vw, 48px);
+    letter-spacing: -0.06em;
   }
 
   .brand-description {
-    font-size: 13px;
-    line-height: 1.45;
+    font-size: 15px;
   }
 
   .security-list {
@@ -539,97 +587,28 @@
 
   .security-item {
     min-height: auto;
-    padding: 10px 12px;
   }
 
   .security-number {
-    margin-bottom: 4px;
-    font-size: 13px;
-  }
-
-  .security-item h2 {
-    margin-bottom: 4px;
-    font-size: 12px;
-  }
-
-  .security-item p {
-    font-size: 10px;
-    line-height: 1.35;
+    margin-bottom: 12px;
   }
 
   .auth-side {
-    padding: 22px;
+    padding: 32px 20px 28px;
   }
 
   .auth-controls {
+    justify-content: space-between;
     gap: 12px;
   }
 
   .auth-card {
-    width: min(86%, 460px);
-    padding: 26px;
-  }
-
-  .auth-footer {
-    font-size: 12px;
-  }
-}
-
-/* ==========================================================================
-   MOBILE
-   Hide the large brand panel to prevent page scrolling.
-   ========================================================================== */
-
-@media (max-width: 720px) {
-  .login-page {
-    grid-template-columns: 1fr;
-    height: 100vh;
-    height: 100dvh;
-    overflow: hidden;
-  }
-
-
-  .brand-side {
-    display: none;
-  }
-
-  .auth-side {
-    height: 100%;
-    min-height: 0;
-    overflow: hidden;
-    padding: 18px;
-    grid-template-rows: auto minmax(0, 1fr) auto;
-  }
-
-  .auth-controls {
-    justify-content: flex-end;
-  }
-
-  .auth-card {
-    width: min(100%, 420px);
-    padding: clamp(22px, 6vw, 34px);
-  }
-
-  .auth-icon {
-    width: clamp(50px, 12vw, 72px);
-    height: clamp(50px, 12vw, 72px);
-  }
-
-  .auth-card h2 {
-    font-size: clamp(32px, 10vw, 44px);
-  }
-
-  .auth-copy {
-    font-size: clamp(14px, 4vw, 16px);
-  }
-
-  .sso-button {
-    width: 100%;
+    padding: 36px 24px;
   }
 
   .auth-footer {
     flex-direction: column;
-    gap: 8px;
+    align-items: center;
     text-align: center;
   }
 
@@ -651,50 +630,52 @@
   }
 }
 
+
 /* ==========================================================================
    TINY SCREENS
    ========================================================================== */
 
 @media (max-width: 420px) {
+  .brand-side {
+    padding-inline: 20px;
+  }
+
+  .brand-logo {
+    width: min(190px, 100%);
+  }
+
+  .brand-message h1 {
+    font-size: clamp(36px, 12vw, 44px);
+  }
+
   .auth-side {
-    padding: 14px;
-    row-gap: 10px;
+    padding-inline: 16px;
+  }
+
+  .auth-controls {
+    gap: 10px;
   }
 
   .support-link {
-    font-size: 12px;
+    font-size: 13px;
   }
 
   .auth-card {
-    padding: 22px 18px;
+    padding-inline: 20px;
   }
 
   .auth-card h2 {
-    font-size: clamp(30px, 11vw, 38px);
+    font-size: clamp(32px, 10vw, 40px);
   }
 
   .auth-copy {
-    margin-block: 12px 18px;
-    font-size: 13px;
-    line-height: 1.4;
+    font-size: 15px;
   }
 
-  .sso-button {
-    min-height: 48px;
-  }
-
-  .sso-button-label {
-    font-size: 12px;
-  }
-
-  .access-note {
-    margin-top: 16px;
-    padding-top: 16px;
-  }
-
-  .access-note span,
-  .access-note a {
-    font-size: 13px;
+  .identity-card {
+    padding-inline: 16px;
+    grid-template-columns: 32px minmax(0, 1fr);
+    gap: 12px;
   }
 
   .brand-shapes {
@@ -702,197 +683,83 @@
   }
 }
 
+
 /* ==========================================================================
    SHORT DESKTOP VIEWPORTS
    ========================================================================== */
 
-@media (min-width: 721px) and (max-height: 760px) {
+@media (min-width: 961px) and (max-height: 760px) {
   .brand-side {
-    padding-block: 18px;
-  }
-
-  .brand-logo {
-    width: clamp(105px, 15vw, 145px);
-    height: auto;
+    padding-block: 24px;
   }
 
   .brand-message {
-    padding-block: 16px;
+    padding-block: 20px;
   }
 
   .brand-message h1 {
-    font-size: clamp(30px, 3.8vw, 52px);
+    font-size: clamp(38px, 4vw, 56px);
   }
 
   .brand-description {
-    margin-top: 14px;
-    font-size: 13px;
-    line-height: 1.4;
+    margin-top: 18px;
+    font-size: 15px;
   }
 
   .security-item {
-    min-height: auto;
-    padding: 9px 12px;
+    min-height: 100px;
+    padding: 12px;
   }
 
   .security-number {
-    margin-bottom: 4px;
-    font-size: 13px;
+    margin-bottom: 8px;
+    font-size: 17px;
   }
 
   .security-item h2 {
-    margin-bottom: 4px;
-    font-size: 12px;
+    font-size: 14px;
   }
 
   .security-item p {
-    font-size: 10px;
-    line-height: 1.3;
+    font-size: 11px;
   }
 
   .auth-side {
-    padding-block: 14px;
-    row-gap: 10px;
+    padding-block: 18px;
+    row-gap: 14px;
   }
 
   .auth-card {
-    width: min(72%, 500px);
-    padding: 22px 30px;
+    padding: 26px 36px;
   }
 
   .auth-icon {
-    width: 52px;
-    height: 52px;
-    margin-bottom: 12px;
-  }
-
-  .auth-card h2 {
-    font-size: clamp(30px, 3.4vw, 44px);
-  }
-
-  .auth-copy {
-    margin-block: 12px 18px;
-    font-size: 14px;
-    line-height: 1.4;
-  }
-
-  .sso-button {
-    min-height: 48px;
-  }
-
-  .access-note {
-    margin-top: 14px;
-    padding-top: 14px;
-  }
-
-  .access-note span,
-  .access-note a {
-    font-size: 13px;
-  }
-
-  .auth-footer {
-    font-size: 12px;
-  }
-}
-
-/* ==========================================================================
-   VERY SHORT VIEWPORTS
-   Extra compression for small laptop heights.
-   ========================================================================== */
-
-@media (min-width: 721px) and (max-height: 620px) {
-  .brand-side {
-    padding-block: 14px;
-  }
-
-  .brand-logo {
-    width: clamp(95px, 14vw, 130px);
-  }
-
-  .brand-message {
-    padding-block: 12px;
-  }
-
-  .brand-message h1 {
-    font-size: clamp(28px, 3.4vw, 44px);
-  }
-
-  .brand-description {
-    margin-top: 10px;
-    font-size: 12px;
-    line-height: 1.35;
-  }
-
-  .security-list {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
-  .security-item {
-    padding: 8px 10px;
-  }
-
-  .security-number {
     display: none;
   }
 
-  .security-item h2 {
-    font-size: 11px;
-  }
-
-  .security-item p {
-    font-size: 9px;
-  }
-
-  .auth-side {
-    padding-block: 10px;
-  }
-
-  .auth-card {
-    padding: 18px 28px;
-  }
-
-  .auth-icon {
-    width: 44px;
-    height: 44px;
-    margin-bottom: 10px;
-  }
-
   .auth-card h2 {
-    font-size: clamp(28px, 3vw, 38px);
+    font-size: clamp(34px, 3.6vw, 48px);
   }
 
   .auth-copy {
-    margin-block: 10px 14px;
-    font-size: 13px;
-    line-height: 1.35;
+    margin-block: 16px 24px;
+    font-size: 16px;
   }
 
   .sso-button {
-    min-height: 44px;
-  }
-
-  .sso-button-logo {
-    width: 28px;
-  }
-
-  .sso-button-arrow {
-    font-size: 24px;
+    min-height: 52px;
   }
 
   .access-note {
-    margin-top: 12px;
-    padding-top: 12px;
+    margin-top: 18px;
+    padding-top: 18px;
   }
 
-  .access-note span,
-  .access-note a {
-    font-size: 12px;
-  }
-
-  .auth-footer {
-    font-size: 11px;
+  .identity-card {
+    padding-block: 12px;
   }
 }
+
 
 /* ==========================================================================
    REDUCED MOTION

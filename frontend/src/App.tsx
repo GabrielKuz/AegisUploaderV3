@@ -6,21 +6,20 @@ import {
 } from "react-router-dom";
 
 import { LoginPage } from "./features/auth/LoginPage";
-import { RequireEntraUser } from "./features/auth/RequireEntraUser";
 import { RequireDevUser } from "./features/auth/RequireDevUser";
-import { SupportLayout } from "./layouts/SupportLayout";
-import { CustomerLayout } from "./layouts/CustomerLayout";
-import { AdminLayout } from "./layouts/AdminLayout";
+
+
 
 import { SupportHomePage } from "./features/support/pages/SupportHomePage";
 import { SupportLinksPage } from "./features/support/pages/SupportLinksPage";
 import { CreateSupportLinkPage } from "./features/support/pages/CreateSupportLinkPage";
-
 import { AdminHomePage } from "./features/admin/AdminHomePage";
 import { AdminLinksPage } from "./features/admin/AdminLinksPage";
 import { AdminCreateSupportLinkPage } from "./features/admin/AdminCreateSupportLinkPage";
 import { AdminUploadPage } from "./features/admin/AdminUploadPage";
-
+import { SupportLayout } from "./layouts/SupportLayout";
+import { CustomerLayout } from "./layouts/CustomerLayout";
+import { AdminLayout } from "./layouts/AdminLayout";
 import { CustomerUpload } from "./features/uploader/CustomerUpload";
 import { UploadDetails } from "./features/uploader/UploadDetails";
 import {SupportUploadPage } from "./features/support/pages/SupportUploadPage";
@@ -42,9 +41,9 @@ export default function App() {
         <Route
           path="/support"
           element={
-            <RequireEntraUser>
+            <RequireDevUser>
               <SupportLayout />
-            </RequireEntraUser>
+            </RequireDevUser>
           }
         >
           <Route index element={<SupportHomePage />} />
@@ -52,7 +51,7 @@ export default function App() {
           <Route path="links/new" element={<CreateSupportLinkPage />} />
           <Route path="view-uploads/:uuid" element={<SupportUploadPage />} />
         </Route>
-
+        
         <Route
           path="/admin"
           element={

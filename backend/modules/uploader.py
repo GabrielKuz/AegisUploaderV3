@@ -18,7 +18,7 @@ from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.backends import default_backend
 from fastapi import APIRouter, Depends, File, Header, HTTPException, UploadFile
 from modules import Session
-from modules.auth import getCurrentActiveUser, User, requireRoles
+from modules.auth import getCurrentActiveUser, User, getCurrentUserNoAuthForTest
 from modules.models import Base, UploadRecord, LinkRecord
 
 router = APIRouter()
@@ -270,7 +270,7 @@ def get_uploads_for_link(link_uuid: str): # Get all uploads for a given link uui
 
 
 @router.get("/links/{linkUUID}/files") # Get all files for a given link uuid from the db. Only returns files the user has access to
-def listFiles(linkUUID: str, current_user: Annotated[User, Depends(requireRoles("User", "Admin"))]):  # TODO: Change to getCurrentActiveUser after testing
+def listFiles(linkUUID: str, current_user: Annotated[User, Depends(getCurrentUserNoAuthForTest)]):
     uploads = get_uploads_for_link(linkUUID) # Get all uploads for the given link uuid
     authorized_uploads = [ # Filter the uploads to only include what the user can access
         upload for upload in uploads
@@ -294,17 +294,4 @@ def listFiles(linkUUID: str, current_user: Annotated[User, Depends(requireRoles(
             "date_uploaded": upload.date_uploaded.isoformat() if upload.date_uploaded else None,
         }
         for upload in authorized_uploads]
-
-@router.post("/uploads/{upload_id}/extend_expiration")
-def extendFileExpiration(upload_id: str, additional_days: int, current_user: Annotated[User, Depends(requireRoles("admin", strict=True))]):  # Only admin can extend expiration
-    upload_record: UploadRecord|None = session.query(UploadRecord).filter(UploadRecord.upload_id == upload_id).first()
-    if not upload_record:
-        raise HTTPException(status_code=404, detail="Upload record not found")
-
-    if upload_record.max_days_in_storage is None:
-        upload_record.max_days_in_storage = 0
-
-    upload_record.max_days_in_storage += additional_days
-    session.commit()
-    return {"message": f"File expiration extended by {additional_days} days", "newExpiration": upload_record.max_days_in_storage, "newExpirationDate": (upload_record.date_uploaded + datetime.timedelta(days=upload_record.max_days_in_storage)).isoformat() if upload_record.date_uploaded else None}
 

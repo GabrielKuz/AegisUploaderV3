@@ -1,39 +1,14 @@
-import { useEffect } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
-import { useMsal } from "@azure/msal-react";
-
-import { isEntraConfigured } from "../features/auth/authConfig";
-import {
-  getAccountDisplayName,
-  getAccountEmail,
-  getActiveAccount,
-} from "../features/auth/entraAuth";
 import { getDevUser, signOutDevUser } from "../features/auth/devAuth";
 import { ThemeToggle } from "../theme/ThemeToggle";
 import "./AppLayout.css";
 
 export function SupportLayout() {
   const navigate = useNavigate();
-  const { accounts, instance } = useMsal();
-  const account = getActiveAccount(instance);
-  const devUser = getDevUser();
-
-  useEffect(() => {
-    if (!instance.getActiveAccount() && accounts[0]) {
-      instance.setActiveAccount(accounts[0]);
-    }
-  }, [accounts, instance]);
+  const user = getDevUser();
 
   const handleSignOut = () => {
-    if (!isEntraConfigured) {
-      signOutDevUser();
-      navigate("/", { replace: true });
-      return;
-    }
-
-    void instance.logoutRedirect({
-      postLogoutRedirectUri: "/",
-    });
+    signOutDevUser();
     navigate("/", { replace: true });
   };
 
@@ -42,7 +17,7 @@ export function SupportLayout() {
       <header className="header">
         <div className="brand">
           <img
-            src="/images/Aegis-Logo.svg"
+            src="/images/aegis-logo.svg"
             alt="Aegis Software"
             className="logo"
           />
@@ -61,16 +36,8 @@ export function SupportLayout() {
 
         <div className="user-menu">
           <div>
-            <strong>
-              {isEntraConfigured
-                ? getAccountDisplayName(account)
-                : devUser?.name ?? "Support User"}
-            </strong>
-            <span>
-              {isEntraConfigured
-                ? getAccountEmail(account)
-                : devUser?.email ?? ""}
-            </span>
+            <strong>{user?.name ?? "Support User"}</strong>
+            <span>{user?.email}</span>
           </div>
 
           <ThemeToggle />

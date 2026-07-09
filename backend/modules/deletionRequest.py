@@ -7,7 +7,7 @@ from modules.auth import getCurrentActiveUser, getCurrentUser, User, userAuthent
 router = APIRouter()
 
 @router.post("/requestfordeletion/{link_uuid}") #Requests from client side to delete data. Only sends email 
-def request_For_Data_Deletion(link_uuid: str):
+def request_For_Data_Deletion(link_uuid: str, current_user: Annotated[User, Depends(getCurrentActiveUser)]):
     #TODO: send email once on azure via ACS
     raise HTTPException(
             status_code=200,

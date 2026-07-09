@@ -4,6 +4,8 @@ import {
     type ChangeEvent,
 } from "react";
 import { useParams } from "react-router-dom";
+
+import "../../styles/SupportTheme.css";
 import "./CustomerUpload.css";
 
 
@@ -128,22 +130,10 @@ export function CustomerUpload() {
                     ...s,
                     [item.file.name]: "uploading",
                 }));
-        try {
-            await runWithConcurrency(selectedFiles, 3, async (item) => {
-                setUploadStatus((s) => ({
-                    ...s,
-                    [item.file.name]: "uploading",
-                }));
 
                 try {
                     const fileBuffer = await item.file.arrayBuffer();
-                try {
-                    const fileBuffer = await item.file.arrayBuffer();
 
-                    const hashBuffer = await crypto.subtle.digest(
-                        "SHA-256",
-                        fileBuffer
-                    );
                     const hashBuffer = await crypto.subtle.digest(
                         "SHA-256",
                         fileBuffer
@@ -152,12 +142,7 @@ export function CustomerUpload() {
                     const sha256 = Array.from(new Uint8Array(hashBuffer))
                         .map((b) => b.toString(16).padStart(2, "0"))
                         .join("");
-                    const sha256 = Array.from(new Uint8Array(hashBuffer))
-                        .map((b) => b.toString(16).padStart(2, "0"))
-                        .join("");
 
-                    const formData = new FormData();
-                    formData.append("file", item.file);
                     const formData = new FormData();
                     formData.append("file", item.file);
 

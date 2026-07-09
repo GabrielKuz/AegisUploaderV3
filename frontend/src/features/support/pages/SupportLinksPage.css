@@ -30,7 +30,7 @@
 
 .links-page-eyebrow {
   margin: 0 0 14px;
-  color: var(--portal-accent);
+  color: var(--support-accent);
   font-family: var(--font-mono, "Geist Mono", monospace);
   font-size: 12px;
   font-weight: 600;
@@ -53,7 +53,7 @@
   display: block;
   max-width: 650px;
   margin: 12px 0 0;
-  color: var(--portal-blue);
+  color: var(--theme-text-secondary);
   font-size: 16px;
   line-height: 1.6;
 }
@@ -71,7 +71,7 @@
   justify-content: center;
   flex: 0 0 auto;
   border: 1px solid transparent;
-  background: var(--portal-accent);
+  background: var(--support-accent);
   color: #fff;
   font-size: 14px;
   font-weight: 600;
@@ -91,7 +91,7 @@
 }
 
 .new-link-link:focus-visible {
-  outline: 3px solid var(--portal-focus-ring);
+  outline: 3px solid var(--support-focus-ring);
   outline-offset: 3px;
 }
 
@@ -102,7 +102,7 @@
 
 .links-table-wrapper {
   width: 100%;
-  overflow-x: hidden;
+  overflow-x: auto;
   border: 1px solid var(--theme-border-strong);
   background: var(--theme-surface);
   box-shadow: var(--theme-card-shadow);
@@ -137,7 +137,6 @@
 .links-table th:hover {
   color: var(--theme-text);
 }
-
 .links-table td {
   color: var(--theme-text-secondary);
   font-size: 14px;
@@ -153,7 +152,7 @@
 }
 
 .links-table tbody tr:hover {
-  background: var(--portal-row-hover);
+  background: var(--support-row-hover);
 }
 
 .links-table tbody tr:last-child td {
@@ -176,21 +175,21 @@
 }
 
 .link-status-open {
-  color: var(--portal-open-text);
-  background: var(--portal-open-background);
-  border-color: var(--portal-open-border);
+  color: var(--support-open-text);
+  background: var(--support-open-background);
+  border-color: var(--support-open-border);
 }
 
 .link-status-in-progress {
-  color: var(--portal-progress-text);
-  background: var(--portal-progress-background);
-  border-color: var(--portal-progress-border);
+  color: var(--support-progress-text);
+  background: var(--support-progress-background);
+  border-color: var(--support-progress-border);
 }
 
 .link-status-resolved {
-  color: var(--portal-resolved-text);
-  background: var(--portal-resolved-background);
-  border-color: var(--portal-resolved-border);
+  color: var(--support-resolved-text);
+  background: var(--support-resolved-background);
+  border-color: var(--support-resolved-border);
 }
 
 

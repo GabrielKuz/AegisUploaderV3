@@ -1,0 +1,39 @@
+:root {
+  /* Updated Aegis brand palette */
+  --color-aegis-red: #ef3b32;
+  --color-black: #000000;
+  --color-charcoal: #404040;
+  --color-gray: #808080;
+  --color-gray-medium: #999999;
+  --color-gray-light: #f2f2f2;
+
+  --color-deep-blue: #083446;
+  --color-blue: #1d5a83;
+  --color-blue-soft: #81a5bb;
+
+  --color-white: #ffffff;
+
+  /* UI aliases */
+  --color-page-dark: #000000;
+  --color-panel-dark: #05090b;
+  --color-panel-blue: #083446;
+  --color-text-primary: #ffffff;
+  --color-text-dark: #0d1114;
+  --color-text-muted: #808080;
+  --color-border-light: rgba(255, 255, 255, 0.18);
+  --color-border-dark: rgba(0, 0, 0, 0.12);
+
+  /* Type */
+  --font-heading: "Epilogue", system-ui, sans-serif;
+  --font-body: "Epilogue", system-ui, sans-serif;
+  --font-mono: "Geist Mono", "SFMono-Regular", Consolas, monospace;
+
+  /* Shape */
+  --radius-none: 0;
+  --radius-sm: 2px;
+  --radius-md: 6px;
+
+  /* Effects */
+  --shadow-soft: 0 24px 80px rgba(0, 0, 0, 0.16);
+  --shadow-glass: 0 24px 80px rgba(0, 0, 0, 0.3);
+}

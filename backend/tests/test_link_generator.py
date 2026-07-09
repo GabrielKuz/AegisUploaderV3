@@ -4,7 +4,7 @@ from fastapi.testclient import TestClient
 from main import app
 from modules.LinkGenerator import LinkRequest, generate_links, get_all_links
 from datetime import datetime, timedelta
-from modules.auth import User, getCurrentActiveUser, requireRoles
+from modules.auth import User, getCurrentActiveUser
 from modules import Session
 from modules.models import UploadRecord, LinkRecord
 from modules.uploader import ensure_uploads_table
@@ -17,14 +17,13 @@ import os
 
 
 client = TestClient(app)
-current_user = User(username="testuser", disabled=False, roles=["User"])  # Mock user for testing
+current_user = User(username="testuser", disabled=False)  # Mock user for testing
 url = f"http://{os.getenv('FRONTEND_URL')}/links/"  # Assuming this is the base URL for links
 
 async def override_get_current_active_user() -> User:
-    return User(username="testuser", disabled=False, roles=["User"]) 
+    return User(username="testuser", disabled=False)
 
 app.dependency_overrides[getCurrentActiveUser] = override_get_current_active_user
-app.dependency_overrides[requireRoles] = lambda *roles, strict=False: override_get_current_active_user()
 
 def test_generate_links_returns_link_and_uuid():
     link_request = LinkRequest(

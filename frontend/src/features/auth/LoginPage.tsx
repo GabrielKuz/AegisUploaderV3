@@ -1,15 +1,6 @@
-import { useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { useMsal } from "@azure/msal-react";
 import { ThemeToggle } from "../../theme/ThemeToggle";
-import { isEntraConfigured, loginRequest } from "./authConfig";
 import { signInDevUser } from "./devAuth";
-import {
-  clearPostLoginRedirect,
-  getActiveAccount,
-  getPostLoginRedirect,
-  setPostLoginRedirect,
-} from "./entraAuth";
 
 import "./LoginPage.css";
 
@@ -103,8 +94,6 @@ function getSafeDestination(state: unknown): string {
 export function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { accounts, instance } = useMsal();
-  const account = getActiveAccount(instance);
 
   /**
    * Simulates SSO authentication during development.
@@ -113,37 +102,15 @@ export function LoginPage() {
    * upload routes receive the customer role, while all other routes
    * receive the support role.
    */
-  useEffect(() => {
-    if (!instance.getActiveAccount() && accounts[0]) {
-      instance.setActiveAccount(accounts[0]);
-    }
-  }, [accounts, instance]);
-
-  useEffect(() => {
-    if (!account) {
-      return;
-    }
-
-    const destination = getPostLoginRedirect(getSafeDestination(location.state));
-    clearPostLoginRedirect();
-    navigate(destination, { replace: true });
-  }, [account, location.state, navigate]);
-
   const handleSsoLogin = () => {
     const destination = getSafeDestination(location.state);
 
-    if (!isEntraConfigured) {
-      const role = destination.startsWith("/upload/")
-        ? "customer"
-        : "support";
+    const role = destination.startsWith("/upload/")
+      ? "customer"
+      : "support";
 
-      signInDevUser(role);
-      navigate(destination, { replace: true });
-      return;
-    }
-
-    setPostLoginRedirect(destination);
-    void instance.loginRedirect(loginRequest);
+    signInDevUser(role);
+    navigate(destination, { replace: true });
   };
 
   return (
@@ -177,7 +144,7 @@ export function LoginPage() {
         <header className="brand-header">
           <img
             className="brand-logo"
-            src="/images/Aegis-Logo.svg"
+            src="/images/aegis-logo.svg"
             alt="Aegis Software"
           />
         </header>
@@ -244,12 +211,10 @@ export function LoginPage() {
 
         {/* Primary authentication card. */}
         <section className="auth-card">
-          <div aria-hidden="true">
-            <img
-              className="auth-icon"
-              src="/images/Aegis-Icon.png"
-              alt="Aegis Logo"
-            />
+          <div
+            className="auth-icon"
+            aria-hidden="true"
+          >
             <span />
           </div>
 
@@ -267,15 +232,8 @@ export function LoginPage() {
             type="button"
             onClick={handleSsoLogin}
           >
-
-            <img
-              className="sso-button-logo"
-              src="/images/Microsoft-Logo.png"
-              alt="Microsoft Logo"
-            />
-
             <span className="sso-button-label">
-              Continue with Microsoft Entra ID
+              Continue with SSO
             </span>
 
             <span
@@ -294,6 +252,30 @@ export function LoginPage() {
             </a>
           </div>
         </section>
+
+        {/* Identity-provider information. */}
+        <aside
+          className="identity-card"
+          aria-label="Identity provider information"
+        >
+          <div
+            className="identity-grid"
+            aria-hidden="true"
+          >
+            <span />
+            <span />
+            <span />
+            <span />
+          </div>
+
+          <div>
+            <h3>Microsoft Entra ID</h3>
+
+            <p>
+              Enterprise identity authentication for approved users.
+            </p>
+          </div>
+        </aside>
 
         {/* Security notice and legal navigation. */}
         <footer className="auth-footer">
