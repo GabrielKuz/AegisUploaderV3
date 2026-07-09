@@ -3,49 +3,86 @@ import {
   //type ChangeEvent,
   type FormEvent,
 } from "react";
+import { useMsal } from "@azure/msal-react";
 import { useNavigate } from "react-router-dom";
 import "./AdminCreateSupportLinkPage.css";
+import { isEntraConfigured } from "../auth/authConfig";
+import {
+  getActiveAccount,
+  getApiAccessToken,
+} from "../auth/entraAuth";
 import { getDevToken } from "../auth/devAuth";
 
 type LinkForm = {
   caseID: string;
-  ITAR: boolean | null;
+  //ITAR: boolean | null;
 };
 
 const INITIAL_FORM: LinkForm = {
   caseID: "",
-  ITAR: null,
+  //ITAR: null,
 };
 
+/**
+ * Creates a new customer-support link request.
+ *
+ * This page is rendered inside the shared SupportLayout, so it should only
+ * control the form content and not the full app layout.
+ */
 export function AdminCreateSupportLinkPage() {
   const navigate = useNavigate();
+  const { instance } = useMsal();
+  const account = getActiveAccount(instance);
 
   const [form, setForm] = useState<LinkForm>(INITIAL_FORM);
   const [error, setError] = useState<string | null>(null);
 
+
+  /**
+   * Validates the form before submitting.
+   *
+   * Replace the console statement with the real API request once the
+   * backend endpoint is available.
+   */
   const handleSubmit = async (
     event: FormEvent<HTMLFormElement>,
   ) => {
     event.preventDefault();
 
     const hasRequiredFields =
-      form.caseID.trim() !== "" && form.ITAR !== null;
+      form.caseID.trim() !== "";
 
     if (!hasRequiredFields) {
       setError(
-        "Case ID and ITAR status are required.",
+        "Case ID is required.",
       );
       return;
     }
 
     setError(null);
+
+    if (isEntraConfigured && !account) {
+      setError("Please sign in before creating a support link.");
+      return;
+    }
+
+    //console.info("Support link submitted:", form);
+    const accessToken = isEntraConfigured
+      ? await getApiAccessToken(instance, account)
+      : getDevToken();
+
+    if (!accessToken) {
+      setError("Please sign in before creating a support link.");
+      return;
+    }
+
     const response = await fetch("/api/links/create/", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${getDevToken()}`,
-        "Content-Type": "application/json"
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
       },
-      body: JSON.stringify({ case_id: form.caseID, itar: form.ITAR })
+      body: JSON.stringify({ case_id: form.caseID }),
     });
     if (!response.ok) {
       setError("Failed to create support link.");
@@ -54,26 +91,21 @@ export function AdminCreateSupportLinkPage() {
     const data = await response.json();
     console.log(data.uuid);
     console.log(data.link);
-    navigate("/admin/links", { state: { refresh: true } });
+    navigate("/support/links", { state: { refresh: true } });
   };
 
   return (
     <section
-      className="create-link-page"
+      className="create-support-link-page"
       aria-labelledby="create-link-heading"
     >
       <header className="create-link-header">
-        <p className="create-link-eyebrow">
-          Customer support
-        </p>
-
         <h1 id="create-link-heading">
           Create a new link
         </h1>
 
         <p className="create-link-description">
-          Inform the team of the situation and describe the
-          assistance they can provide.
+          Enter Case ID to create a new support link.
         </p>
       </header>
 
@@ -90,6 +122,7 @@ export function AdminCreateSupportLinkPage() {
             {error}
           </div>
         )}
+
         <label className="link-form-field">
           <span>Case ID</span>
 
@@ -104,7 +137,7 @@ export function AdminCreateSupportLinkPage() {
             }
           />
         </label>
-        <label className="link-form-field">
+        {/*<label className="link-form-field">
           <span>ITAR Status</span>
 
           <select
@@ -126,12 +159,12 @@ export function AdminCreateSupportLinkPage() {
             <option value="Yes">Yes</option>
             <option value="No">No</option>
           </select>
-        </label>
+        </label>*/}
         <div className="link-form-actions">
           <button
             type="button"
             className="link-cancel-button"
-            onClick={() => navigate("/admin")}
+            onClick={() => navigate("/support")}
           >
             Cancel
           </button>

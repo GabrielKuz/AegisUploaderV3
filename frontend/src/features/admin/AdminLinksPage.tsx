@@ -1,8 +1,13 @@
 import { Link } from "react-router-dom";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMsal } from "@azure/msal-react";
 
-import "../../styles/SupportTheme.css";
-import "./AdminLinksPage.css";
+import "../support/pages/SupportLinksPage.css";
+import { isEntraConfigured } from "../auth/authConfig";
+import {
+    getActiveAccount,
+    getApiAccessToken,
+} from "../auth/entraAuth";
 import { getDevToken } from "../auth/devAuth";
 
 type SupportLink = {
@@ -21,8 +26,8 @@ type SortKey = keyof SupportLink;
 type SortDirection = "asc" | "desc";
 
 function getSortIcon(
-    column: SortKey,
-    sortKey: SortKey,
+    column: string,
+    sortKey: string,
     sortDirection: SortDirection
 ) {
     if (column !== sortKey) return "⇅";
@@ -32,32 +37,57 @@ function getSortIcon(
 export function AdminLinksPage() {
     const [links, setLinks] = useState<SupportLink[]>([]);
     const [sortKey, setSortKey] = useState<SortKey>("timestamp");
-    const [sortDirection, setSortDirection] =
-        useState<SortDirection>("desc");
+    const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
 
-    async function loadLinks() {
-        try {
-            const response = await fetch("/api/links/", {
-                headers: {
-                    Authorization: `Bearer ${getDevToken()}`
-                }
-            });
-
-            if (!response.ok) {
-                console.error("Failed to load support links.");
-                return;
-            }
-
-            const data: SupportLink[] = await response.json();
-            setLinks(data);
-        } catch (err) {
-            console.error(err);
-        }
-    }
+    const { accounts, instance } = useMsal();
+    const account = getActiveAccount(instance);
 
     useEffect(() => {
-        loadLinks();
-    }, []);
+        if (!instance.getActiveAccount() && accounts[0]) {
+            instance.setActiveAccount(accounts[0]);
+        }
+    }, [accounts, instance]);
+
+    const loadLinks = useCallback(async () => {
+        if (isEntraConfigured && !account) {
+            console.error("No signed-in account found.");
+            return;
+        }
+
+        const accessToken = isEntraConfigured
+            ? await getApiAccessToken(instance, account)
+            : getDevToken();
+
+        if (!accessToken) {
+            console.error("No access token available.");
+            return;
+        }
+
+        const response = await fetch("/api/links/", {
+            headers: {
+                Authorization: `Bearer ${accessToken}`,
+            },
+        });
+
+        if (!response.ok) {
+            console.error("Failed to load support links.");
+            return;
+        }
+
+        const data: SupportLink[] = await response.json();
+
+        if (!response.ok) {
+            console.error(await response.text());
+            return;
+        }
+
+        console.log(data);
+        setLinks(data);
+    }, [account, instance]);
+
+    useEffect(() => {
+        void loadLinks();
+    }, [loadLinks]);
 
     function handleSort(key: SortKey) {
         if (key === sortKey) {
@@ -66,13 +96,7 @@ export function AdminLinksPage() {
             );
         } else {
             setSortKey(key);
-
-            // Default newest first for dates.
-            if (key === "timestamp" || key === "expiration_date") {
-                setSortDirection("desc");
-            } else {
-                setSortDirection("asc");
-            }
+            setSortDirection("asc");
         }
     }
 
@@ -80,23 +104,16 @@ export function AdminLinksPage() {
         const copy = [...links];
 
         copy.sort((a, b) => {
-            // Date sorting
-            if (
-                sortKey === "timestamp" ||
-                sortKey === "expiration_date"
-            ) {
-                const aTime = new Date(a[sortKey]).getTime();
-                const bTime = new Date(b[sortKey]).getTime();
-
-                return sortDirection === "asc"
-                    ? aTime - bTime
-                    : bTime - aTime;
+            if (sortKey === "timestamp") {
+                return (
+                    new Date(b.timestamp).getTime() -
+                    new Date(a.timestamp).getTime()
+                );
             }
 
             const aVal = a[sortKey];
             const bVal = b[sortKey];
 
-            // Boolean sorting
             if (
                 typeof aVal === "boolean" &&
                 typeof bVal === "boolean"
@@ -106,8 +123,9 @@ export function AdminLinksPage() {
                     : Number(bVal) - Number(aVal);
             }
 
-            // String sorting
-            const comparison = String(aVal).localeCompare(String(bVal));
+            const comparison = String(aVal).localeCompare(
+                String(bVal)
+            );
 
             return sortDirection === "asc"
                 ? comparison
@@ -118,7 +136,10 @@ export function AdminLinksPage() {
     }, [links, sortKey, sortDirection]);
 
     return (
-        <section className="links-page">
+        <section
+            className="links-page"
+            aria-labelledby="links-page-heading"
+        >
             <header className="links-page-header">
                 <div className="links-page-heading">
                     <p className="links-page-eyebrow">
@@ -126,12 +147,11 @@ export function AdminLinksPage() {
                     </p>
 
                     <h1 id="links-page-heading">
-                        Created Upload Links
+                        Created links
                     </h1>
 
                     <p className="links-page-description">
-                        Review previously created upload links and
-                        access uploaded files.
+                        Review previous requests and their current status.
                     </p>
                 </div>
 
@@ -139,7 +159,7 @@ export function AdminLinksPage() {
                     to="/admin/links/new"
                     className="new-link-link"
                 >
-                    Create Link
+                    Create link
                 </Link>
             </header>
 
@@ -160,9 +180,7 @@ export function AdminLinksPage() {
                             </th>
 
                             <th
-                                onClick={() =>
-                                    handleSort("case_id")
-                                }
+                                onClick={() => handleSort("case_id")}
                                 style={{ cursor: "pointer" }}
                             >
                                 Case ID{" "}
@@ -186,9 +204,7 @@ export function AdminLinksPage() {
                             </th>
 
                             <th
-                                onClick={() =>
-                                    handleSort("creator")
-                                }
+                                onClick={() => handleSort("creator")}
                                 style={{ cursor: "pointer" }}
                             >
                                 Creator{" "}
@@ -200,9 +216,7 @@ export function AdminLinksPage() {
                             </th>
 
                             <th
-                                onClick={() =>
-                                    handleSort("timestamp")
-                                }
+                                onClick={() => handleSort("timestamp")}
                                 style={{ cursor: "pointer" }}
                             >
                                 Created (UTC){" "}
@@ -227,16 +241,21 @@ export function AdminLinksPage() {
                                 )}
                             </th>
 
-                            <th>Upload Link</th>
-
-                            <th>Uploads</th>
+                            {/*
+                            Future admin-only actions column.
+                            <th>Actions</th>
+                            */}
                         </tr>
                     </thead>
 
                     <tbody>
                         {sortedLinks.map((link) => (
                             <tr key={link.uuid}>
-                                <td>{link.uuid}</td>
+                                <td>
+                                    <Link to={`/upload/${link.uuid}`}>
+                                        /upload/{link.uuid}
+                                    </Link>
+                                </td>
 
                                 <td>{link.case_id}</td>
 
@@ -245,13 +264,10 @@ export function AdminLinksPage() {
                                         <span
                                             style={{
                                                 fontWeight: "bold",
-                                                backgroundColor:
-                                                    "#ff4d4d",
+                                                backgroundColor: "#ff4d4d",
                                                 color: "white",
-                                                padding:
-                                                    "4px 8px",
-                                                borderRadius:
-                                                    "6px"
+                                                padding: "4px 8px",
+                                                borderRadius: "6px",
                                             }}
                                         >
                                             ITAR
@@ -275,25 +291,15 @@ export function AdminLinksPage() {
                                     ).toLocaleString()}
                                 </td>
 
-                                <td>
-                                    <Link
-                                        to={`/upload/${link.uuid}`}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="table-link-button"
-                                    >
-                                        Open Upload Page
-                                    </Link>
-                                </td>
+                                {/*
+                                Future admin-only actions.
 
                                 <td>
-                                    <Link
-                                        to={`/admin/view-uploads/${link.uuid}`}
-                                        className="table-link-button"
-                                    >
-                                        View Uploads
-                                    </Link>
+                                    <button onClick={() => deleteLink(link.uuid)}>
+                                        Delete
+                                    </button>
                                 </td>
+                                */}
                             </tr>
                         ))}
                     </tbody>
