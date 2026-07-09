@@ -152,7 +152,7 @@ services:
         VITE_AZURE_API_SCOPE: ${AZURE_API_SCOPE}
 
     ports:
-      - "80:8080" # avoid nginx running as root  
+      - "443:8443" # avoid nginx running as root  
       # Switch to 443:8443 eventually
     depends_on:
       - backend
@@ -162,8 +162,10 @@ services:
 
     security_opt: # prevent privelege escalation
       - no-new-privileges:true
+    volumes: 
+      -  C:\certs:/etc/nginx/certs:ro
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost"]
+      test: ["CMD", "curl", "-fk", "http://localhost:8443"]
       interval: 5s
       timeout: 5s
       retries: 10
