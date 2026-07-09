@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
-import "../../../styles/PortalTheme.css";
+import "../../../styles/SupportTheme.css";
 import "./SupportUploadPage.css";
 import { getDevToken } from "../../auth/devAuth";
 

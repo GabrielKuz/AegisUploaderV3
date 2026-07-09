@@ -17,12 +17,12 @@ import { getDevToken } from "../../auth/devAuth";
 
 type LinkForm = {
   caseID: string;
-
+  ITAR: boolean | null;
 };
 
 const INITIAL_FORM: LinkForm = {
   caseID: "",
-
+  ITAR: null,
 };
 
 /**
@@ -52,11 +52,11 @@ export function CreateSupportLinkPage() {
     event.preventDefault();
 
     const hasRequiredFields =
-      form.caseID.trim() !== "";
+      form.caseID.trim() !== "" && form.ITAR !== null;
 
     if (!hasRequiredFields) {
       setError(
-        "Case ID is required.",
+        "Case ID and ITAR status are required.",
       );
       return;
     }
@@ -84,7 +84,7 @@ export function CreateSupportLinkPage() {
         Authorization: `Bearer ${accessToken}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ case_id: form.caseID, itar: false }),
+      body: JSON.stringify({ case_id: form.caseID, itar: form.ITAR }),
     });
     if (!response.ok) {
       setError("Failed to create support link.");
@@ -107,7 +107,8 @@ export function CreateSupportLinkPage() {
         </h1>
 
         <p className="create-link-description">
-          Enter Case ID to create a new support link.
+          Describe the customer request and provide enough detail for
+          the support team to follow up.
         </p>
       </header>
 
@@ -136,11 +137,10 @@ export function CreateSupportLinkPage() {
                 ...prev,
                 caseID: e.target.value
               }))
-              
             }
           />
         </label>
-        {/*<label className="link-form-field">
+        <label className="link-form-field">
           <span>ITAR Status</span>
 
           <select
@@ -162,7 +162,7 @@ export function CreateSupportLinkPage() {
             <option value="Yes">Yes</option>
             <option value="No">No</option>
           </select>
-        </label>*/}
+        </label>
         <div className="link-form-actions">
           <button
             type="button"

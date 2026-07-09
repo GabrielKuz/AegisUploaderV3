@@ -120,58 +120,75 @@ export function CustomerUpload() {
         }
     };
     const uploadFiles = async () => {
-    setUploading(true);
+        setUploading(true);
 
-    try {
-        await runWithConcurrency(selectedFiles, 3, async (item) => {
-            setUploadStatus((s) => ({
-                ...s,
-                [item.file.name]: "uploading",
-            }));
+        try {
+            await runWithConcurrency(selectedFiles, 3, async (item) => {
+                setUploadStatus((s) => ({
+                    ...s,
+                    [item.file.name]: "uploading",
+                }));
+        try {
+            await runWithConcurrency(selectedFiles, 3, async (item) => {
+                setUploadStatus((s) => ({
+                    ...s,
+                    [item.file.name]: "uploading",
+                }));
 
-            try {
-                const fileBuffer = await item.file.arrayBuffer();
+                try {
+                    const fileBuffer = await item.file.arrayBuffer();
+                try {
+                    const fileBuffer = await item.file.arrayBuffer();
 
-                const hashBuffer = await crypto.subtle.digest(
-                    "SHA-256",
-                    fileBuffer
-                );
+                    const hashBuffer = await crypto.subtle.digest(
+                        "SHA-256",
+                        fileBuffer
+                    );
+                    const hashBuffer = await crypto.subtle.digest(
+                        "SHA-256",
+                        fileBuffer
+                    );
 
-                const sha256 = Array.from(new Uint8Array(hashBuffer))
-                    .map((b) => b.toString(16).padStart(2, "0"))
-                    .join("");
+                    const sha256 = Array.from(new Uint8Array(hashBuffer))
+                        .map((b) => b.toString(16).padStart(2, "0"))
+                        .join("");
+                    const sha256 = Array.from(new Uint8Array(hashBuffer))
+                        .map((b) => b.toString(16).padStart(2, "0"))
+                        .join("");
 
-                const formData = new FormData();
-                formData.append("file", item.file);
+                    const formData = new FormData();
+                    formData.append("file", item.file);
+                    const formData = new FormData();
+                    formData.append("file", item.file);
 
-                const response = await fetch(`/api/uploadfile/${uuid}`, {
-                    method: "POST",
-                    headers: {
-                        "X-File-Hash": sha256,
-                        "X-User-Location": "US",
-                    },
-                    body: formData,
-                });
+                    const response = await fetch(`/api/uploadfile/${uuid}`, {
+                        method: "POST",
+                        headers: {
+                            "X-File-Hash": sha256,
+                            "X-User-Location": "US",
+                            
+                        },
+                        body: formData,
+                    });
+                    if (!response.ok) {
+                        throw new Error("upload failed");
+                    }
 
-                if (!response.ok) {
-                    throw new Error("Upload failed");
+                    setUploadStatus((s) => ({
+                        ...s,
+                        [item.file.name]: "done",
+                    }));
+                } catch {
+                    setUploadStatus((s) => ({
+                        ...s,
+                        [item.file.name]: "error",
+                    }));
                 }
-
-                setUploadStatus((s) => ({
-                    ...s,
-                    [item.file.name]: "done",
-                }));
-            } catch {
-                setUploadStatus((s) => ({
-                    ...s,
-                    [item.file.name]: "error",
-                }));
-            }
-        });
-    } finally {
-        setUploading(false);
-    }
-};
+            });
+        } finally {
+            setUploading(false);
+        }
+    };
         return (
         <section
             className="customer-upload-page"

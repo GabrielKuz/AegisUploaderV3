@@ -222,4 +222,72 @@ export function SupportLinksPage() {
       </div>
     </section>
   );
+                    <tbody>
+                        {sortedLinks.map((link) => (
+                            <tr key={link.uuid}>
+                                <td>{link.uuid}</td>
+
+                                <td>{link.case_id}</td>
+
+                                <td>
+                                    {link.itar ? (
+                                        <span
+                                            style={{
+                                                fontWeight: "bold",
+                                                backgroundColor:
+                                                    "#ff4d4d",
+                                                color: "white",
+                                                padding:
+                                                    "4px 8px",
+                                                borderRadius:
+                                                    "6px"
+                                            }}
+                                        >
+                                            ITAR
+                                        </span>
+                                    ) : (
+                                        "No"
+                                    )}
+                                </td>
+
+                                <td>{link.creator}</td>
+
+                                <td>
+                                    {new Date(
+                                        link.timestamp
+                                    ).toLocaleString()}
+                                </td>
+
+                                <td>
+                                    {new Date(
+                                        link.expiration_date
+                                    ).toLocaleString()}
+                                </td>
+
+                                <td>
+                                    <Link
+                                        to={`/upload/${link.uuid}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="table-link-button"
+                                    >
+                                        Open Upload Page
+                                    </Link>
+                                </td>
+
+                                <td>
+                                    <Link
+                                        to={`/support/view-uploads/${link.uuid}`}
+                                        className="table-link-button"
+                                    >
+                                        View Uploads
+                                    </Link>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    );
 }
