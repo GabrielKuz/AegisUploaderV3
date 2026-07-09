@@ -1,88 +1,100 @@
-
-from datetime import datetime, timedelta
-import os
 import logging
+from datetime import datetime, timedelta, timezone
+from sqlalchemy import select
+
 from modules import Session
 from modules.models import LinkRecord, UploadRecord
 from modules.HubSpotIntegration import is_caseExpirable
-from sqlalchemy import select
-from datetime import datetime, timedelta, timezone
-from azure.storage.blob import BlobSasPermissions, BlobServiceClient, generate_blob_sas
-
-from modules.uploader import AZURE_CONTAINER_NAME
+from modules.StorageProvider import StorageProvider  # adjust import to your structure
+from modules import usFileStorageProvider, euFileStorageProvider, itarFileStorageProvider
 logger = logging.getLogger(__name__)
 
-LINK_EXPIRY_DAYS = 2  
+LINK_EXPIRY_DAYS = 2
 
 def _expireUploads():
     now = datetime.now(timezone.utc)
-    cache = {}
 
     with Session() as session:
-        records = session.scalars(select(UploadRecord).where(UploadRecord.upload_complete.is_(True)).where(UploadRecord.for_deletion.is_(False))).all() 
+        uploads = session.scalars(
+            select(UploadRecord)
+            .where(UploadRecord.upload_complete.is_(True))
+            .where(UploadRecord.for_deletion.is_(False))
+        ).all()
 
-        for record in records:
-            if record.timestamp is None:
+        case_cache: dict[str, bool] = {}
+
+        for upload in uploads:
+            if not upload.timestamp:
                 continue
 
-            if record.timestamp + timedelta(days=record.max_days_in_storage) <= now:
-                record.for_deletion = True
+            if upload.timestamp + timedelta(days=upload.max_days_in_storage) <= now:
+                upload.for_deletion = True
                 continue
 
-            if record.case_id not in cache:
-                cache[record.case_id] = is_caseExpirable(record.case_id)
+            case_id = upload.case_id
+            if case_id not in case_cache:
+                case_cache[case_id] = is_caseExpirable(case_id)
 
-            if cache[record.case_id]:
-                record.for_deletion = True
+            if case_cache[case_id]:
+                upload.for_deletion = True
 
         session.commit()
-
 
 def _expireLinks():
     cutoff = datetime.now(timezone.utc) - timedelta(days=LINK_EXPIRY_DAYS)
 
     with Session() as session:
-        records = session.scalars(select(LinkRecord).where(LinkRecord.expired.is_not(True))).all()
+        links = session.scalars(
+            select(LinkRecord).where(LinkRecord.expired.is_(False))
+        ).all()
 
-        for record in records:
-            if record.timestamp and record.timestamp <= cutoff:
-                record.expired = True
+        for link in links:
+            if link.timestamp and link.timestamp <= cutoff:
+                link.expired = True
 
         session.commit()
 
-def _deleteExpiredUploads(): #delete from azure blob then drop record
+def _deleteExpiredUploads(storage: StorageProvider):
     with Session() as session:
-        expired_uploads = session.scalars(select(UploadRecord).where(UploadRecord.for_deletion.is_(True))).all()
+        uploads = session.scalars(
+            select(UploadRecord).where(UploadRecord.for_deletion.is_(True))
+        ).all()
 
-        blob_service_client = BlobServiceClient.from_connection_string(os.environ.get("AZURE_STORAGE_CONNECTION_STRING"))
+        for upload in uploads:
+            try:
+                if upload.blob_name:
+                    storage.delete_file(upload.blob_name)
 
-        for upload in expired_uploads:
-            if upload.blob_name:
-                try:
-                    blob_client = blob_service_client.get_blob_client(container=os.environ.get("AZURE_CONTAINER_NAME"), blob=upload.blob_name)
-                    blob_client.delete_blob()
-                except Exception as e:
-                    logger.error(f"Error deleting blob {upload.blob_name}: {e}")
-                    continue  # Skip deletion of the record if blob deletion fails
+                session.delete(upload)
 
-            session.delete(upload)
+            except Exception as e:
+                logger.error(
+                    f"Failed deleting file for upload {upload.id} ({upload.blob_name}): {e}"
+                )
 
         session.commit()
-    
+
 
 def _deleteExpiredLinks():
     with Session() as session:
-        session.query(LinkRecord).filter(LinkRecord.expired.is_(True)).delete(synchronize_session=False)
+        session.query(LinkRecord).filter(LinkRecord.expired.is_(True)).delete(
+            synchronize_session=False
+        )
         session.commit()
+
 
 
 def expireAndDeleteOldData():
     try:
-        logger.info("starting data cleanup")
+        logger.info("Starting cleanup job")
+
         _expireUploads()
         _expireLinks()
-        _deleteExpiredUploads()
+        for storage in [usFileStorageProvider, euFileStorageProvider, itarFileStorageProvider]:
+            _deleteExpiredUploads(storage)
         _deleteExpiredLinks()
-        logger.info("data successfully deleted")
+
+        logger.info("Cleanup completed successfully")
+
     except Exception as e:
-        logger.error(f"Error in expireAndDeleteOldData: {e}")
+        logger.exception(f"Cleanup job failed: {e}")
