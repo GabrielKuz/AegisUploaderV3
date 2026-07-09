@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 import os
 import logging
 from modules import Session
-from modules.models import LinkRecord, UploadRecord
+from modules.models import LinkRecord, UploadRecord, update_other_from_self, update_similar_between_LinkDB_and_UploadDB
 from modules.HubSpotIntegration import is_caseExpirable
 from sqlalchemy import select
 from datetime import datetime, timedelta, timezone
@@ -49,6 +49,7 @@ def _expireLinks():
                 record.expired = True
 
         session.commit()
+        update_similar_between_LinkDB_and_UploadDB(session)
 
 def _deleteExpiredUploads(): #delete from azure blob then drop record
     with Session() as session:
@@ -74,6 +75,7 @@ def _deleteExpiredLinks():
     with Session() as session:
         session.query(LinkRecord).filter(LinkRecord.expired.is_(True)).delete(synchronize_session=False)
         session.commit()
+        update_similar_between_LinkDB_and_UploadDB(session)
 
 
 def expireAndDeleteOldData():
