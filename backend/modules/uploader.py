@@ -3,7 +3,9 @@ import datetime
 import hashlib
 import traceback
 import traceback
+import psycopg
 import uuid
+import re
 from pathlib import Path
 from typing import Annotated, Literal
 
@@ -52,7 +54,10 @@ def ensure_uploads_table(db_session):
 
 
 def find_link_entry(link_uuid: str):
-    return session.query(LinkRecord).filter(LinkRecord.uuid == link_uuid).first()
+    try:
+        return session.query(LinkRecord).filter(LinkRecord.uuid == link_uuid).first()
+    except psycopg.errors.InvalidTextRepresentation as e:
+        return None
 
 # Set up all 3 azure regions
 US_CONNECTION_STRING = os.getenv("AZURE_STORAGE_CONNECTION_STRING_US")
@@ -91,9 +96,14 @@ async def create_upload_file(
     file_hash_clientside: Annotated[str | None, Header(alias="X-File-Hash")] = None, # SHA256 has as header
     userLocation: Annotated[Literal["US", "EU"], Header(alias="X-User-Location")] = "US" # For where data gets stored. ITAR supercedes this
 ):
-    if file is None:
-        return {"message": "No upload file sent"}
+    if not (file is not None and file.filename is not None):
+        nofile = HTTPException(400,detail={"message": "File or Filename not present"})
+        raise nofile
 
+    if not bool(re.compile("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89aAbB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$",re.IGNORECASE).match(link_uuid)):
+        badUUID = HTTPException(400,detail={"message": "Invalid uuid"})
+        raise badUUID
+        return None
     contents = await file.read() # Can be very large, but we need to read it to compute the hash and upload to azure blob storage. Might split up into chunks later 
 
     try:
