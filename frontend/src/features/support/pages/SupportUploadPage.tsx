@@ -1,7 +1,19 @@
-import { useEffect, useMemo, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { useParams } from "react-router-dom";
+import { useMsal } from "@azure/msal-react";
+
 import "../../../styles/PortalTheme.css";
 import "./SupportUploadPage.css";
+import { isEntraConfigured } from "../../auth/authConfig";
+import {
+  getActiveAccount,
+  getApiAccessToken,
+} from "../../auth/entraAuth";
 import { getDevToken } from "../../auth/devAuth";
 
 type Upload = {
@@ -27,40 +39,80 @@ function getSortIcon(
 
 export function SupportUploadPage() {
   const { uuid } = useParams<{ uuid: string }>();
+
   const [uploads, setUploads] = useState<Upload[]>([]);
-  const [sortKey, setSortKey] = useState<SortKey>("date_uploaded");
+  const [sortKey, setSortKey] =
+    useState<SortKey>("date_uploaded");
   const [sortDirection, setSortDirection] =
     useState<SortDirection>("desc");
 
-  async function loadUploads() {
-    if (!uuid) {return;}
-    const response = await fetch(`/api/links/${uuid}/files`, {
-      headers: {
-        Authorization: `Bearer ${getDevToken()}`
-      }
-    });
+  const { accounts, instance } = useMsal();
+  const account = getActiveAccount(instance);
 
-    if (!response.ok) {
-      console.error("Failed to load uploads.");
+  useEffect(() => {
+    if (!instance.getActiveAccount() && accounts[0]) {
+      instance.setActiveAccount(accounts[0]);
+    }
+  }, [accounts, instance]);
+
+  const loadUploads = useCallback(async () => {
+    if (!uuid) {
       return;
     }
 
-    const data: Upload[] = await response.json();
-    setUploads(data);
-  }
+    if (isEntraConfigured && !account) {
+      console.error("No signed-in account found.");
+      return;
+    }
+
+    const accessToken = isEntraConfigured
+      ? await getApiAccessToken(instance, account)
+      : getDevToken();
+
+    if (!accessToken) {
+      console.error("No access token available.");
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `/api/links/${uuid}/files`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        console.error("Failed to load uploads.");
+        return;
+      }
+
+      const data: Upload[] = await response.json();
+      setUploads(data);
+    } catch (err) {
+      console.error(err);
+    }
+  }, [account, instance, uuid]);
 
   useEffect(() => {
-    loadUploads();
-  }, [uuid]);
+    void loadUploads();
+  }, [loadUploads]);
 
   function handleSort(key: SortKey) {
     if (key === sortKey) {
-      setSortDirection(prev =>
+      setSortDirection((prev) =>
         prev === "asc" ? "desc" : "asc"
       );
     } else {
       setSortKey(key);
-      setSortDirection("asc");
+
+      if (key === "date_uploaded") {
+        setSortDirection("desc");
+      } else {
+        setSortDirection("asc");
+      }
     }
   }
 
@@ -68,16 +120,30 @@ export function SupportUploadPage() {
     const copy = [...uploads];
 
     copy.sort((a, b) => {
+      if (sortKey === "date_uploaded") {
+        const aTime = new Date(a.date_uploaded).getTime();
+        const bTime = new Date(b.date_uploaded).getTime();
+
+        return sortDirection === "asc"
+          ? aTime - bTime
+          : bTime - aTime;
+      }
+
       const aVal = a[sortKey];
       const bVal = b[sortKey];
 
-      if (typeof aVal === "number" && typeof bVal === "number") {
+      if (
+        typeof aVal === "number" &&
+        typeof bVal === "number"
+      ) {
         return sortDirection === "asc"
           ? aVal - bVal
           : bVal - aVal;
       }
 
-      const comparison = String(aVal).localeCompare(String(bVal));
+      const comparison = String(aVal).localeCompare(
+        String(bVal)
+      );
 
       return sortDirection === "asc"
         ? comparison
@@ -87,53 +153,11 @@ export function SupportUploadPage() {
     return copy;
   }, [uploads, sortKey, sortDirection]);
 
-  /*async function extendUpload(uploadUuid: string) {
-    const input = prompt("Extend retention by how many days?");
-
-    if (!input) return;
-
-    const days = Number(input);
-
-    if (!Number.isInteger(days) || days <= 0) {
-      alert("Please enter a positive whole number.");
-      return;
-    }
-
-    const response = await fetch(`/api/upload/extend/${uploadUuid}`, {
-      method: "PATCH",
-      headers: {
-        Authorization: `Bearer ${getDevToken()}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        uuid: uploadUuid,
-        days,
-      }),
-    });
-
-    if (!response.ok) {
-      alert("Failed to extend upload.");
-      return;
-    }
-
-    const data = await response.json();
-
-    alert(`Retention extended to ${data.totalPeriod} days.`);
-
-    loadUploads();
-  }*/
-
   return (
     <section className="links-page">
       <header className="links-page-header">
         <div className="links-page-heading">
-          <p className="links-page-eyebrow">
-            Administrator
-          </p>
-
-          <h1>
-            Upload Management
-          </h1>
+          <h1>Upload Management</h1>
 
           <p className="links-page-description">
             View uploads of a specific link.
@@ -146,63 +170,78 @@ export function SupportUploadPage() {
           <thead>
             <tr>
               <th
-                  onClick={() => handleSort("filename")}
-                  style={{ cursor: "pointer" }}
+                onClick={() => handleSort("filename")}
+                style={{ cursor: "pointer" }}
               >
-                  File {getSortIcon("filename", sortKey, sortDirection)}
+                File{" "}
+                {getSortIcon(
+                  "filename",
+                  sortKey,
+                  sortDirection
+                )}
               </th>
 
               <th
-                  onClick={() => handleSort("size")}
-                  style={{ cursor: "pointer" }}
+                onClick={() => handleSort("size")}
+                style={{ cursor: "pointer" }}
               >
-                  Size {getSortIcon("size", sortKey, sortDirection)}
+                Size{" "}
+                {getSortIcon(
+                  "size",
+                  sortKey,
+                  sortDirection
+                )}
               </th>
 
               <th
-                  onClick={() => handleSort("content_type")}
-                  style={{ cursor: "pointer" }}
+                onClick={() =>
+                  handleSort("content_type")
+                }
+                style={{ cursor: "pointer" }}
               >
-                  Type {getSortIcon("content_type", sortKey, sortDirection)}
+                Type{" "}
+                {getSortIcon(
+                  "content_type",
+                  sortKey,
+                  sortDirection
+                )}
               </th>
 
               <th
-                  onClick={() => handleSort("date_uploaded")}
-                  style={{ cursor: "pointer" }}
+                onClick={() =>
+                  handleSort("date_uploaded")
+                }
+                style={{ cursor: "pointer" }}
               >
-                  Uploaded {getSortIcon("date_uploaded", sortKey, sortDirection)}
+                Uploaded{" "}
+                {getSortIcon(
+                  "date_uploaded",
+                  sortKey,
+                  sortDirection
+                )}
               </th>
-
-              
-          </tr>
+            </tr>
           </thead>
 
           <tbody>
-            {sortedUploads.map(upload => (
-                <tr key={upload.upload_id}>
-                    <td>{upload.filename}</td>
+            {sortedUploads.map((upload) => (
+              <tr key={upload.upload_id}>
+                <td>{upload.filename}</td>
 
-                    <td>
-                        {(upload.size / 1024).toFixed(1)} KB
-                    </td>
+                <td>
+                  {(upload.size / 1024).toFixed(1)} KB
+                </td>
 
-                    <td>{upload.content_type}</td>
+                <td>{upload.content_type}</td>
 
-                    <td>
-                        {new Date(upload.date_uploaded).toLocaleString()}
-                    </td>
-
-                    {/*<td>
-                        <button
-                            className="link-submit-button"
-                            onClick={() => extendUpload(upload.upload_id)}
-                        >
-                            Extend
-                        </button>
-                    </td>*/}
-                </tr>
+                <td>
+                  {new Date(
+                    upload.date_uploaded
+                  ).toLocaleString()}
+                </td>
+              </tr>
             ))}
-        </tbody>
+          </tbody>
         </table>
       </div>
     </section>
