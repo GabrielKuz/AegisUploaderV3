@@ -141,35 +141,6 @@ services:
       - postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
 
-  nginx:
-  
-    build:
-      context: .
-      dockerfile: nginx/DOCKERFILE
-      args:
-        VITE_AZURE_TENANT_ID: ${TENANT_ID}
-        VITE_AZURE_CLIENT_ID: ${CLIENT_ID}
-        VITE_AZURE_API_SCOPE: ${AZURE_API_SCOPE}
-
-    ports:
-      - "443:8443" # avoid nginx running as root  
-      # Switch to 443:8443 eventually
-    depends_on:
-      - backend
-      
-    cap_drop: # prevent privelege escalation
-      - ALL
-
-    security_opt: # prevent privelege escalation
-      - no-new-privileges:true
-    volumes: 
-      -  C:\certs:/etc/nginx/certs:ro
-    healthcheck:
-      test: ["CMD", "curl", "-fk", "http://localhost:8443"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-    restart: unless-stopped
 
 volumes:
   postgres_data: # allow db persistence across container restarts
