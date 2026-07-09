@@ -9,6 +9,7 @@ from modules.models import LinkRecord, UploadRecord
 import os
 from warnings import warn, deprecated
 from modules import Session, engine
+from Utils import IsCaseID
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 if DATABASE_URL is None:
@@ -34,12 +35,12 @@ def generate_links(link_request: LinkRequest, current_user: User):
             detail="User not authenticated"
         )
     
-    if not link_request.case_id.startswith("AIS-") and not link_request.case_id[link_request.case_id.index("-")+1:].isdigit():
+    if not IsCaseID(link_request.case_id):
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid Case-ID: Bad Request"
-        )
-
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid Case-ID: Bad Request"
+            )
+        
     uuid_str = str(uuid.uuid4()) # New uuidv4 on every link. We assume no collissions due to large space and link expiration
 
     store_link(link_request, uuid_str, current_user) # add to db

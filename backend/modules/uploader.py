@@ -6,6 +6,7 @@ import traceback
 import psycopg
 import uuid
 import re
+from Utils import IsUUID
 from pathlib import Path
 from typing import Annotated, Literal
 
@@ -100,7 +101,7 @@ async def create_upload_file(
         nofile = HTTPException(400,detail={"message": "File or Filename not present"})
         raise nofile
 
-    if not bool(re.compile("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89aAbB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$",re.IGNORECASE).match(link_uuid)):
+    if not IsUUID(link_uuid):
         badUUID = HTTPException(400,detail={"message": "Invalid uuid"})
         raise badUUID
         return None
@@ -244,6 +245,10 @@ def get_uploads_for_link(link_uuid: str): # Get all uploads for a given link uui
 
 @router.get("/links/{linkUUID}/files") # Get all files for a given link uuid from the db. Only returns files the user has access to
 def listFiles(linkUUID: str, current_user: Annotated[User, Depends(requireRoles("User", "Admin"))]):  
+    if not IsUUID(linkUUID):
+        badUUID = HTTPException(400,detail={"message": "Invalid uuid"})
+        raise badUUID
+        return None
     uploads = get_uploads_for_link(linkUUID) # Get all uploads for the given link uuid
     authorized_uploads = [ # Filter the uploads to only include what the user can access
         upload for upload in uploads
