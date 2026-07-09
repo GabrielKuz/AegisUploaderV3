@@ -1,7 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
-import { useParams } from "react-router-dom";
-import "../support/pages/SupportLinksPage.css";
+
 import { getDevToken } from "../auth/devAuth";
+
+import "../support/SupportLinksPage.css";
+
+const UPLOADS_ENDPOINT = "/api/uploads/";
 
 type Upload = {
   uuid: string;
@@ -12,85 +15,83 @@ type SortKey = keyof Upload;
 type SortDirection = "asc" | "desc";
 
 function getSortIcon(
-  column: string,
-  sortKey: string,
-  sortDirection: SortDirection
+  column: SortKey,
+  sortKey: SortKey,
+  sortDirection: SortDirection,
 ) {
   if (column !== sortKey) return "⇅";
   return sortDirection === "asc" ? "▲" : "▼";
 }
 
 export function AdminUploadPage() {
-  const { uuid } = useParams<{ uuid: string }>();
   const [uploads, setUploads] = useState<Upload[]>([]);
   const [sortKey, setSortKey] = useState<SortKey>("uuid");
   const [sortDirection, setSortDirection] =
     useState<SortDirection>("asc");
+  const [error, setError] = useState<string | null>(null);
 
   async function loadUploads() {
-    if (!uuid) { return; }
-    const response = await fetch(`/api/upload/${uuid}`, {
-      headers: {
-        Authorization: `Bearer ${getDevToken()}`
+    try {
+      const response = await fetch(UPLOADS_ENDPOINT, {
+        headers: {
+          Authorization: `Bearer ${getDevToken()}`,
+        },
+      });
+
+      if (!response.ok) {
+        setError("Failed to load uploads.");
+        return;
       }
-    });
 
-    if (!response.ok) {
-      console.error("Failed to load uploads.");
-      return;
+      const data: Upload[] = await response.json();
+
+      setUploads(data);
+      setError(null);
+    } catch {
+      setError("Something went wrong while loading uploads.");
     }
-
-    const data: Upload[] = await response.json();
-    setUploads(data);
   }
 
   useEffect(() => {
     loadUploads();
-  }, [uuid]);
+  }, []);
 
   function handleSort(key: SortKey) {
     if (key === sortKey) {
-      setSortDirection(prev =>
-        prev === "asc" ? "desc" : "asc"
+      setSortDirection((current) =>
+        current === "asc" ? "desc" : "asc",
       );
-    } else {
-      setSortKey(key);
-      setSortDirection("asc");
+      return;
     }
+
+    setSortKey(key);
+    setSortDirection("asc");
   }
 
   const sortedUploads = useMemo(() => {
-    const copy = [...uploads];
+    return [...uploads].sort((a, b) => {
+      const aValue = a[sortKey];
+      const bValue = b[sortKey];
 
-    copy.sort((a, b) => {
-      const aVal = a[sortKey];
-      const bVal = b[sortKey];
-
-      if (typeof aVal === "number" && typeof bVal === "number") {
-        return sortDirection === "asc"
-          ? aVal - bVal
-          : bVal - aVal;
+      if (typeof aValue === "number" && typeof bValue === "number") {
+        const comparison = aValue - bValue;
+        return sortDirection === "asc" ? comparison : -comparison;
       }
 
-      const comparison = String(aVal).localeCompare(String(bVal));
-
-      return sortDirection === "asc"
-        ? comparison
-        : -comparison;
+      const comparison = String(aValue).localeCompare(String(bValue));
+      return sortDirection === "asc" ? comparison : -comparison;
     });
-
-    return copy;
   }, [uploads, sortKey, sortDirection]);
 
   async function extendUpload(uploadUuid: string) {
-    const input = prompt("Extend retention by how many days?");
+    const input = window.prompt("Extend retention by how many days?");
 
     if (!input) return;
 
     const days = Number(input);
 
     if (!Number.isInteger(days) || days <= 0) {
-      alert("Please enter a positive whole number.");
+      window.alert("Please enter a positive whole number.");
       return;
     }
 
@@ -107,76 +108,96 @@ export function AdminUploadPage() {
     });
 
     if (!response.ok) {
-      alert("Failed to extend upload.");
+      window.alert("Failed to extend upload.");
       return;
     }
 
-    const data = await response.json();
-
-    alert(`Retention extended to ${data.totalPeriod} days.`);
-
-    loadUploads();
+    await loadUploads();
   }
 
   return (
-    <section className="links-page">
+    <section
+      className="links-page"
+      aria-labelledby="upload-management-heading"
+    >
       <header className="links-page-header">
         <div className="links-page-heading">
           <p className="links-page-eyebrow">
             Administrator
           </p>
 
-          <h1>
-            Upload Management
+          <h1 id="upload-management-heading">
+            Upload management
           </h1>
 
           <p className="links-page-description">
-            View uploads and extend their retention period.
+            Review uploaded files and extend retention periods when support needs more time.
           </p>
         </div>
       </header>
 
-      <div className="links-table-wrapper">
-        <table className="links-table">
-          <thead>
-            <tr>
-              <th
-                onClick={() => handleSort("uuid")}
-                style={{ cursor: "pointer" }}
-              >
-                Upload UUID {getSortIcon("uuid", sortKey, sortDirection)}
-              </th>
+      {error && (
+        <p className="table-message" role="alert">
+          {error}
+        </p>
+      )}
 
-              <th
-                onClick={() => handleSort("days")}
-                style={{ cursor: "pointer" }}
-              >
-                Retention Days {getSortIcon("days", sortKey, sortDirection)}
-              </th>
+      {!error && sortedUploads.length === 0 && (
+        <p className="table-message">
+          No uploads found.
+        </p>
+      )}
 
-              <th>Actions</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {sortedUploads.map(upload => (
-              <tr key={upload.uuid}>
-                <td>{upload.uuid}</td>
-                <td>{upload.days}</td>
-
-                <td>
+      {sortedUploads.length > 0 && (
+        <div className="links-table-wrapper">
+          <table className="links-table">
+            <thead>
+              <tr>
+                <th>
                   <button
-                    className="link-submit-button"
-                    onClick={() => extendUpload(upload.uuid)}
+                    className="table-sort-button"
+                    type="button"
+                    onClick={() => handleSort("uuid")}
                   >
-                    Extend
+                    Upload UUID {getSortIcon("uuid", sortKey, sortDirection)}
                   </button>
-                </td>
+                </th>
+
+                <th>
+                  <button
+                    className="table-sort-button"
+                    type="button"
+                    onClick={() => handleSort("days")}
+                  >
+                    Retention Days {getSortIcon("days", sortKey, sortDirection)}
+                  </button>
+                </th>
+
+                <th>Actions</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+
+            <tbody>
+              {sortedUploads.map((upload) => (
+                <tr key={upload.uuid}>
+                  <td>{upload.uuid}</td>
+                  <td>{upload.days}</td>
+
+                  <td>
+                    <button
+                      className="table-action-button"
+                      type="button"
+                      onClick={() => extendUpload(upload.uuid)}
+                    >
+                      Extend
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </section>
   );
 }
