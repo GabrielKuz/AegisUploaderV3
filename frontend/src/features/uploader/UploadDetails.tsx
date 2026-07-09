@@ -1,6 +1,4 @@
 import { useParams } from "react-router-dom";
-
-import "../../styles/SupportTheme.css";
 import "./UploadDetails.css";
 
 export function UploadDetails() {

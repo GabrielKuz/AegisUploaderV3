@@ -5,13 +5,14 @@ from modules.auth import getCurrentActiveUser, getCurrentUser, User, userAuthent
 from modules.LinkGenerator import LinkRequest, generate_links, get_all_links, get_link
 from modules.auth import getCurrentActiveUser, getCurrentUser, User
 from modules.LinkGenerator import LinkRequest, generate_links, get_all_links
-from modules.auth import getCurrentActiveUser, getCurrentUser, User, userAuthenticated
+from modules.auth import getCurrentActiveUser, getCurrentUser, User, userAuthenticated, requireRole, requireRoles
 from modules.uploader import router as uploader_router, listFiles
 from modules.deletionRequest import router as deletionRequest_router
 from modules.downloadData import downloadData
 from modules import Session, engine
 from typing import Annotated
 from warnings import deprecated
+import os
 from contextlib import asynccontextmanager
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from zoneinfo import ZoneInfo
@@ -45,16 +46,16 @@ app.include_router(uploader_router)
 app.include_router(deletionRequest_router)
 
 @app.post("/links/create/")
-def create_link(link_request: LinkRequest, current_user: Annotated[User, Depends(getCurrentActiveUser)]):  # TODO: Change to getCurrentActiveUser after testing
+def create_link(link_request: LinkRequest, current_user: Annotated[User, Depends(requireRoles("User", "Admin"))]):  # TODO: Change to getCurrentActiveUser after testing
     #authentication: bool = userAuthenticated(getCurrentUser())
     return generate_links(link_request, current_user) #TODO: CHANGE IMMENDIATLY AFTER TESTING
 
 @app.get("/links/")
-def get_links(current_user: Annotated[User, Depends(getCurrentActiveUser)]):  # TODO: Change to getCurrentActiveUser after testing
+def get_links(current_user: Annotated[User, Depends(requireRoles("User", "Admin"))]):  # TODO: Change to getCurrentActiveUser after testing
     return get_all_links(current_user)
 
 @app.get("/links/{uuid}")
-def get_link_endpoint(uuid: str, current_user: Annotated[User, Depends(getCurrentActiveUser)]):  # TODO: Change to getCurrentActiveUser after testing
+def get_link_endpoint(uuid: str, current_user: Annotated[User, Depends(requireRoles("User", "Admin"))]):  # TODO: Change to getCurrentActiveUser after testing
     return get_link(uuid)
 
 
@@ -78,7 +79,7 @@ def main(): # start the app when run directly and not through docker
 
 @app.get("/links/{uuid}/download")
 @deprecated("use /uploads/{upload_id}/download instead. This assumes only one uploaded file per link")
-def download_link(uuid: str, currentUser: Annotated[User, Depends(getCurrentActiveUser)]):
+def download_link(uuid: str, currentUser: Annotated[User, Depends(requireRoles("User", "Admin"))]):  
     uploads = listFiles(uuid, currentUser)
     if len(uploads) == 1:
         return downloadData(uploads[0]["upload_id"], currentUser)
@@ -87,7 +88,7 @@ def download_link(uuid: str, currentUser: Annotated[User, Depends(getCurrentActi
     return uploads
 
 @app.get("/links/{uuid}")
-def getLinkInfo(uuid: str, currentUser: Annotated[User, Depends(getCurrentActiveUser)]):
+def getLinkInfo(uuid: str, currentUser: Annotated[User, Depends(requireRoles("User", "Admin"))]):  
     data = get_all_links(currentUser)
     for link in data:
         if link["uuid"] == uuid:
@@ -95,9 +96,8 @@ def getLinkInfo(uuid: str, currentUser: Annotated[User, Depends(getCurrentActive
     raise HTTPException(status_code=404, detail="Link not found")
 
 @app.get("/uploads/{upload_id}/download")
-def download_upload(upload_id: str, currentUser: Annotated[User, Depends(getCurrentActiveUser)]):
+def download_upload(upload_id: str, currentUser: Annotated[User, Depends(requireRoles("User", "Admin"))]):
     return downloadData(upload_id, currentUser)
 
 if __name__ == "__main__": # Doesnt get run by docker
     main()
-

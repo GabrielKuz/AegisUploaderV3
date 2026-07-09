@@ -1,4 +1,3 @@
-@import url("https://fonts.googleapis.com/css2?family=Epilogue:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap");
 
 /* ==========================================================================
    GLOBAL RESET
@@ -24,10 +23,9 @@ body {
   background: var(--theme-page);
   color: var(--theme-text);
   transition:
-    color 180ms ease,
-    background-color 180ms ease;
+    color var(--transition-fast),
+    background-color var(--transition-fast);
 }
-
 
 /* ==========================================================================
    BASE ELEMENTS
@@ -43,6 +41,11 @@ textarea {
 
 button {
   border: 0;
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
 }
 
 a {
@@ -56,79 +59,143 @@ svg {
   max-width: 100%;
 }
 
-
 /* ==========================================================================
-   THEME TOKENS
+   DESIGN TOKENS
+   Raw brand colors, fonts, radii, shadows, and transitions.
    ========================================================================== */
 
 :root {
   color-scheme: light;
 
+  /* Brand palette */
   --color-aegis-red: #ef3b32;
-  --color-blue: #083446;
+  --color-aegis-navy: #083446;
+  --color-aegis-teal: #0b3f4e;
+  --color-aegis-blue: #1d5a83;
+  --color-aegis-blue-soft: #81a5bb;
 
+  /* Neutral palette */
+  --color-black: #000000;
+  --color-white: #ffffff;
+  --color-charcoal: #404040;
+  --color-gray: #808080;
+  --color-gray-medium: #999999;
+  --color-gray-light: #f2f2f2;
+
+  /* Type */
+  --font-heading: "Epilogue", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-body: "Epilogue", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-mono: "Geist Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+
+  /* Shape */
+  --radius-none: 0;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 14px;
+  --radius-xl: 22px;
+  --radius-pill: 999px;
+
+  /* Effects */
+  --shadow-soft: 0 24px 80px rgba(0, 0, 0, 0.16);
+  --shadow-glass: 0 24px 80px rgba(0, 0, 0, 0.3);
+
+  /* Motion */
+  --transition-fast: 180ms ease;
+  --transition-base: 220ms ease;
+}
+
+/* ==========================================================================
+   GLOBAL THEME TOKENS
+   Semantic app-wide variables used by components.
+   ========================================================================== */
+
+:root {
+  /* Page surfaces */
   --theme-page: #f3f5f6;
+  --theme-card: rgba(255, 255, 255, 0.94);
   --theme-surface: rgba(255, 255, 255, 0.74);
   --theme-surface-secondary: rgba(255, 255, 255, 0.68);
+
+  /* Text */
   --theme-text: #101214;
   --theme-text-secondary: #4f5960;
   --theme-muted: #687279;
 
+  /* Borders and dividers */
   --theme-border: rgba(0, 0, 0, 0.1);
   --theme-border-strong: rgba(0, 0, 0, 0.2);
+  --theme-card-border: rgba(0, 0, 0, 0.12);
   --theme-divider: rgba(0, 0, 0, 0.12);
 
+  /* Decorative backgrounds */
   --theme-pattern: rgba(8, 52, 70, 0.045);
   --theme-pattern-secondary: rgba(8, 52, 70, 0.035);
   --theme-panel-gradient: rgba(8, 52, 70, 0.06);
 
-  --theme-button: #000000;
+  /* Buttons */
+  --theme-button: #101214;
   --theme-button-text: #ffffff;
 
-  --theme-card-shadow:
-    0 24px 60px rgba(8, 24, 31, 0.12);
-
-  --theme-control-shadow:
-    0 8px 20px rgba(8, 24, 31, 0.08);
+  /* Shadows */
+  --theme-card-shadow: 0 24px 60px rgba(8, 24, 31, 0.12);
+  --theme-control-shadow: 0 8px 20px rgba(8, 24, 31, 0.08);
 }
 
 :root[data-theme="dark"] {
   color-scheme: dark;
 
-  --color-blue: #68c6e8;
-
+  /* Page surfaces */
   --theme-page: #080d10;
+  --theme-card: rgba(15, 27, 33, 0.92);
   --theme-surface: rgba(17, 25, 30, 0.88);
   --theme-surface-secondary: rgba(19, 29, 35, 0.82);
+
+  /* Text */
   --theme-text: #f4f6f7;
   --theme-text-secondary: #c0c9ce;
   --theme-muted: #929da4;
 
+  /* Borders and dividers */
   --theme-border: rgba(255, 255, 255, 0.12);
   --theme-border-strong: rgba(255, 255, 255, 0.22);
+  --theme-card-border: rgba(112, 139, 148, 0.35);
   --theme-divider: rgba(255, 255, 255, 0.12);
 
+  /* Decorative backgrounds */
   --theme-pattern: rgba(255, 255, 255, 0.035);
   --theme-pattern-secondary: rgba(255, 255, 255, 0.025);
   --theme-panel-gradient: rgba(35, 137, 176, 0.08);
 
+  /* Buttons */
   --theme-button: #f4f6f7;
   --theme-button-text: #080d10;
 
-  --theme-card-shadow:
-    0 28px 70px rgba(0, 0, 0, 0.42);
-
-  --theme-control-shadow:
-    0 8px 24px rgba(0, 0, 0, 0.3);
+  /* Shadows */
+  --theme-card-shadow: 0 28px 70px rgba(0, 0, 0, 0.42);
+  --theme-control-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
 }
 
-
 /* ==========================================================================
-   REDUCED MOTION
+   ACCESSIBILITY
    ========================================================================== */
 
+:focus-visible {
+  outline: 2px solid var(--color-aegis-blue);
+  outline-offset: 3px;
+}
+
+:root[data-theme="dark"] :focus-visible {
+  outline-color: #78c5e8;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  body {
-    transition: none;
+
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
   }
 }

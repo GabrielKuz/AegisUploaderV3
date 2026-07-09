@@ -1,0 +1,355 @@
+/* ==========================================================================
+   ADMIN HOME PAGE
+   ========================================================================== */
+
+.admin-home {
+  width: 100%;
+  max-width: 1130px;
+  margin-inline: auto;
+  padding: 54px 46px 72px;
+  color: var(--theme-text);
+}
+
+
+/* ==========================================================================
+   PAGE HEADER
+   ========================================================================== */
+
+.admin-page-heading {
+  max-width: 760px;
+  margin-bottom: clamp(32px, 5vw, 56px);
+}
+
+.admin-page-eyebrow {
+  margin: 0 0 14px;
+  color: var(--portal-accent);
+  font-family: var(--font-mono, "Geist Mono", monospace);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.4;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.support-page-heading h1 {
+  margin: 0;
+  color: var(--theme-text);
+  font-family: var(--font-heading);
+  font-size: clamp(48px, 5vw, 68px);
+  font-weight: 400;
+  line-height: 1.02;
+  letter-spacing: -0.065em;
+}
+
+.support-page-description {
+  max-width: 650px;
+  margin: 22px 0 0;
+  color: var(--theme-text-secondary);
+  font-size: 17px;
+  line-height: 1.65;
+}
+
+
+/* ==========================================================================
+   ACTION GRID
+   ========================================================================== */
+
+.support-home-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: clamp(22px, 3vw, 40px);
+}
+
+
+/* ==========================================================================
+   ACTION CARD
+   ========================================================================== */
+
+.link-action-card {
+  position: relative;
+  min-height: 365px;
+  padding: 36px 34px 32px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+
+  color: var(--theme-text);
+  text-decoration: none;
+
+  background: var(--portal-card-background);
+  border: 1px solid var(--portal-accent-focus);
+  border-radius: 8px;
+  box-shadow: var(--portal-card-shadow);
+  backdrop-filter: blur(16px);
+
+  transition:
+    color 220ms ease,
+    transform 220ms ease,
+    box-shadow 220ms ease,
+    border-color 220ms ease,
+    background-color 220ms ease;
+}
+
+.link-action-card:hover {
+  border-color: var(--portal-accent-border);
+  box-shadow: var(--portal-card-shadow-hover);
+  transform: translateY(-4px);
+}
+
+.link-action-card:focus-visible {
+  outline: 3px solid var(--portal-accent-focus);
+  outline-offset: 5px;
+}
+
+/* Decorative accent line positioned at the top of each card. */
+.link-action-accent {
+  position: absolute;
+  top: 0;
+  left: 28px;
+  width: 64px;
+  height: 3px;
+  background: var(--portal-accent);
+}
+
+
+/* ==========================================================================
+   CARD HEADER
+   ========================================================================== */
+
+.link-action-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.link-action-number {
+  color: var(--portal-accent);
+  font-family: var(--font-mono, "Geist Mono", monospace);
+  font-size: 25px;
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
+.link-action-icon {
+  width: 74px;
+  height: 74px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+
+  color: var(--portal-accent);
+  background: var(--portal-accent-soft);
+  border-radius: 50%;
+
+  transition:
+    color 220ms ease,
+    background-color 220ms ease,
+    transform 220ms ease;
+}
+
+.link-action-card:hover .link-action-icon {
+  color: #fff;
+  background: var(--portal-accent);
+  transform: translateY(-2px);
+}
+
+.link-action-divider {
+  width: 100%;
+  height: 1px;
+  margin-top: 22px;
+  background: var(--portal-divider);
+}
+
+
+/* ==========================================================================
+   CARD CONTENT
+   ========================================================================== */
+
+.link-action-content {
+  max-width: 420px;
+  margin-top: 42px;
+}
+
+.link-action-content h2 {
+  margin: 0 0 16px;
+  color: var(--theme-text);
+  font-family: "Epilogue", sans-serif;
+  font-size: clamp(27px, 2.2vw, 34px);
+  font-weight: 400;
+  line-height: 1.14;
+  letter-spacing: -0.055em;
+}
+
+.link-action-content p {
+  margin: 0;
+  color: var(--theme-text-secondary);
+  font-size: 16px;
+  line-height: 1.65;
+}
+
+
+/* ==========================================================================
+   CARD FOOTER
+   ========================================================================== */
+
+.link-action-footer {
+  position: relative;
+  z-index: 2;
+  margin-top: auto;
+  padding-top: 36px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+
+  color: var(--portal-accent);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.link-action-footer svg {
+  transition: transform 220ms ease;
+}
+
+.link-action-card:hover .link-action-footer svg {
+  transform: translateX(5px);
+}
+
+
+/* ==========================================================================
+   DECORATIVE DOT PATTERN
+   ========================================================================== */
+
+.link-action-dots {
+  position: absolute;
+  right: 26px;
+  bottom: 18px;
+  width: 190px;
+  height: 52px;
+  pointer-events: none;
+  opacity: 0.55;
+
+  background-image:
+    radial-gradient(circle,
+      var(--portal-dot-color) 1.2px,
+      transparent 1.4px);
+  background-size: 13px 13px;
+
+  mask-image:
+    linear-gradient(to left,
+      rgba(0, 0, 0, 1),
+      rgba(0, 0, 0, 0));
+}
+
+
+
+
+/* ==========================================================================
+   MEDIUM SCREENS
+   ========================================================================== */
+
+@media (max-width: 1000px) {
+  .support-home {
+    padding-inline: 34px;
+  }
+
+  .support-home-actions {
+    gap: 24px;
+  }
+
+  .link-action-card {
+    min-height: 350px;
+  }
+}
+
+
+/* ==========================================================================
+   TABLET AND MOBILE
+   ========================================================================== */
+
+@media (max-width: 760px) {
+  .support-home {
+    padding: 40px 22px 54px;
+  }
+
+  .support-page-heading {
+    margin-bottom: 36px;
+  }
+
+  .support-page-heading h1 {
+    font-size: clamp(42px, 11vw, 56px);
+  }
+
+  .support-home-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .link-action-card {
+    min-height: 320px;
+  }
+}
+
+
+/* ==========================================================================
+   SMALL MOBILE
+   ========================================================================== */
+
+@media (max-width: 480px) {
+  .support-home {
+    padding-inline: 16px;
+  }
+
+  .support-page-description {
+    font-size: 15px;
+  }
+
+  .link-action-card {
+    min-height: 300px;
+    padding: 28px 24px 26px;
+  }
+
+  .link-action-accent {
+    left: 22px;
+    width: 52px;
+  }
+
+  .link-action-icon {
+    width: 58px;
+    height: 58px;
+  }
+
+  .link-action-content {
+    margin-top: 30px;
+  }
+
+  .link-action-content h2 {
+    font-size: 27px;
+  }
+
+  .link-action-content p {
+    font-size: 15px;
+  }
+
+  .link-action-dots {
+    width: 135px;
+  }
+}
+
+
+/* ==========================================================================
+   REDUCED MOTION
+   ========================================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+
+  .link-action-card,
+  .link-action-icon,
+  .link-action-footer svg {
+    transition: none;
+  }
+
+  .link-action-card:hover,
+  .link-action-card:hover .link-action-icon {
+    transform: none;
+  }
+}
