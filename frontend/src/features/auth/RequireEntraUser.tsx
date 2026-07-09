@@ -7,44 +7,44 @@ import { getActiveAccount } from "./entraAuth";
 import { getDevUser } from "./devAuth";
 
 type RequireEntraUserProps = {
-    children: ReactNode;
+  children: ReactNode;
 };
 
 export function RequireEntraUser({ children }: RequireEntraUserProps) {
-    const location = useLocation();
-    const { accounts, instance } = useMsal();
-    const account = getActiveAccount(instance);
-    const devUser = getDevUser();
+  const location = useLocation();
+  const { accounts, instance } = useMsal();
+  const account = getActiveAccount(instance);
+  const devUser = getDevUser();
 
-    useEffect(() => {
-        if (!instance.getActiveAccount() && accounts[0]) {
-            instance.setActiveAccount(accounts[0]);
-        }
-    }, [accounts, instance]);
-
-    if (isEntraConfigured && !account) {
-        return (
-            <Navigate
-                to="/"
-                replace
-                state={{
-                    from: `${location.pathname}${location.search}`,
-                }}
-            />
-        );
+  useEffect(() => {
+    if (!instance.getActiveAccount() && accounts[0]) {
+      instance.setActiveAccount(accounts[0]);
     }
+  }, [accounts, instance]);
 
-    if (!isEntraConfigured && !devUser) {
-        return (
-            <Navigate
-                to="/"
-                replace
-                state={{
-                    from: `${location.pathname}${location.search}`,
-                }}
-            />
-        );
-    }
+  if (isEntraConfigured && !account) {
+    return (
+      <Navigate
+        to="/"
+        replace
+        state={{
+          from: `${location.pathname}${location.search}`,
+        }}
+      />
+    );
+  }
 
-    return children;
+  if (!isEntraConfigured && !devUser) {
+    return (
+      <Navigate
+        to="/"
+        replace
+        state={{
+          from: `${location.pathname}${location.search}`,
+        }}
+      />
+    );
+  }
+
+  return children;
 }

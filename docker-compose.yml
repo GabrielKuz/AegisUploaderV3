@@ -16,6 +16,7 @@ services:
       TENANT_ID: ${TENANT_ID}
       CLIENT_ID: ${CLIENT_ID}
       BACKEND_URL: ${BACKEND_URL}
+      TESTING: ${TESTING}
       AZURE_STORAGE_CONNECTION_STRING: DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://azurite:10000/devstoreaccount1;QueueEndpoint=http://azurite:10001/devstoreaccount1;
       AZURE_CONTAINER_NAME: ${AZURE_CONTAINER_NAME}
       HUBSPOT_ACCESS_TOKEN: ${HUBSPOT_ACCESS_TOKEN}
@@ -141,11 +142,17 @@ services:
     restart: unless-stopped
 
   nginx:
+  
     build:
       context: .
       dockerfile: nginx/DOCKERFILE
+      args:
+        VITE_AZURE_TENANT_ID: ${TENANT_ID}
+        VITE_AZURE_CLIENT_ID: ${CLIENT_ID}
+        VITE_AZURE_API_SCOPE: ${AZURE_API_SCOPE}
+
     ports:
-      - "80:8080" # avoid nginx running as root  
+      - "443:8443" # avoid nginx running as root  
       # Switch to 443:8443 eventually
     depends_on:
       - backend
@@ -155,8 +162,10 @@ services:
 
     security_opt: # prevent privelege escalation
       - no-new-privileges:true
+    volumes: 
+      -  C:\certs:/etc/nginx/certs:ro
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost"]
+      test: ["CMD", "curl", "-fk", "http://localhost:8443"]
       interval: 5s
       timeout: 5s
       retries: 10

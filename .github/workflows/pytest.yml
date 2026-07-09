@@ -22,6 +22,7 @@ env:
   CLIENT_ID: test-client-id
   BACKEND_URL: http://backend:8000
   SECRET_KEY: test-secret-key
+  TESTING: "true"
 
 jobs:
   build:
@@ -37,7 +38,7 @@ jobs:
           systemctl status --no-pager || true
 
       - name: Start Docker Compose stack
-        run: docker compose up -d --build
+        run: docker compose -f docker-compose.ci.yml up -d --build
 
       - name: Wait for backend health
         run: sleep 15

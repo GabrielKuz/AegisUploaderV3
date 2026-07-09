@@ -6,89 +6,89 @@ import { apiRequest, msalInstance } from "./authConfig";
 const POST_LOGIN_REDIRECT_KEY = "aegis-post-login-redirect";
 
 export function getActiveAccount(
-    instance: IPublicClientApplication = msalInstance,
+  instance: IPublicClientApplication = msalInstance,
 ): AccountInfo | null {
-    return instance.getActiveAccount() ?? instance.getAllAccounts()[0] ?? null;
+  return instance.getActiveAccount() ?? instance.getAllAccounts()[0] ?? null;
 }
 
 export function getAccountDisplayName(account: AccountInfo | null): string {
-    return account?.name ?? account?.username ?? "Signed-in user";
+  return account?.name ?? account?.username ?? "Signed-in user";
 }
 
 export function getAccountEmail(account: AccountInfo | null): string {
-    return account?.username ?? account?.idTokenClaims?.preferred_username ?? "";
+  return account?.username ?? account?.idTokenClaims?.preferred_username ?? "";
 }
 
 export function setPostLoginRedirect(destination: string): void {
-    window.sessionStorage.setItem(POST_LOGIN_REDIRECT_KEY, destination);
+  window.sessionStorage.setItem(POST_LOGIN_REDIRECT_KEY, destination);
 }
 
 export function getPostLoginRedirect(defaultDestination = "/support"): string {
-    const storedDestination = window.sessionStorage.getItem(POST_LOGIN_REDIRECT_KEY);
+  const storedDestination = window.sessionStorage.getItem(POST_LOGIN_REDIRECT_KEY);
 
-    if (
-        storedDestination &&
-        storedDestination.startsWith("/") &&
-        !storedDestination.startsWith("//")
-    ) {
-        return storedDestination;
-    }
+  if (
+    storedDestination &&
+    storedDestination.startsWith("/") &&
+    !storedDestination.startsWith("//")
+  ) {
+    return storedDestination;
+  }
 
-    return defaultDestination;
+  return defaultDestination;
 }
 
 export function clearPostLoginRedirect(): void {
-    window.sessionStorage.removeItem(POST_LOGIN_REDIRECT_KEY);
+  window.sessionStorage.removeItem(POST_LOGIN_REDIRECT_KEY);
 }
 
 export async function getApiAccessToken(
-    instance: IPublicClientApplication = msalInstance,
-    account: AccountInfo | null = getActiveAccount(instance),
+  instance: IPublicClientApplication = msalInstance,
+  account: AccountInfo | null = getActiveAccount(instance),
 ): Promise<string> {
-    const activeAccount = account ?? getActiveAccount(instance);
+  const activeAccount = account ?? getActiveAccount(instance);
 
-    if (!activeAccount) {
-        throw new Error("No signed-in account is available");
+  if (!activeAccount) {
+    throw new Error("No signed-in account is available");
+  }
+
+  try {
+    const result = await instance.acquireTokenSilent({
+      ...apiRequest,
+      account: activeAccount,
+    });
+
+    return result.accessToken;
+  } catch (error) {
+    if (error instanceof InteractionRequiredAuthError) {
+      await instance.acquireTokenRedirect({
+        ...apiRequest,
+        account: activeAccount,
+      });
     }
 
-    try {
-        const result = await instance.acquireTokenSilent({
-            ...apiRequest,
-            account: activeAccount,
-        });
-
-        return result.accessToken;
-    } catch (error) {
-        if (error instanceof InteractionRequiredAuthError) {
-            await instance.acquireTokenRedirect({
-                ...apiRequest,
-                account: activeAccount,
-            });
-        }
-
-        throw error;
-    }
+    throw error;
+  }
 }
 export function getUserRoles(
-    account: AccountInfo | null = getActiveAccount(),
+  account: AccountInfo | null = getActiveAccount(),
 ): string[] {
-    if (!account) {
-        return [];
-    }
+  if (!account) {
+    return [];
+  }
 
-    const claims = account.idTokenClaims as Record<string, unknown>;
+  const claims = account.idTokenClaims as Record<string, unknown>;
 
-    const roles = claims["roles"];
+  const roles = claims["roles"];
 
-    if (!Array.isArray(roles)) {
-        return [];
-    }
+  if (!Array.isArray(roles)) {
+    return [];
+  }
 
-    return roles.filter((role): role is string => typeof role === "string");
+  return roles.filter((role): role is string => typeof role === "string");
 }
 
 export function isAdmin(
-    account: AccountInfo | null = getActiveAccount(),
+  account: AccountInfo | null = getActiveAccount(),
 ): boolean {
-    return getUserRoles(account).includes("Admin");
+  return getUserRoles(account).includes("Admin");
 }

@@ -1,7 +1,15 @@
+import { useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-
+import { useMsal } from "@azure/msal-react";
 import { ThemeToggle } from "../../theme/ThemeToggle";
+import { isEntraConfigured, loginRequest } from "./authConfig";
 import { signInDevUser } from "./devAuth";
+import {
+  clearPostLoginRedirect,
+  getActiveAccount,
+  getPostLoginRedirect,
+  setPostLoginRedirect,
+} from "./entraAuth";
 
 import "./LoginPage.css";
 
@@ -60,16 +68,47 @@ function getSafeDestination(state: unknown): string {
 export function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { accounts, instance } = useMsal();
+  const account = getActiveAccount(instance);
+
+  /**
+   * Simulates SSO authentication during development.
+   *
+   * The destination route determines which mock role is assigned:
+   * upload routes receive the customer role, while all other routes
+   * receive the support role.
+   */
+  useEffect(() => {
+    if (!instance.getActiveAccount() && accounts[0]) {
+      instance.setActiveAccount(accounts[0]);
+    }
+  }, [accounts, instance]);
+
+  useEffect(() => {
+    if (!account) {
+      return;
+    }
+
+    const destination = getPostLoginRedirect(getSafeDestination(location.state));
+    clearPostLoginRedirect();
+    navigate(destination, { replace: true });
+  }, [account, location.state, navigate]);
 
   const handleSsoLogin = () => {
     const destination = getSafeDestination(location.state);
 
-    const role = destination.startsWith("/upload/")
-      ? "customer"
-      : "support";
+    if (!isEntraConfigured) {
+      const role = destination.startsWith("/upload/")
+        ? "customer"
+        : "support";
 
-    signInDevUser(role);
-    navigate(destination, { replace: true });
+      signInDevUser(role);
+      navigate(destination, { replace: true });
+      return;
+    }
+
+    setPostLoginRedirect(destination);
+    void instance.loginRedirect(loginRequest);
   };
 
   return (
