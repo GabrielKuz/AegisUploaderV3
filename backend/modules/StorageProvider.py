@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from io import BufferedReader, BytesIO
 from pathlib import Path
-from typing import BinaryIO
+from typing import AsyncIterator, BinaryIO
 from azure.core.exceptions import ResourceExistsError, ResourceNotFoundError
 from azure.storage.fileshare import ShareDirectoryClient,ShareFileClient
 
@@ -15,6 +15,10 @@ class StorageProvider(ABC):
 
     @abstractmethod
     def download_file(self, source_path: str) -> bytes:
+        pass
+    
+    @abstractmethod
+    async def upload_stream(self, stream: AsyncIterator[bytes], destination_path: str) -> None:
         pass
 
     @abstractmethod
@@ -81,6 +85,15 @@ class LocalStorageProvider(StorageProvider):
 
     def get_file_url(self, file_path: str) -> str:
         return str(self._resolve_path(file_path))
+
+    async def upload_stream(self, stream: AsyncIterator[bytes], destination_path: str) -> None:
+        destination = self._resolve_path(destination_path)
+
+        destination.parent.mkdir(parents=True, exist_ok=True)
+
+        with open(destination, "wb") as f:
+            async for chunk in stream:
+                f.write(chunk)
 
     def get_file(self, file_path: str) -> BinaryIO:
         try:
@@ -150,6 +163,29 @@ class AzureFileStorageProvider(StorageProvider):
             return client.download_file().readall()
         except ResourceNotFoundError:
             raise FileNotFoundError(f"File '{source_path}' does not exist.") from None
+    
+    async def upload_stream(self, stream: AsyncIterator[bytes], destination_path: str) -> None:
+        directory = str(Path(self.base_path) / Path(destination_path).parent).replace("\\", "/")
+
+        self._ensure_directory_exists(directory)
+
+        client = self._get_client(destination_path)
+
+        file_size = 0
+        chunks: list[tuple[int, bytes]] = []
+
+        async for chunk in stream:
+            chunks.append((file_size, chunk))
+            file_size += len(chunk)
+
+        client.create_file(file_size)
+
+        for offset, chunk in chunks:
+            client.upload_range(
+                data=chunk,
+                offset=offset,
+                length=len(chunk),
+            )
 
     def delete_file(self, file_path: str) -> None:
         client = self._get_client(file_path)

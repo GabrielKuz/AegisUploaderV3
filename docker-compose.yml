@@ -17,6 +17,7 @@ services:
       CLIENT_ID: ${CLIENT_ID}
       BACKEND_URL: ${BACKEND_URL}
       TESTING: ${TESTING}
+      STORAGE_ROOT: ${FILE_STORAGE_ROOT}
       AZURE_STORAGE_CONNECTION_STRING: DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://azurite:10000/devstoreaccount1;QueueEndpoint=http://azurite:10001/devstoreaccount1;
       AZURE_CONTAINER_NAME: ${AZURE_CONTAINER_NAME}
       HUBSPOT_ACCESS_TOKEN: ${HUBSPOT_ACCESS_TOKEN}

@@ -22,6 +22,7 @@ from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.backends import default_backend
 from fastapi import APIRouter, Depends, File, Header, HTTPException, UploadFile
 from modules import Session
+from fastapi import Request
 from modules.auth import getCurrentActiveUser, User, requireRoles
 from modules.models import Base, UploadRecord, LinkRecord
 
@@ -93,11 +94,12 @@ if not ITAR_CONNECTION_STRING:
 @router.post("/uploadfile/{link_uuid}")
 async def create_upload_file(
     link_uuid: str,
-    file: Annotated[UploadFile | None, File(description="A file read as UploadFile")] = None, # MIME multipart/form-data
+    request: Request,
     file_hash_clientside: Annotated[str | None, Header(alias="X-File-Hash")] = None, # SHA256 has as header
+    filename: Annotated[str | None, Header(alias="X-File-Name")] = None,
     userLocation: Annotated[Literal["US", "EU"], Header(alias="X-User-Location")] = "US" # For where data gets stored. ITAR supercedes this
 ):
-    if not (file is not None and file.filename is not None):
+    if not filename:
         nofile = HTTPException(400,detail={"message": "File or Filename not present"})
         raise nofile
 
@@ -105,15 +107,24 @@ async def create_upload_file(
         badUUID = HTTPException(400,detail={"message": "Invalid uuid"})
         raise badUUID
         return None
-    contents = await file.read() # Can be very large, but we need to read it to compute the hash and upload to azure blob storage. Might split up into chunks later 
+
+    if not file_hash_clientside:
+        raise HTTPException(400, detail="X-File-Hash header is required")
+
+    hasher = hashlib.sha256()
+    file_size = 0
+
+    async def hashed_stream():
+        nonlocal file_size
+
+        async for chunk in request.stream():
+            print("chunk received:", len(chunk))
+            hasher.update(chunk)
+            file_size += len(chunk)
+            yield chunk
 
     try:
-        server_hash = validate_file_hash(contents, file_hash_clientside)
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc # Invalid file hash
-
-    try: # attempt to find the link entry in the db to determine if it is ITAR 
-        link_entry = find_link_entry(link_uuid) # This field is populated by hubspot
+        link_entry = find_link_entry(link_uuid)
     except Exception as e:
         print("LINK LOOKUP ERROR:", e)
         raise
@@ -121,51 +132,56 @@ async def create_upload_file(
     if link_entry is None:
         raise HTTPException(status_code=404, detail="Link not found")
 
-    itar_status = bool(link_entry.itar) if link_entry else False # assume false if not found
+    itar_status = bool(link_entry.itar) if link_entry else False
 
-    if itar_status: # itar overrides user location, otherwise store closer to user
+    if itar_status:
         serviceClient = itarFileStorageProvider
-        #container_client = itar_container
     elif userLocation == "EU":
         serviceClient = euFileStorageProvider
-        #container_client = eu_container
     else:
         serviceClient = usFileStorageProvider
-        #container_client = us_container
 
-    filename = Path(file.filename).name
-    blob_name = filename
-    #blob_client = container_client.get_blob_client(blob_name)
+    path_filename = Path(filename).name
+    blob_name = path_filename
 
-    if serviceClient.exists(link_entry.case_id + "/" + blob_name): # Duplicate file name
+    if serviceClient.exists(link_entry.case_id + "/" + blob_name):
         path_obj = Path(filename)
         stem = path_obj.stem
         suffix = path_obj.suffix
-        counter = 1 # handle duplicate file names by appending _{counter} until a unique name is found
+        counter = 1
+
         while serviceClient.exists(link_entry.case_id + "/" + blob_name):
             if suffix:
                 blob_name = f"{stem}_{counter}{suffix}"
             else:
                 blob_name = f"{stem}_{counter}"
             counter += 1
-    
+
     print(repr(link_entry.case_id))
     print(repr(blob_name))
     print(repr(f"{link_entry.case_id}/{blob_name}"))
 
-    serviceClient.upload_file(contents, link_entry.case_id + "/" + blob_name) # Upload to db once it has a unique name
+    await serviceClient.upload_stream(
+        hashed_stream(),
+        link_entry.case_id + "/" + blob_name
+    )
 
-    persisted_contents:bytes = serviceClient.download_file(link_entry.case_id + "/" + blob_name)
-    persisted_hash = hash_bytes(persisted_contents) # Check hash
-    if persisted_hash != server_hash: # Return 500 if hashes dont match
-        raise HTTPException(status_code=500,detail="Uploaded file hash does not match the persisted blob contents")
+    server_hash = hasher.hexdigest()
 
-    try: # try to populate db with the record. If it fails we still return 200 to client since uplaod is succesful but db entry is missing so we log it for manual intervention
-        now = datetime.datetime.now(tz=datetime.timezone.utc) # All timestamps in utc
+    normalized_client_hash = file_hash_clientside.strip().lower()
+
+    if normalized_client_hash != server_hash:
+        raise HTTPException(
+            status_code=400,
+            detail=f"File hash mismatch, expected {normalized_client_hash}, got {server_hash}"
+        )
+
+    try:
+        now = datetime.datetime.now(tz=datetime.timezone.utc)
         case_id = None
         users_with_access = []
-        original_link = "" #TODO
-        sas_retrieval_link = "" #TODO
+        original_link = ""
+        sas_retrieval_link = ""
 
         if link_entry:
             if link_entry.expired:
@@ -174,12 +190,13 @@ async def create_upload_file(
                     detail="This link has expired and is no longer available for uploads",
                     headers={"WWW-Authenticate": "Bearer"},
                 )
+
             case_id = link_entry.case_id
             users_with_access = link_entry.users_with_access or []
             original_link = link_entry.link or original_link
 
             try:
-                if link_entry.timestamp: # datetime object
+                if link_entry.timestamp:
                     try:
                         parsed_ts = link_entry.timestamp
                     except Exception:
@@ -193,21 +210,21 @@ async def create_upload_file(
                 timestamp_val = now
         else:
             timestamp_val = now
-
+            
         inserted_upload_id = None
 
         if link_entry and getattr(link_entry, "uuid", None):
-            record = UploadRecord( # Create new upload record for "LinkDB".uploads table
+            record = UploadRecord(
                 upload_id=str(uuid.uuid4()),
                 link_uuid=link_entry.uuid,
-                original_filename=file.filename,
+                original_filename=filename,
                 for_deletion=False,
                 blob_name=blob_name,
-                content_type=file.content_type,
+                content_type=request.headers.get("content-type"),
                 sha256=server_hash,
                 date_uploaded=now,
                 itar_status=itar_status,
-                combined_file_size=len(contents),
+                combined_file_size=file_size,
                 timestamp=timestamp_val,
                 max_days_in_storage=30,
                 case_id=case_id,
@@ -230,15 +247,15 @@ async def create_upload_file(
         except Exception:
             pass
 
-    return { #Return a limited set of data to the client to avoid exposing sensitive information while allowing confirmation of the upload
-        "filename": file.filename,
-        "content_type": file.content_type,
-        "size": len(contents),
-        "uuid": link_uuid, # Not the upload_id since that would allow the client to attempt to download the file
-        "file_transfer_check": server_hash == persisted_hash,
-        "server_hash": server_hash, # Allow client to verify the hash of the uploaded file in addition to it being done server side
-        "blob_hash": persisted_hash,
-        "date_and_time": str(datetime.datetime.now(tz=datetime.timezone.utc)), # Time of completion 
+    return {
+        "filename": filename,
+        "content_type": request.headers.get("content-type"),
+        "size": file_size,
+        "uuid": link_uuid,
+        "file_transfer_check": True,
+        "server_hash": server_hash,
+        "blob_hash": server_hash,
+        "date_and_time": str(datetime.datetime.now(tz=datetime.timezone.utc)),
     }
 
 

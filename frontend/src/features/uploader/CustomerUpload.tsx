@@ -5,7 +5,7 @@ import {
 } from "react";
 import { useParams } from "react-router-dom";
 import { sha256 } from "@noble/hashes/sha2.js";
-import { bytesToHex } from '@noble/hashes/utils.js';
+import { bytesToHex } from "@noble/hashes/utils.js";
 import "./CustomerUpload.css";
 
 type SelectedFile = {
@@ -46,9 +46,6 @@ async function sha256File(file: File): Promise<string> {
     const hasher = sha256.create();
     const reader = file.stream().getReader();
 
-    let total = 0;
-    let chunks = 0;
-
     try {
         while (true) {
             const { value, done } = await reader.read();
@@ -57,17 +54,8 @@ async function sha256File(file: File): Promise<string> {
                 break;
             }
 
-            total += value.byteLength;
-            chunks++;
-
             hasher.update(value);
         }
-
-        console.log({
-            expectedBytes: file.size,
-            actualBytes: total,
-            chunks,
-        });
 
         return bytesToHex(hasher.digest());
     } finally {
@@ -137,21 +125,23 @@ export function CustomerUpload() {
                 }));
 
                 try {
-                    const sha256 = await sha256File(item.file);
-
-                    const formData = new FormData();
-                    formData.append("file", item.file);
-
+                    const sha256Hash = await sha256File(item.file);
+                    console.log("UPLOAD DEBUG", {
+                        name: item.file.name,
+                        size: item.file.size,
+                        type: item.file.type,
+                    });
                     const response = await fetch(`/api/uploadfile/${uuid}`, {
                         method: "POST",
                         headers: {
-                            Region: "US",
-                            "X-File-Hash": sha256,
+                            "X-File-Name": item.file.name,
+                            "X-File-Hash": sha256Hash,
+                            "X-User-Location": "US",
+                            "Content-Type": "application/octet-stream",
                         },
-                        body: formData,
+                        body: item.file,
                     });
-
-                    if (!response.ok) {
+                                        if (!response.ok) {
                         throw new Error("upload failed");
                     }
 
@@ -170,8 +160,7 @@ export function CustomerUpload() {
             setUploading(false);
         }
     };
-
-    return (
+        return (
         <section
             className="customer-upload-page"
             aria-labelledby="customer-upload-heading"
