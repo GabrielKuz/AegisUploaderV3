@@ -118,6 +118,9 @@ async def create_upload_file(
         print("LINK LOOKUP ERROR:", e)
         raise
 
+    if link_entry is None:
+        raise HTTPException(status_code=404, detail="Link not found")
+
     itar_status = bool(link_entry.itar) if link_entry else False # assume false if not found
 
     if itar_status: # itar overrides user location, otherwise store closer to user
@@ -242,6 +245,18 @@ async def create_upload_file(
 def get_uploads_for_link(link_uuid: str): # Get all uploads for a given link uuid from the db
     return session.query(UploadRecord).filter(UploadRecord.link_uuid == link_uuid).all()
 
+@router.post("/uploads/{upload_id}/mark_for_deletion")
+def mark_for_deletion(upload_id: str, current_user: Annotated[User, Depends(requireRoles("Admin", strict=True))]):
+    if not IsUUID(upload_id):
+        badUUID = HTTPException(400,detail={"message": "Invalid uuid"})
+        raise badUUID
+    upload_record: UploadRecord|None = session.query(UploadRecord).filter(UploadRecord.upload_id == upload_id).first()
+    if not upload_record:
+        raise HTTPException(status_code=404, detail="Upload not found")
+    upload_record.for_deletion = True
+    session.commit()
+    return {"message": f"Upload {upload_id} marked for deletion"}
+
 
 @router.get("/links/{linkUUID}/files") # Get all files for a given link uuid from the db. Only returns files the user has access to
 def listFiles(linkUUID: str, current_user: Annotated[User, Depends(requireRoles("User", "Admin"))]):  
@@ -274,7 +289,16 @@ def listFiles(linkUUID: str, current_user: Annotated[User, Depends(requireRoles(
         for upload in authorized_uploads]
 
 @router.post("/uploads/{upload_id}/extend_expiration")
-def extendFileExpiration(upload_id: str, additional_days: int, current_user: Annotated[User, Depends(requireRoles("admin", strict=True))]):  # Only admin can extend expiration
+def extendFileExpiration(upload_id: str, additional_days: int, current_user: Annotated[User, Depends(requireRoles("Admin", strict=True))]):  # Only admin can extend expiration
+    if type(additional_days) is not int:
+        raise HTTPException(status_code=400, detail="Additional days must be an integer")
+    if not IsUUID(upload_id):
+        badUUID = HTTPException(400,detail={"message": "Invalid uuid"})
+        raise badUUID
+    if additional_days <= 0:
+        raise HTTPException(status_code=400, detail="Additional days must be a positive integer")
+    if additional_days > 365:
+        raise HTTPException(status_code=400, detail="Additional days cannot exceed 365")
     upload_record: UploadRecord|None = session.query(UploadRecord).filter(UploadRecord.upload_id == upload_id).first()
     if not upload_record:
         raise HTTPException(status_code=404, detail="Upload record not found")
