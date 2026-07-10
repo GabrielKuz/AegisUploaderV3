@@ -80,11 +80,11 @@ export function PortalLayout({
 
                     {showSignOut && (
                         <button
-                            className="user-button"
+                            className="sign-out"
                             type="button"
                             onClick={handleSignOut}
                         >
-                            Sign out
+                            Sign Out
                         </button>
                     )}
                 </div>

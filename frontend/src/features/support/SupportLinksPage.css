@@ -61,24 +61,29 @@
 .new-link-link {
   min-height: 46px;
   padding: 0 20px;
+  border-radius: var(--radius-md);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   flex: 0 0 auto;
-  border: 1px solid transparent;
-  border-radius: var(--radius-md);
-  background: var(--portal-accent);
+  border: 1px solid var(--portal-accent-border);
   color: #ffffff;
-  font-size: 14px;
-  font-weight: 700;
+  background: transparent;
   text-decoration: none;
   transition:
+    color 160ms ease,
     background-color 160ms ease,
-    transform 160ms ease;
+    border-color 160ms ease,
+    transform 160ms ease,
+    opacity 160ms ease;
 }
 
 .new-link-link:hover {
-  background: var(--portal-accent-hover);
+  background: var(--portal-accent-soft);
+  border-color: var(--portal-accent-hover);
   transform: translateY(-1px);
 }
 
@@ -179,9 +184,9 @@
 
 .table-message {
   padding: 18px 20px;
-  color: var(--theme-text-secondary);
+  color: var(--theme-text);
   background: var(--theme-surface);
-  border: 1px solid var(--theme-border);
+  border: 1px solid var(--portal-accent-border);
   border-radius: var(--radius-lg);
   box-shadow: var(--theme-card-shadow);
 }
@@ -204,25 +209,35 @@
   background: var(--color-aegis-red);
 }
 
-.table-action-button {
+.table-action-button,
+.table-action-link {
   min-height: 36px;
   padding: 0 14px;
   border: 1px solid transparent;
   border-radius: var(--radius-md);
   background: var(--portal-accent);
-  color: #ffffff;
+  color: #ffffff !important;
   font: inherit;
   font-size: 13px;
   font-weight: 700;
   cursor: pointer;
+  text-decoration: none !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   transition:
     background-color 160ms ease,
     transform 160ms ease;
 }
 
-.table-action-button:hover {
+.table-action-button:hover,
+.table-action-link:hover {
   background: var(--portal-accent-hover);
   transform: translateY(-1px);
+}
+
+.table-muted-text {
+  color: var(--theme-muted);
 }
 
 /* ==========================================================================
@@ -255,13 +270,15 @@
 
   .new-link-link,
   .links-table tbody tr,
-  .table-action-button {
+  .table-action-button,
+  .table-action-link {
     transition: none;
   }
 
   .new-link-link:hover,
   .new-link-link:active,
-  .table-action-button:hover {
+  .table-action-button:hover,
+  .table-action-link:hover {
     transform: none;
   }
 }

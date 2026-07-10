@@ -158,6 +158,7 @@ export function CreateUploadLinkForm({
                             type="submit"
                             className="link-submit-button"
                         >
+                            Submit
                         </button>
                     </div>
                 </form>

@@ -185,7 +185,6 @@
 .link-form-actions button {
   min-height: 44px;
   padding: 0 20px;
-  border: 1px solid transparent;
   border-radius: var(--radius-md);
   font: inherit;
   font-size: 14px;
@@ -215,7 +214,7 @@
 .link-cancel-button {
   color: var(--theme-text);
   background: transparent;
-  border-color: var(--portal-accent-border);
+  border: 1px solid var(--portal-accent-soft);
 }
 
 .link-cancel-button:hover {
@@ -224,8 +223,8 @@
 }
 
 .link-submit-button {
-  color: #ffffff;
-  background: var(--portal-accent);
+  color: var(--theme-text);
+  background: var(--portal-accent-soft);
 }
 
 .link-submit-button:hover {
