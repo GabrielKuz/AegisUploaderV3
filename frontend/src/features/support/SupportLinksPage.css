@@ -1,16 +1,13 @@
 /* ==========================================================================
-   ADMIN LINKS PAGE
-   Displays previously created support links and their current status.
+   LINKS / TABLE PAGES
    ========================================================================== */
 
 .links-page {
   width: 100%;
   max-width: 1130px;
   margin-inline: auto;
-  padding: 54px 46px 72px;
   color: var(--theme-text);
 }
-
 
 /* ==========================================================================
    PAGE HEADER
@@ -30,10 +27,10 @@
 
 .links-page-eyebrow {
   margin: 0 0 14px;
-  color: var(--portal-accent);
-  font-family: var(--font-mono, "Geist Mono", monospace);
+  color: var(--current-theme);
+  font-family: var(--font-mono, monospace);
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 700;
   line-height: 1.4;
   letter-spacing: 0.13em;
   text-transform: uppercase;
@@ -42,7 +39,7 @@
 .links-page-heading h1 {
   margin: 0;
   color: var(--theme-text);
-  font-family: "Epilogue", sans-serif;
+  font-family: var(--font-heading);
   font-size: clamp(46px, 5vw, 68px);
   font-weight: 400;
   line-height: 1.02;
@@ -51,16 +48,14 @@
 
 .links-page-description {
   display: block;
-  max-width: 650px;
+  max-width: 700px;
   margin: 12px 0 0;
-  color: var(--theme-text-secondary);
   font-size: 16px;
   line-height: 1.6;
 }
 
-
 /* ==========================================================================
-   CREATE-LINK ACTION
+   CREATE LINK ACTION
    ========================================================================== */
 
 .new-link-link {
@@ -71,10 +66,11 @@
   justify-content: center;
   flex: 0 0 auto;
   border: 1px solid transparent;
+  border-radius: var(--radius-md);
   background: var(--portal-accent);
-  color: #fff;
+  color: #ffffff;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
   text-decoration: none;
   transition:
     background-color 160ms ease,
@@ -82,7 +78,7 @@
 }
 
 .new-link-link:hover {
-  background: var(--color-aegis-red);
+  background: var(--portal-accent-hover);
   transform: translateY(-1px);
 }
 
@@ -95,16 +91,18 @@
   outline-offset: 3px;
 }
 
-
 /* ==========================================================================
-   LINKS TABLE
+   TABLE
    ========================================================================== */
 
 .links-table-wrapper {
   width: 100%;
   overflow-x: auto;
   border: 1px solid var(--theme-border-strong);
-  background: var(--theme-surface);
+  border-radius: var(--radius-lg);
+  background:
+    linear-gradient(135deg, var(--portal-accent-soft), transparent 34%),
+    var(--theme-surface);
   box-shadow: var(--theme-card-shadow);
 }
 
@@ -124,14 +122,13 @@
 .links-table th {
   color: var(--theme-muted);
   background: var(--theme-surface-secondary);
-  font-family: var(--font-mono, "Geist Mono", monospace);
+  font-family: var(--font-mono, monospace);
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  cursor: pointer;
   user-select: none;
-  transition: color 0.15s ease;
+  transition: color 160ms ease;
 }
 
 .links-table th:hover {
@@ -148,6 +145,13 @@
   color: var(--theme-text);
 }
 
+.links-table a {
+  color: var(--current-theme);
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
 .links-table tbody tr {
   transition: background-color 160ms ease;
 }
@@ -160,49 +164,72 @@
   border-bottom: 0;
 }
 
+.table-sort-button {
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  text-transform: inherit;
+  letter-spacing: inherit;
+  cursor: pointer;
+}
+
+.table-message {
+  padding: 18px 20px;
+  color: var(--theme-text-secondary);
+  background: var(--theme-surface);
+  border: 1px solid var(--theme-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--theme-card-shadow);
+}
 
 /* ==========================================================================
-   STATUS BADGES
+   BADGES / ACTIONS
    ========================================================================== */
 
-.link-status {
+.link-badge {
   display: inline-flex;
   align-items: center;
-  padding: 6px 10px;
-  border: 1px solid;
+  padding: 4px 8px;
+  border-radius: var(--radius-pill);
   font-size: 12px;
-  font-weight: 600;
-  white-space: nowrap;
+  font-weight: 700;
 }
 
-.link-status-open {
-  color: var(--portal-open-text);
-  background: var(--portal-open-background);
-  border-color: var(--portal-open-border);
+.link-badge-danger {
+  color: #ffffff;
+  background: var(--color-aegis-red);
 }
 
-.link-status-in-progress {
-  color: var(--portal-progress-text);
-  background: var(--portal-progress-background);
-  border-color: var(--portal-progress-border);
+.table-action-button {
+  min-height: 36px;
+  padding: 0 14px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  background: var(--portal-accent);
+  color: #ffffff;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    background-color 160ms ease,
+    transform 160ms ease;
 }
 
-.link-status-resolved {
-  color: var(--portal-resolved-text);
-  background: var(--portal-resolved-background);
-  border-color: var(--portal-resolved-border);
+.table-action-button:hover {
+  background: var(--portal-accent-hover);
+  transform: translateY(-1px);
 }
-
 
 /* ==========================================================================
-   RESPONSIVE LAYOUT
+   RESPONSIVE
    ========================================================================== */
 
 @media (max-width: 760px) {
-  .links-page {
-    padding: 40px 22px 54px;
-  }
-
   .links-page-header {
     align-items: flex-start;
     flex-direction: column;
@@ -215,10 +242,6 @@
 }
 
 @media (max-width: 480px) {
-  .links-page {
-    padding-inline: 16px;
-  }
-
   .links-page-heading h1 {
     font-size: 42px;
   }
@@ -228,20 +251,17 @@
   }
 }
 
-
-/* ==========================================================================
-   REDUCED MOTION
-   ========================================================================== */
-
 @media (prefers-reduced-motion: reduce) {
 
   .new-link-link,
-  .links-table tbody tr {
+  .links-table tbody tr,
+  .table-action-button {
     transition: none;
   }
 
   .new-link-link:hover,
-  .new-link-link:active {
+  .new-link-link:active,
+  .table-action-button:hover {
     transform: none;
   }
 }

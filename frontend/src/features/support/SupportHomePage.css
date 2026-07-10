@@ -1,5 +1,5 @@
 /* ==========================================================================
-   SUPPORT HOME PAGE
+   SUPPORT / ADMIN HOME PAGES
    ========================================================================== */
 
 .support-home {
@@ -9,22 +9,21 @@
   color: var(--theme-text);
 }
 
-
 /* ==========================================================================
    PAGE HEADER
    ========================================================================== */
 
-.-page-heading {
+.support-page-heading {
   max-width: 760px;
   margin-bottom: clamp(32px, 5vw, 56px);
 }
 
-.-page-eyebrow {
+.support-page-eyebrow {
   margin: 0 0 14px;
-  color: var(--portal-accent);
+  color: var(--current-theme);
   font-family: var(--font-mono, monospace);
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 700;
   line-height: 1.4;
   letter-spacing: 0.13em;
   text-transform: uppercase;
@@ -41,29 +40,28 @@
 }
 
 .support-page-description {
-  max-width: 650px;
+  max-width: 680px;
   margin: 22px 0 0;
-  margin-bottom: 40px;
-  color: var(--theme-text-secondary);
   font-size: 17px;
   line-height: 1.65;
 }
 
-
 /* ==========================================================================
-   ACTION GRID
+   ACTION GRIDS
    ========================================================================== */
 
-.support-home-actions {
+.support-home-actions,
+.admin-home-actions {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: clamp(22px, 3vw, 40px);
 }
 
+.support-home-actions {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .admin-home-actions {
-  display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: clamp(22px, 3vw, 40px);
 }
 
 /* ==========================================================================
@@ -76,11 +74,14 @@
   padding: clamp(28px, 3vw, 36px);
   display: flex;
   flex-direction: column;
+  overflow: hidden;
   color: var(--theme-text);
   text-decoration: none;
-  background: var(--portal-card-background);
+  background:
+    linear-gradient(135deg, var(--portal-accent-soft), transparent 36%),
+    var(--portal-card-background);
   border: 1px solid var(--portal-card-border);
-  border-radius: 8px;
+  border-radius: var(--radius-lg);
   box-shadow: var(--portal-card-shadow);
   backdrop-filter: blur(16px);
   transition:
@@ -107,7 +108,7 @@
   left: 28px;
   width: 64px;
   height: 3px;
-  background: var(--portal-accent);
+  background: var(--current-theme);
 }
 
 .link-action-top {
@@ -117,7 +118,7 @@
 }
 
 .link-action-number {
-  color: var(--portal-accent);
+  color: var(--current-theme);
   font-family: var(--font-mono, monospace);
   font-size: 25px;
   font-weight: 500;
@@ -130,7 +131,7 @@
   display: grid;
   place-items: center;
   flex: 0 0 auto;
-  color: var(--portal-accent);
+  color: var(--current-theme);
   background: var(--portal-accent-soft);
   border-radius: 50%;
   transition:
@@ -141,7 +142,7 @@
 
 .link-action-card:hover .link-action-icon {
   color: #ffffff;
-  background: var(--portal-accent);
+  background: var(--current-theme);
   transform: translateY(-2px);
 }
 
@@ -182,9 +183,9 @@
   display: flex;
   align-items: center;
   gap: 14px;
-  color: var(--portal-accent);
+  color: var(--current-theme);
   font-size: 15px;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .link-action-footer svg {
@@ -204,20 +205,21 @@
   pointer-events: none;
   opacity: 0.55;
   background-image:
-    radial-gradient(circle,
-      var(--portal-dot-color) 1.2px,
-      transparent 1.4px);
+    radial-gradient(circle, var(--portal-dot-color) 1.2px, transparent 1.4px);
   background-size: 13px 13px;
   mask-image:
-    linear-gradient(to left,
-      rgba(0, 0, 0, 1),
-      rgba(0, 0, 0, 0));
+    linear-gradient(to left, rgba(0, 0, 0, 1), rgba(0, 0, 0, 0));
 }
-
 
 /* ==========================================================================
    RESPONSIVE
    ========================================================================== */
+
+@media (max-width: 1000px) {
+  .admin-home-actions {
+    grid-template-columns: 1fr;
+  }
+}
 
 @media (max-width: 900px) {
   .support-home-actions {

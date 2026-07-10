@@ -6,6 +6,7 @@ import {
 import { useParams } from "react-router-dom";
 import "./CustomerUpload.css";
 
+
 type SelectedFile = {
     file: File;
     preview: string;
@@ -48,6 +49,7 @@ export function CustomerUpload() {
     const [selectedFiles, setSelectedFiles] = useState<SelectedFile[]>([]);
     const [uploading, setUploading] = useState(false);
     const [uploadStatus, setUploadStatus] = useState<Record<string, string>>({});
+    const [dragActive, setDragActive] = useState(false);
 
     if (!uuid) {
         return <p>Invalid upload link.</p>;
@@ -56,16 +58,7 @@ export function CustomerUpload() {
     const handleBrowseClick = () => {
         fileInputRef.current?.click();
     };
-
-    const handleFileChange = (
-        event: ChangeEvent<HTMLInputElement>,
-    ) => {
-        const files = event.target.files;
-
-        if (!files) {
-            return;
-        }
-
+    const addFiles = (files: FileList | File[]) => {
         const newFiles = Array.from(files).map((file) => ({
             file,
             preview: URL.createObjectURL(file),
@@ -73,15 +66,26 @@ export function CustomerUpload() {
 
         setSelectedFiles((currentFiles) => {
             const existingNames = new Set(
-                currentFiles.map((item) => item.file.name),
+                currentFiles.map((item) => item.file.name)
             );
 
             const uniqueNewFiles = newFiles.filter(
-                (item) => !existingNames.has(item.file.name),
+                (item) => !existingNames.has(item.file.name)
             );
 
             return [...currentFiles, ...uniqueNewFiles];
         });
+    };
+    const handleFileChange = (
+        event: ChangeEvent<HTMLInputElement>,
+    ) => {
+
+
+        if (!event.target.files) {
+            return;
+        }
+
+        addFiles(event.target.files);
 
         event.target.value = "";
     };
@@ -90,6 +94,30 @@ export function CustomerUpload() {
         setSelectedFiles((currentFiles) =>
             currentFiles.filter((_, index) => index !== indexToRemove),
         );
+    };
+    const handleDragOver = (
+        event: React.DragEvent<HTMLDivElement>
+    ) => {
+        event.preventDefault();
+        setDragActive(true);
+    };
+
+    const handleDragLeave = (
+        event: React.DragEvent<HTMLDivElement>
+    ) => {
+        event.preventDefault();
+        setDragActive(false);
+    };
+
+    const handleDrop = (
+        event: React.DragEvent<HTMLDivElement>
+    ) => {
+        event.preventDefault();
+        setDragActive(false);
+
+        if (event.dataTransfer.files.length > 0) {
+            addFiles(event.dataTransfer.files);
+        }
     };
     const uploadFiles = async () => {
         setUploading(true);
@@ -119,14 +147,14 @@ export function CustomerUpload() {
                     const response = await fetch(`/api/uploadfile/${uuid}`, {
                         method: "POST",
                         headers: {
-                            Region: "US",
                             "X-File-Hash": sha256,
+                            "X-User-Location": "US",
                         },
                         body: formData,
                     });
 
                     if (!response.ok) {
-                        throw new Error("upload failed");
+                        throw new Error("Upload failed");
                     }
 
                     setUploadStatus((s) => ({
@@ -168,7 +196,12 @@ export function CustomerUpload() {
                     the link expires.
                 </p>
 
-                <div className="upload-box">
+                <div
+                    className={`upload-box ${dragActive ? "drag-active" : ""}`}
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
+                >
                     <p>Choose files or drag and drop here.</p>
 
                     <button

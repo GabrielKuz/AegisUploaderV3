@@ -255,17 +255,6 @@
   gap: 18px;
 }
 
-.support-link {
-  color: var(--portal-blue);
-  font-size: 14px;
-  font-weight: 600;
-  text-decoration: none;
-  transition: color 160ms ease;
-}
-
-.support-link:hover {
-  color: var(--color-aegis-red);
-}
 
 .support-link:focus-visible,
 .access-note a:focus-visible,
