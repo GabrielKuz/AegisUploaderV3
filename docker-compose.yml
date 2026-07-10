@@ -165,7 +165,7 @@ services:
     volumes: 
       -  C:\certs:/etc/nginx/certs:ro
     healthcheck:
-      test: ["CMD", "curl", "-fk", "http://localhost:8443"]
+      test: ["CMD", "curl", "-fk", "https://localhost:8443"]
       interval: 5s
       timeout: 5s
       retries: 10
