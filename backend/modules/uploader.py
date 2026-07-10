@@ -42,7 +42,7 @@ def validate_file_hash(contents: bytes, file_hash_clientside: str | None) -> str
     normalized_client_hash = file_hash_clientside.strip().lower() # remove whitespace and make lowercase for comparison
     computed_hash = hash_bytes(contents)
     if normalized_client_hash != computed_hash:
-        raise ValueError("File hash mismatch")
+        raise ValueError(f"File hash mismatch, expected client side hash - {normalized_client_hash}, but got {computed_hash}")
 
     return computed_hash
 

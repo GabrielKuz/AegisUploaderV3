@@ -4,6 +4,8 @@ import {
     type ChangeEvent,
 } from "react";
 import { useParams } from "react-router-dom";
+import { sha256 } from "@noble/hashes/sha2.js";
+import { bytesToHex } from '@noble/hashes/utils.js';
 import "./CustomerUpload.css";
 
 type SelectedFile = {
@@ -34,11 +36,43 @@ async function runWithConcurrency<T>(
         }
     };
 
-    // start initial batch
     const starters = Array.from({ length: limit }, runNext);
 
     await Promise.all(starters);
     await Promise.all(active);
+}
+
+async function sha256File(file: File): Promise<string> {
+    const hasher = sha256.create();
+    const reader = file.stream().getReader();
+
+    let total = 0;
+    let chunks = 0;
+
+    try {
+        while (true) {
+            const { value, done } = await reader.read();
+
+            if (done) {
+                break;
+            }
+
+            total += value.byteLength;
+            chunks++;
+
+            hasher.update(value);
+        }
+
+        console.log({
+            expectedBytes: file.size,
+            actualBytes: total,
+            chunks,
+        });
+
+        return bytesToHex(hasher.digest());
+    } finally {
+        reader.releaseLock();
+    }
 }
 
 export function CustomerUpload() {
@@ -91,6 +125,7 @@ export function CustomerUpload() {
             currentFiles.filter((_, index) => index !== indexToRemove),
         );
     };
+
     const uploadFiles = async () => {
         setUploading(true);
 
@@ -102,16 +137,7 @@ export function CustomerUpload() {
                 }));
 
                 try {
-                    const fileBuffer = await item.file.arrayBuffer();
-
-                    const hashBuffer = await crypto.subtle.digest(
-                        "SHA-256",
-                        fileBuffer
-                    );
-
-                    const sha256 = Array.from(new Uint8Array(hashBuffer))
-                        .map((b) => b.toString(16).padStart(2, "0"))
-                        .join("");
+                    const sha256 = await sha256File(item.file);
 
                     const formData = new FormData();
                     formData.append("file", item.file);
@@ -144,6 +170,7 @@ export function CustomerUpload() {
             setUploading(false);
         }
     };
+
     return (
         <section
             className="customer-upload-page"
