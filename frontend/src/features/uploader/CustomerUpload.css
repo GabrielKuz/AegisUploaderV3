@@ -9,81 +9,16 @@
 }
 
 .customer-upload-grid {
-  width: min(100%, 1120px);
-  margin-inline: auto;
-  display: grid;
-  grid-template-columns: 240px minmax(0, 1fr);
-  gap: clamp(24px, 4vw, 44px);
-  align-items: start;
+    width: 100%;
+    min-height: calc(100vh - 120px);
+
+    display: grid;
+    grid-template-columns: 260px minmax(0, 1fr);
+
+    gap: 0;
+    align-items: stretch;
 }
 
-/* ==========================================================================
-   SUMMARY SIDEBAR
-   ========================================================================== */
-
-.upload-summary-card {
-  position: sticky;
-  top: 0;
-  min-height: 260px;
-  padding: 24px 18px;
-  color: #ffffff;
-  background:
-    linear-gradient(180deg,
-      rgba(255, 255, 255, 0.04),
-      transparent 42%),
-    #1a1a1a;
-  border: 1px solid var(--theme-border-strong);
-  border-left: 4px solid var(--current-theme);
-  border-radius: 0;
-  box-shadow: var(--theme-card-shadow);
-}
-
-.upload-summary-eyebrow {
-  margin: 0 0 20px;
-  color: var(--current-theme);
-  font-family: var(--font-mono, monospace);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.13em;
-  text-transform: uppercase;
-}
-
-.upload-summary-list {
-  display: grid;
-  gap: 0;
-  margin: 0;
-}
-
-.upload-summary-list div {
-  padding: 16px 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
-}
-
-.upload-summary-list div:first-child {
-  padding-top: 0;
-}
-
-.upload-summary-list div:last-child {
-  padding-bottom: 0;
-  border-bottom: 0;
-}
-
-.upload-summary-list dt {
-  margin-bottom: 6px;
-  color: rgba(255, 255, 255, 0.62);
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-}
-
-.upload-summary-list dd {
-  margin: 0;
-  color: #ffffff;
-  font-size: 18px;
-  font-weight: 700;
-  word-break: break-word;
-}
 
 /* ==========================================================================
    MAIN PANEL
@@ -310,3 +245,4 @@
     transform: none;
   }
 }
+

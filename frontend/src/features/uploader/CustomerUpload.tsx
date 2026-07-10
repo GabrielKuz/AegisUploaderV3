@@ -5,7 +5,7 @@ import {
 } from "react";
 import { useParams } from "react-router-dom";
 import "./CustomerUpload.css";
-
+import { useCustomerUpload } from "../../layouts/CustomerLayoutContext";
 
 type SelectedFile = {
     file: File;
@@ -45,12 +45,33 @@ async function runWithConcurrency<T>(
 export function CustomerUpload() {
     const { uuid } = useParams();
     const fileInputRef = useRef<HTMLInputElement>(null);
-
+    const {
+        setUploadStats
+    } = useCustomerUpload();
     const [selectedFiles, setSelectedFiles] = useState<SelectedFile[]>([]);
     const [uploading, setUploading] = useState(false);
     const [uploadStatus, setUploadStatus] = useState<Record<string, string>>({});
     const [dragActive, setDragActive] = useState(false);
 
+    const uploadedFiles = selectedFiles.filter(
+        (item) => uploadStatus[item.file.name] === "done"
+    );
+
+    //const uploadedCount = uploadedFiles.length;
+
+    const uploadedBytes = uploadedFiles.reduce(
+        (total, item) => total + item.file.size,
+        0
+    );
+
+    /*const formatBytes = (bytes: number) => {
+        if (bytes === 0) return "0 B";
+
+        const units = ["B", "KB", "MB", "GB", "TB"];
+        const i = Math.floor(Math.log(bytes) / Math.log(1024));
+
+        return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${units[i]}`;
+    };*/
     if (!uuid) {
         return <p>Invalid upload link.</p>;
     }
@@ -157,10 +178,15 @@ export function CustomerUpload() {
                         throw new Error("Upload failed");
                     }
 
-                    setUploadStatus((s) => ({
+                   setUploadStatus((s) => ({
                         ...s,
                         [item.file.name]: "done",
                     }));
+
+                    setUploadStats(
+                        uploadedFiles.length + 1,
+                        uploadedBytes + item.file.size
+                    );
                 } catch {
                     setUploadStatus((s) => ({
                         ...s,
@@ -173,22 +199,16 @@ export function CustomerUpload() {
         }
     };
     return (
-        <section
-            className="customer-upload-page"
-            aria-labelledby="customer-upload-heading"
-        >
+        <section className="customer-upload-page">
             <div className="upload-panel">
-                <p className="upload-eyebrow">
-                    Secure upload
-                </p>
+
+                
+                
+        <div className="upload-panel">
 
                 <h1 id="customer-upload-heading">
                     Upload your files
                 </h1>
-
-                <p className="upload-link-id">
-                    Upload link ID: {uuid}
-                </p>
 
                 <p className="upload-note">
                     This link is temporary and will stop working after the
@@ -274,6 +294,7 @@ export function CustomerUpload() {
                     )}
                 </div>
             </div>
-        </section>
+        </div>
+    </section>
     );
 }

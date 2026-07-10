@@ -82,7 +82,7 @@ export function CreateUploadLinkForm({
                 Authorization: `Bearer ${accessToken}`,
                 "Content-Type": "application/json",
             },
-            body: JSON.stringify({ case_id: form.caseID }),
+            body: JSON.stringify({ case_id: form.caseID, itar: false}),
         });
         if (!response.ok) {
             setError("Failed to create support link.");

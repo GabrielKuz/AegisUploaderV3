@@ -19,6 +19,7 @@ type PortalLayoutProps = {
     defaultUserName?: string;
     showUserMenu?: boolean;
     showSignOut?: boolean;
+    sidebarContent?: React.ReactNode;
 };
 
 function getNavLinkClassName({ isActive }: { isActive: boolean }) {
@@ -33,10 +34,11 @@ export function PortalLayout({
     defaultUserName = "Support User",
     showUserMenu = true,
     showSignOut = true,
+    sidebarContent,
 }: PortalLayoutProps) {
     const navigate = useNavigate();
     const user = getDevUser();
-    const hasSidebar = navItems.length > 0;
+    const showSidebar = navItems.length > 0 || !!sidebarContent;
 
     const handleSignOut = () => {
         signOutDevUser();
@@ -44,7 +46,7 @@ export function PortalLayout({
     };
 
     return (
-        <div className={hasSidebar ? "layout" : "layout layout-no-sidebar"}>
+        <div className={showSidebar ? "layout" : "layout layout-no-sidebar"}>
             <header className="header">
                 <div className="brand">
                     <img
@@ -90,20 +92,24 @@ export function PortalLayout({
                 </div>
             </header>
 
-            {hasSidebar && (
+            {(showSidebar || sidebarContent) && (
                 <aside className="sidebar">
-                    <nav aria-label={navLabel}>
-                        {navItems.map((item) => (
-                            <NavLink
-                                key={item.to}
-                                to={item.to}
-                                end={item.end}
-                                className={getNavLinkClassName}
-                            >
-                                {item.label}
-                            </NavLink>
-                        ))}
-                    </nav>
+                    {sidebarContent ? (
+                        sidebarContent
+                    ) : (
+                        <nav aria-label={navLabel}>
+                            {navItems.map((item) => (
+                                <NavLink
+                                    key={item.to}
+                                    to={item.to}
+                                    end={item.end}
+                                    className={getNavLinkClassName}
+                                >
+                                    {item.label}
+                                </NavLink>
+                            ))}
+                        </nav>
+                    )}
                 </aside>
             )}
 

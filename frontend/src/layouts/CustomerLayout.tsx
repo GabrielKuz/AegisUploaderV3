@@ -1,6 +1,8 @@
 import { Navigate, useParams } from "react-router-dom";
 
 import { PortalLayout } from "./PortalLayout";
+import { CustomerUploadProvider } from "./CustomerLayoutContext";
+import { CustomerUploadSidebar } from "./CustomerUploadSidebar";
 
 export function CustomerLayout() {
     const { uuid } = useParams();
@@ -10,11 +12,12 @@ export function CustomerLayout() {
     }
 
     return (
-        <PortalLayout
-            productName="Customer Upload"
-            sectionName="Provide files for support"
-            showUserMenu={false}
-            showSignOut={false}
-        />
+        <CustomerUploadProvider uuid={uuid}>
+            <PortalLayout
+                productName="Customer Upload"
+                sectionName="Provide Files"
+                sidebarContent={<CustomerUploadSidebar />}
+            />
+        </CustomerUploadProvider>
     );
 }
