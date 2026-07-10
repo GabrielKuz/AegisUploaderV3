@@ -50,11 +50,16 @@ export function CustomerUpload() {
     } = useCustomerUpload();
     const [selectedFiles, setSelectedFiles] = useState<SelectedFile[]>([]);
     const [uploading, setUploading] = useState(false);
-    const [uploadStatus, setUploadStatus] = useState<Record<string, string>>({});
+    type UploadState = {
+    status: "uploading" | "done" | "error";
+    progress: number;
+    };
+
+    const [uploadStatus, setUploadStatus] = useState<Record<string, UploadState>>({});
     const [dragActive, setDragActive] = useState(false);
 
     const uploadedFiles = selectedFiles.filter(
-        (item) => uploadStatus[item.file.name] === "done"
+        (item) => uploadStatus[item.file.name]?.status === "done"
     );
 
     //const uploadedCount = uploadedFiles.length;
@@ -140,6 +145,56 @@ export function CustomerUpload() {
             addFiles(event.dataTransfer.files);
         }
     };
+    const uploadSingleFile = (
+        file: File,
+        sha256: string,
+        uuid: string,
+        onProgress: (progress: number) => void
+    ) => {
+        return new Promise<void>((resolve, reject) => {
+            const xhr = new XMLHttpRequest();
+
+            xhr.open(
+                "POST",
+                `/api/uploadfile/${uuid}`
+            );
+
+            xhr.setRequestHeader(
+                "X-File-Hash",
+                sha256
+            );
+
+            xhr.setRequestHeader(
+                "X-User-Location",
+                "US"
+            );
+
+            xhr.upload.onprogress = (event) => {
+                if (event.lengthComputable) {
+                    const percent = Math.round(
+                        (event.loaded / event.total) * 100
+                    );
+
+                    onProgress(percent);
+                }
+            };
+
+            xhr.onload = () => {
+                if (xhr.status >= 200 && xhr.status < 300) {
+                    resolve();
+                } else {
+                    reject();
+                }
+            };
+
+            xhr.onerror = () => reject();
+
+            const formData = new FormData();
+            formData.append("file", file);
+
+            xhr.send(formData);
+        });
+    };
     const uploadFiles = async () => {
         setUploading(true);
 
@@ -147,7 +202,10 @@ export function CustomerUpload() {
             await runWithConcurrency(selectedFiles, 3, async (item) => {
                 setUploadStatus((s) => ({
                     ...s,
-                    [item.file.name]: "uploading",
+                    [item.file.name]: {
+                        status: "uploading",
+                        progress: 0,
+                    },
                 }));
 
                 try {
@@ -165,22 +223,27 @@ export function CustomerUpload() {
                     const formData = new FormData();
                     formData.append("file", item.file);
 
-                    const response = await fetch(`/api/uploadfile/${uuid}`, {
-                        method: "POST",
-                        headers: {
-                            "X-File-Hash": sha256,
-                            "X-User-Location": "US",
-                        },
-                        body: formData,
-                    });
-
-                    if (!response.ok) {
-                        throw new Error("Upload failed");
-                    }
+                    await uploadSingleFile(
+                        item.file,
+                        sha256,
+                        uuid,
+                        (progress) => {
+                            setUploadStatus((s) => ({
+                                ...s,
+                                [item.file.name]: {
+                                    status: "uploading",
+                                    progress,
+                                },
+                            }));
+                        }
+                    );
 
                    setUploadStatus((s) => ({
                         ...s,
-                        [item.file.name]: "done",
+                        [item.file.name]: {
+                            status: "done",
+                            progress: 100,
+                        },
                     }));
 
                     setUploadStats(
@@ -190,7 +253,10 @@ export function CustomerUpload() {
                 } catch {
                     setUploadStatus((s) => ({
                         ...s,
-                        [item.file.name]: "error",
+                        [item.file.name]: {
+                            status: "error",
+                            progress: 0,
+                        },
                     }));
                 }
             });
@@ -251,13 +317,25 @@ export function CustomerUpload() {
                                         <span>{item.file.name}</span>
 
                                         <small>
-                                            {uploadStatus[item.file.name] === "uploading" &&
-                                                "Uploading..."}
-                                            {uploadStatus[item.file.name] === "done" &&
-                                                "Uploaded"}
-                                            {uploadStatus[item.file.name] === "error" &&
-                                                "Failed"}
+                                            {uploadStatus[item.file.name]?.status === "uploading" &&
+                                                `Uploading... ${uploadStatus[item.file.name].progress}%`
+                                            }
+
+                                            {uploadStatus[item.file.name]?.status === "done" &&
+                                                "Uploaded"
+                                            }
+
+                                            {uploadStatus[item.file.name]?.status === "error" &&
+                                                "Failed"
+                                            }
                                         </small>
+
+                                        {uploadStatus[item.file.name]?.status === "uploading" && (
+                                            <progress
+                                                value={uploadStatus[item.file.name].progress}
+                                                max="100"
+                                            />
+                                        )}
                                     </div>
 
                                     <div className="selected-file-actions">

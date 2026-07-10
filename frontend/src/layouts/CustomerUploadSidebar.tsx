@@ -44,7 +44,7 @@ export function CustomerUploadSidebar() {
             </div>
 
             <div className="customer-upload-sidebar-item">
-                <span>Upload Link</span>
+                <span>UUID</span>
                 <code>{uuid}</code>
             </div>
         </div>
