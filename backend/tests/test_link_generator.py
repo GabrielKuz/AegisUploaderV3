@@ -28,7 +28,7 @@ app.dependency_overrides[requireRoles] = lambda *roles, strict=False: override_g
 
 def test_generate_links_returns_link_and_uuid():
     link_request = LinkRequest(
-        case_id="AIS-123",
+        case_id="AIS-1234",
         itar=False
     )
 
@@ -42,7 +42,7 @@ def test_generate_links_returns_link_and_uuid():
 
 def test_create_link_endpoint_returns_generated_link():
     payload = {
-        "case_id": "AIS-123",
+        "case_id": "AIS-1234",
         "itar": False
     }
     
@@ -55,7 +55,7 @@ def test_create_link_endpoint_returns_generated_link():
 
 def test_store_link_persists_data():
     link_request = LinkRequest(
-        case_id="AIS-456",
+        case_id="AIS-4567",
         itar=False
     )
 
@@ -70,7 +70,7 @@ def test_store_link_persists_data():
     data = response.json()
     assert data["uuid"] == uuid
     assert data["link"].endswith(uuid)
-    assert data["case_id"] == "AIS-456"
+    assert data["case_id"] == "AIS-4567"
     assert data["itar"] is False
     assert data["creator"]  # Assuming the creator is set to the current user
     assert data["timestamp"]  # Assuming the timestamp is set to the current time
@@ -81,7 +81,7 @@ def test_store_link_persists_data():
 def test_get_all_links_returns_links_for_user():
     # Create a link for the test user
     link_request = LinkRequest(
-        case_id="AIS-789",
+        case_id="AIS-7890",
         itar=False
     )
     
@@ -92,7 +92,7 @@ def test_get_all_links_returns_links_for_user():
     assert response.status_code == 200
     data = response.json()
     assert isinstance(data, list)
-    assert any(link["case_id"] == "AIS-789" for link in data)  # Check if the created link is in the list
+    assert any(link["case_id"] == "AIS-7890" for link in data)  # Check if the created link is in the list
 
 # def test_link_expiration(): # fixed on another branch
 #     # Create a link

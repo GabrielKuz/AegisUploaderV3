@@ -44,7 +44,7 @@ def test_verify_and_test_uploader_endpoint(monkeypatch, tmp_path):
 
     monkeypatch.setattr(uploader, "ensure_uploads_table", lambda *a, **k: None)
     monkeypatch.setattr(uploader, "session", FakeSession())
-    fake_link_record = uploader.LinkRecord(uuid="test-link", case_id="test-case", itar=False, users_with_access=["testuser"], timestamp=datetime.datetime.now())
+    fake_link_record = uploader.LinkRecord(uuid="55340765-5e4f-4215-a416-05fe0b0a12f4", case_id="AIS-1234", itar=False, users_with_access=["testuser"], timestamp=datetime.datetime.now())
     monkeypatch.setattr(uploader, "find_link_entry", lambda *a, **k: fake_link_record)
     monkeypatch.setattr(uploader, "usFileStorageProvider", uploader.LocalStorageProvider(base_path=str(tmp_path / "us")))
 
@@ -59,7 +59,7 @@ def test_verify_and_test_uploader_endpoint(monkeypatch, tmp_path):
         payload = b"hello world"
         file_hash = hashlib.sha256(payload).hexdigest()
         response = client.post(
-            "/uploadfile/test-link",
+            "/uploadfile/55340765-5e4f-4215-a416-05fe0b0a12f4",
             files={"file": ("hello.txt", payload, "text/plain")},
             headers={"X-File-Hash": file_hash},
         )
@@ -72,7 +72,7 @@ def test_verify_and_test_uploader_endpoint(monkeypatch, tmp_path):
     assert body["server_hash"] == file_hash
     assert body["blob_hash"] == file_hash
 
-    stored_file = Path(tmp_path) / "us"/ "test-case" / "hello.txt"
+    stored_file = Path(tmp_path) / "us"/ "AIS-1234" / "hello.txt"
     assert stored_file.exists()
 
 
