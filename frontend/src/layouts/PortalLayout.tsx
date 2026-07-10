@@ -56,7 +56,7 @@ export function PortalLayout({
                     <div className="divide" aria-hidden="true" />
 
                     <div className="title">
-                        <span className="product-name">{productName}</span>
+                        <strong className="product-name">{productName}</strong>
                         <span className="section-name">{sectionName}</span>
                     </div>
                 </div>
