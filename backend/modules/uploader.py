@@ -153,7 +153,7 @@ async def start_upload(
     filename = sanitize_filename(filename)  # Sanitize the filename to prevent directory traversal and other issues
     path_filename = Path(filename).name # deal with dir traversal and get just the filename
     try:
-        validate_filename(path_filename)  # Validate the sanitized filename
+        validate_filename(path_filename)
     except Exception:
         raise HTTPException(status_code=400, detail="Invalid filename after sanitization")
     blob_name = path_filename

@@ -8,10 +8,14 @@ from hubspot.crm.tickets.models import Filter, FilterGroup
 api_client = HubSpot(access_token=os.getenv("HUBSPOT_ACCESS_TOKEN"))
 
 
-
+    
 #=======================================================================================================
 # Main Functions
 #=======================================================================================================
+
+def caseIDExists(case_id: str) -> bool:
+    ticket = advancedSearchThroughHubSpot(case_id, "ais_ticket_number")
+    return ticket is not None
 
 def get_ticket(ais_id: str):
     return advancedSearchThroughHubSpot(ais_id, "ais_ticket_number")

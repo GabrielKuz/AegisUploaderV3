@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime, timedelta
 from sqlalchemy import create_engine, select, update
 from typing import Dict
-from modules.HubSpotIntegration import get_caseITARstatus
+from modules.HubSpotIntegration import get_caseITARstatus, caseIDExists
 from modules.auth import User
 from modules.models import LinkRecord, UploadRecord, update_other_from_self, update_similar_between_LinkDB_and_UploadDB
 import os
@@ -41,6 +41,8 @@ def generate_links(link_request: LinkRequest, current_user: User):
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Invalid Case-ID: Bad Request"
             )
+    if not caseIDExists(link_request.case_id):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Case-ID not found")
         
     uuid_str = str(uuid.uuid4()) # New uuidv4 on every link. We assume no collissions due to large space and link expiration
 
