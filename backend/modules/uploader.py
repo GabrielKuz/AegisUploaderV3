@@ -27,6 +27,7 @@ from cryptography.hazmat.backends import default_backend
 from fastapi import APIRouter, Depends, File, Header, HTTPException, UploadFile
 from modules import Session
 from fastapi import Request
+from pathvalidate import sanitize_filename, validate_filename
 from modules.auth import getCurrentActiveUser, User, requireRoles
 from modules.models import Base, StorageRegion, UploadRecord, LinkRecord, UploadSession
 
@@ -148,7 +149,11 @@ async def start_upload(
         service_client = usFileStorageProvider
         storage_region = StorageRegion.US
 
+
+    filename = sanitize_filename(filename)  # Sanitize the filename to prevent directory traversal and other issues
     path_filename = Path(filename).name # deal with dir traversal and get just the filename
+    if not validate_filename(path_filename):
+        raise HTTPException(status_code=400, detail="Invalid filename after sanitization")
     blob_name = path_filename
 
     chunk_size = 32 * 1024 * 1024
