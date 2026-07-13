@@ -154,67 +154,63 @@ async def start_upload(
     chunk_size = 32 * 1024 * 1024
 
     try:
-        with db.begin():
+        db.execute(
+            text("SELECT pg_advisory_xact_lock(hashtext(:key))"),
+            {"key": str(link_entry.uuid)}
+        )
 
-            db.execute(
-                text("SELECT pg_advisory_xact_lock(hashtext(:key))"),
-                {"key": str(link_entry.uuid)}
+        path_obj = Path(blob_name)
+        stem = path_obj.stem
+        suffix = path_obj.suffix
+        counter = 1
+
+        while True:
+            exists_in_storage = service_client.exists(f"{link_entry.case_id}/{blob_name}")
+
+            exists_in_db = (
+                db.query(UploadSession).filter(
+                    UploadSession.link_uuid == link_entry.uuid,
+                    UploadSession.blob_name == blob_name,
+                ).first() is not None
             )
 
-            path_obj = Path(blob_name)
-            stem = path_obj.stem
-            suffix = path_obj.suffix
-            counter = 1
+            if not exists_in_storage and not exists_in_db:
+                break
 
-            while True:
-                exists_in_storage = service_client.exists(f"{link_entry.case_id}/{blob_name}")
+            if suffix:
+                blob_name = f"{stem}_{counter}{suffix}"
+            else:
+                blob_name = f"{stem}_{counter}"
 
-                exists_in_db = (
-                    db.query(UploadSession).filter(
-                        UploadSession.link_uuid == link_entry.uuid,
-                        UploadSession.blob_name == blob_name,
-                    ).first() is not None
-                )
+            counter += 1
 
-                if not exists_in_storage and not exists_in_db:
-                    break
+        upload_session = UploadSession(
+            link_uuid=link_entry.uuid,
+            case_id=link_entry.case_id,
+            blob_name=blob_name,
+            original_filename=filename,
+            content_type=None,
+            expected_size=file_size,
+            expected_sha256=file_hash.strip().lower(),
+            received_ranges=[],
+            received_size=0,
+            chunk_size=chunk_size,
+            completed=False,
+            itar_status=itar_status,
+            storage_region=storage_region,
+        )
 
-                if suffix:
-                    blob_name = f"{stem}_{counter}{suffix}"
-                else:
-                    blob_name = f"{stem}_{counter}"
+        db.add(upload_session)
 
-                counter += 1
+        db.flush()
 
-            upload_session = UploadSession(
-                link_uuid=link_entry.uuid,
-                case_id=link_entry.case_id,
-                blob_name=blob_name,
-                original_filename=filename,
-                content_type=None,
-                expected_size=file_size,
-                expected_sha256=file_hash.strip().lower(),
-                received_ranges=[],
-                received_size=0,
-                chunk_size=chunk_size,
-                completed=False,
-                itar_status=itar_status,
-                storage_region=storage_region,
-            )
-
-            db.add(upload_session)
-
-            db.flush()
-
-            upload_token = upload_session.upload_token
+        upload_token = upload_session.upload_token
+        db.commit()
 
     except Exception:
         db.rollback()
         traceback.print_exc()
-        raise HTTPException(
-            status_code=500,
-            detail="Failed to create upload session"
-        )
+        raise HTTPException(status_code=500, detail="Failed to create upload session")
 
     try:
         service_client.prepare_file(f"{link_entry.case_id}/{blob_name}", file_size)
@@ -340,6 +336,7 @@ async def upload_file_chunk(
                 UploadSession.link_uuid == link_uuid
             ).with_for_update().populate_existing().first()
         )
+
 
         if upload_session is None:
             raise HTTPException(status_code=404, detail="Upload session not found")

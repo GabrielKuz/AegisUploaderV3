@@ -107,7 +107,6 @@ class LocalStorageProvider(StorageProvider):
     def prepare_file(self, file_path: str, size: int) -> None:
         path = self._resolve_path(file_path)
 
-        print("\n\nPREPARED FILE", path, size, "\n\n")
 
         path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -115,7 +114,6 @@ class LocalStorageProvider(StorageProvider):
             f.truncate(size)
 
     async def write_stream_range(self, stream: AsyncIterator[bytes], destination_path: str, offset: int, size: int) -> None:
-        print("\n\nWRITING STREAM RANGE", destination_path, offset, size, "\n\n")
         destination = self._resolve_path(destination_path)
 
         destination.parent.mkdir(parents=True, exist_ok=True)
