@@ -62,6 +62,54 @@ async function sha256File(file: File): Promise<string> {
         reader.releaseLock();
     }
 }
+async function sha256Blob(blob: Blob): Promise<string> {
+    const hasher = sha256.create();
+    const reader = blob.stream().getReader();
+
+    try {
+        while (true) {
+            const { value, done } = await reader.read();
+
+            if (done) {
+                break;
+            }
+
+            hasher.update(value);
+        }
+
+        return bytesToHex(hasher.digest());
+    } finally {
+        reader.releaseLock();
+    }
+}
+
+async function uploadChunk(
+    uuid: string,
+    uploadToken: string,
+    chunk: Blob,
+    offset: number,
+    chunkSize: number,
+) {
+    const hash = await sha256Blob(chunk);
+
+    const response = await fetch(
+        `/api/uploadfile/${uuid}/${uploadToken}`,
+        {
+            method: "POST",
+            headers: {
+                "X-Chunk-Offset": offset.toString(),
+                "X-Chunk-Size": chunkSize.toString(),
+                "X-Chunk-Hash": hash,
+                "Content-Type": "application/octet-stream",
+            },
+            body: chunk,
+        },
+    );
+
+    if (!response.ok) {
+        throw new Error("Chunk upload failed");
+    }
+}
 
 export function CustomerUpload() {
     const { uuid } = useParams();
@@ -119,36 +167,100 @@ export function CustomerUpload() {
 
         try {
             await runWithConcurrency(selectedFiles, 3, async (item) => {
-                setUploadStatus((s) => ({
-                    ...s,
-                    [item.file.name]: "uploading",
-                }));
-
                 try {
-                    const sha256Hash = await sha256File(item.file);
-                    console.log("UPLOAD DEBUG", {
-                        name: item.file.name,
-                        size: item.file.size,
-                        type: item.file.type,
-                    });
-                    const response = await fetch(`/api/uploadfile/${uuid}`, {
-                        method: "POST",
-                        headers: {
-                            "X-File-Name": item.file.name,
-                            "X-File-Hash": sha256Hash,
-                            "X-User-Location": "US",
-                            "Content-Type": "application/octet-stream",
+                    setUploadStatus((s) => ({
+                        ...s,
+                        [item.file.name]: "starting",
+                    }));
+
+                    const fileHash = await sha256File(item.file);
+
+                    const startResponse = await fetch(
+                        `/api/uploadfile/${uuid}/start`,
+                        {
+                            method: "POST",
+                            headers: {
+                                "X-File-Name": item.file.name,
+                                "X-File-Hash": fileHash,
+                                "X-File-Size": item.file.size.toString(),
+                                "X-User-Location": "US",
+                            },
                         },
-                        body: item.file,
-                    });
-                                        if (!response.ok) {
-                        throw new Error("upload failed");
+                    );
+
+                    if (!startResponse.ok) {
+                        throw new Error("Failed to start upload");
+                    }
+
+                    const {
+                        uploadToken,
+                        chunkSize,
+                    }: {
+                        uploadToken: string;
+                        chunkSize: number;
+                    } = await startResponse.json();
+
+
+                    setUploadStatus((s) => ({
+                        ...s,
+                        [item.file.name]: "uploading",
+                    }));
+
+                    let offset = 0;
+
+                    while (offset < item.file.size) {
+                        const end = Math.min(
+                            offset + chunkSize,
+                            item.file.size,
+                        );
+
+                        const chunk = item.file.slice(offset, end);
+
+                        let uploaded = false;
+                        let attempts = 0;
+
+                        while (!uploaded && attempts < 3) {
+                            try {
+                                await uploadChunk(
+                                    uuid,
+                                    uploadToken,
+                                    chunk,
+                                    offset,
+                                    chunk.size,
+                                );
+
+                                uploaded = true;
+                            } catch {
+                                attempts++;
+
+                                if (attempts >= 3) {
+                                    throw new Error(
+                                        "Chunk failed after retries",
+                                    );
+                                }
+                            }
+                        }
+
+                        offset = end;
+                    }
+
+
+                    const completeResponse = await fetch(
+                        `/api/uploadfile/${uuid}/${uploadToken}/complete`,
+                        {
+                            method: "POST",
+                        },
+                    );
+
+                    if (!completeResponse.ok) {
+                        throw new Error("Failed to complete upload");
                     }
 
                     setUploadStatus((s) => ({
                         ...s,
                         [item.file.name]: "done",
                     }));
+
                 } catch {
                     setUploadStatus((s) => ({
                         ...s,
@@ -160,6 +272,7 @@ export function CustomerUpload() {
             setUploading(false);
         }
     };
+
         return (
         <section
             className="customer-upload-page"

@@ -7,9 +7,9 @@ import traceback
 import psycopg
 import uuid
 import re
-
-from requests import session
 import sqlalchemy
+
+from sqlalchemy.orm import Session
 from Utils import IsUUID
 from pathlib import Path
 from typing import Annotated, Literal
@@ -66,7 +66,7 @@ def ensure_uploads_table(db_session):
     Base.metadata.create_all(bind=engine, tables=[UploadRecord.__table__])
 
 
-def find_link_entry(link_uuid: str, db: Annotated[sqlalchemy.orm.Session, Depends(get_db)]):
+def find_link_entry(link_uuid: str, db):
     try:
         return db.query(LinkRecord).filter(LinkRecord.uuid == link_uuid).first()
     except psycopg.errors.InvalidTextRepresentation as e:
@@ -125,7 +125,7 @@ async def start_upload(
         raise HTTPException(status_code=400, detail="X-File-Size header required")
 
     try:
-        link_entry = find_link_entry(link_uuid)
+        link_entry = find_link_entry(link_uuid, db)
     except Exception:
         traceback.print_exc()
         raise HTTPException(status_code=404, detail="Unable to find link entry. Please check the link UUID and try again.")
@@ -232,7 +232,7 @@ async def upload_file_chunk(
         raise HTTPException(status_code=400, detail="X-Chunk-Hash header required")
 
     upload_session = (
-        session.query(UploadSession).filter(
+        db.query(UploadSession).filter(
             UploadSession.upload_token == upload_token,
             UploadSession.link_uuid == link_uuid,
         ).first())
@@ -245,12 +245,19 @@ async def upload_file_chunk(
 
     if chunk_offset >= upload_session.expected_size:
         raise HTTPException(status_code=400, detail="Chunk offset outside file size")
-    
+
+    for start, end in upload_session.received_ranges or []:
+        if chunk_offset >= start and chunk_offset + upload_session.chunk_size <= end:
+            return {
+                "received": upload_session.chunk_size,
+                "offset": chunk_offset,
+                "hash": chunk_hash,
+                "ranges": upload_session.received_ranges,
+            }
+
     if chunk_offset + upload_session.chunk_size > upload_session.expected_size:
         if chunk_offset + chunk_size != upload_session.expected_size:
-            raise HTTPException(status_code=400,  detail="Invalid chunk size")
-
-    service_client = None
+            raise HTTPException(status_code=400, detail="Invalid chunk size")
 
     if upload_session.itar_status:
         service_client = itarFileStorageProvider
@@ -284,6 +291,9 @@ async def upload_file_chunk(
 
             yield chunk
 
+    if received_size > upload_session.chunk_size:
+        raise HTTPException(status_code=400, detail="Chunk exceeds expected chunk size")
+
     try:
         await service_client.write_stream_range(
             buffered_stream(),
@@ -295,6 +305,7 @@ async def upload_file_chunk(
     except Exception:
         traceback.print_exc()
         raise HTTPException(status_code=500, detail="Failed to write upload chunk")
+
     expected_end = chunk_offset + received_size
 
     if expected_end > upload_session.expected_size:
@@ -306,6 +317,7 @@ async def upload_file_chunk(
                 db.query(UploadSession).filter(
                     UploadSession.upload_token == upload_token,
                     UploadSession.link_uuid == link_uuid).with_for_update().first())
+
             if upload_session is None:
                 raise HTTPException(status_code=404, detail="Upload session not found")
 
@@ -334,10 +346,7 @@ async def upload_file_chunk(
 
     except Exception:
         traceback.print_exc()
-        raise HTTPException(
-            status_code=500,
-            detail="Failed to update upload session"
-        )
+        raise HTTPException(status_code=500, detail="Failed to update upload session")
 
     return {
         "received": received_size,
@@ -437,7 +446,7 @@ async def complete_upload(link_uuid: str, upload_token: str, db: Annotated[sqlal
             
             if upload_session is None:
                 raise HTTPException(status_code=404, detail="Upload session not found")
-            link_entry = find_link_entry(link_uuid)
+            link_entry = find_link_entry(link_uuid, db)
 
 
             record = UploadRecord(
