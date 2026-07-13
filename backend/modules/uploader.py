@@ -151,19 +151,34 @@ async def start_upload(
     path_filename = Path(filename).name # deal with dir traversal and get just the filename
     blob_name = path_filename
 
-    with db.begin():
-        db.execute(
-            text("SELECT pg_advisory_xact_lock(hashtext(:key))"), # lock the link uuid to prevent race conditions
-            {"key": str(link_entry.uuid)}
-        )
+    chunk_size = 32 * 1024 * 1024
 
-        if service_client.exists(f"{link_entry.case_id}/{blob_name}"): # handle collisions
+    try:
+        with db.begin():
+
+            db.execute(
+                text("SELECT pg_advisory_xact_lock(hashtext(:key))"),
+                {"key": str(link_entry.uuid)}
+            )
+
             path_obj = Path(blob_name)
             stem = path_obj.stem
             suffix = path_obj.suffix
             counter = 1
 
-            while service_client.exists(f"{link_entry.case_id}/{blob_name}"):
+            while True:
+                exists_in_storage = service_client.exists(f"{link_entry.case_id}/{blob_name}")
+
+                exists_in_db = (
+                    db.query(UploadSession).filter(
+                        UploadSession.link_uuid == link_entry.uuid,
+                        UploadSession.blob_name == blob_name,
+                    ).first() is not None
+                )
+
+                if not exists_in_storage and not exists_in_db:
+                    break
+
                 if suffix:
                     blob_name = f"{stem}_{counter}{suffix}"
                 else:
@@ -171,44 +186,51 @@ async def start_upload(
 
                 counter += 1
 
-        chunk_size = 32 * 1024 * 1024  # 32 MiB
+            upload_session = UploadSession(
+                link_uuid=link_entry.uuid,
+                case_id=link_entry.case_id,
+                blob_name=blob_name,
+                original_filename=filename,
+                content_type=None,
+                expected_size=file_size,
+                expected_sha256=file_hash.strip().lower(),
+                received_ranges=[],
+                received_size=0,
+                chunk_size=chunk_size,
+                completed=False,
+                itar_status=itar_status,
+                storage_region=storage_region,
+            )
 
-        upload_session = UploadSession(
-            link_uuid=link_entry.uuid,
-            case_id=link_entry.case_id,
-            blob_name=blob_name,
-            original_filename=filename,
-            content_type=None,
-            expected_size=file_size,
-            expected_sha256=file_hash.strip().lower(),
-            received_ranges=[],
-            received_size=0,
-            chunk_size=chunk_size,
-            completed=False,
-            itar_status=itar_status,
-            storage_region=storage_region,
-        )
-
-        try:
             db.add(upload_session)
 
-        except Exception:
-            traceback.print_exc()
-            raise HTTPException(status_code=500,detail="Failed to create upload session")
+            db.flush()
+
+            upload_token = upload_session.upload_token
+
+    except Exception:
+        db.rollback()
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to create upload session"
+        )
 
     try:
         service_client.prepare_file(f"{link_entry.case_id}/{blob_name}", file_size)
 
     except Exception:
-        with db.begin():
+        try:
             db.delete(upload_session)
+            db.commit()
+        except Exception:
+            traceback.print_exc()
 
         traceback.print_exc()
-
         raise HTTPException(status_code=500, detail="Failed to prepare storage")
     
     return {
-        "uploadToken": upload_session.upload_token,
+        "uploadToken": upload_token,
         "chunkSize": chunk_size,
     }
 
@@ -312,42 +334,47 @@ async def upload_file_chunk(
         raise HTTPException(status_code=400, detail="Chunk exceeds expected file size")
 
     try:
-        with db.begin():
-            upload_session = (
-                db.query(UploadSession).filter(
-                    UploadSession.upload_token == upload_token,
-                    UploadSession.link_uuid == link_uuid).with_for_update().first())
+        upload_session = (
+            db.query(UploadSession).filter(
+                UploadSession.upload_token == upload_token,
+                UploadSession.link_uuid == link_uuid
+            ).with_for_update().populate_existing().first()
+        )
 
-            if upload_session is None:
-                raise HTTPException(status_code=404, detail="Upload session not found")
+        if upload_session is None:
+            raise HTTPException(status_code=404, detail="Upload session not found")
 
-            ranges = upload_session.received_ranges or []
+        ranges = upload_session.received_ranges or []
 
-            new_range = [chunk_offset, expected_end]
+        new_range = [chunk_offset, expected_end]
 
-            ranges.append(new_range)
+        ranges.append(new_range)
 
-            ranges.sort(key=lambda x: x[0])
+        ranges.sort(key=lambda x: x[0])
 
-            merged_ranges = []
+        merged_ranges = []
 
-            for start, end in ranges:
-                if not merged_ranges or start > merged_ranges[-1][1]:
-                    merged_ranges.append([start, end])
-                else:
-                    merged_ranges[-1][1] = max(merged_ranges[-1][1], end)
+        for start, end in ranges:
+            if not merged_ranges or start > merged_ranges[-1][1]:
+                merged_ranges.append([start, end])
+            else:
+                merged_ranges[-1][1] = max(merged_ranges[-1][1], end)
 
-            upload_session.received_ranges = merged_ranges
-            upload_session.received_size = sum(end - start for start, end in merged_ranges)
-            upload_session.last_activity = datetime.datetime.now(tz=datetime.timezone.utc)
+        upload_session.received_ranges = merged_ranges
+        upload_session.received_size = sum(
+            end - start for start, end in merged_ranges
+        )
+        upload_session.last_activity = datetime.datetime.now(tz=datetime.timezone.utc)
+
+        db.commit()
 
     except HTTPException:
         raise
 
     except Exception:
+        db.rollback()
         traceback.print_exc()
         raise HTTPException(status_code=500, detail="Failed to update upload session")
-
     return {
         "received": received_size,
         "offset": chunk_offset,
@@ -438,52 +465,56 @@ async def complete_upload(link_uuid: str, upload_token: str, db: Annotated[sqlal
     try:
         now = datetime.datetime.now(tz=datetime.timezone.utc)
 
-        with db.begin():
-            upload_session = db.query(UploadSession).filter(
-                    UploadSession.upload_token == upload_token,
-                    UploadSession.link_uuid == link_uuid,
-                ).with_for_update().first()
-            
-            if upload_session is None:
-                raise HTTPException(status_code=404, detail="Upload session not found")
-            link_entry = find_link_entry(link_uuid, db)
+        upload_session = db.query(UploadSession).filter(
+                UploadSession.upload_token == upload_token,
+                UploadSession.link_uuid == link_uuid,
+            ).with_for_update().populate_existing().first()
+        
 
+        if upload_session is None:
+            raise HTTPException(status_code=404,  detail="Upload session not found")
 
-            record = UploadRecord(
-                upload_id=upload_session.upload_id,
-                link_uuid=upload_session.link_uuid,
-                original_filename=upload_session.original_filename,
-                for_deletion=False,
-                blob_name=upload_session.blob_name,
-                content_type=upload_session.content_type,
-                sha256=server_hash,
-                date_uploaded=now,
-                itar_status=upload_session.itar_status,
-                combined_file_size=upload_session.expected_size,
-                timestamp=now,
-                max_days_in_storage=30,
-                case_id=upload_session.case_id,
-                original_link=link_entry.link,
-                sas_retrieval_link="",
-                upload_complete=True,
-                users_with_access=link_entry.users_with_access,
-            )
+        link_entry = find_link_entry(link_uuid, db)
 
-            db.add(record)
+        if link_entry is None:
+            raise HTTPException(status_code=404, detail="Link not found")
 
-            upload_session.completed = True
-            upload_session.last_activity = now
+        record = UploadRecord(
+            upload_id=upload_session.upload_id,
+            link_uuid=upload_session.link_uuid,
+            original_filename=upload_session.original_filename,
+            for_deletion=False,
+            blob_name=upload_session.blob_name,
+            content_type=upload_session.content_type,
+            sha256=server_hash,
+            date_uploaded=now,
+            itar_status=upload_session.itar_status,
+            combined_file_size=upload_session.expected_size,
+            timestamp=now,
+            max_days_in_storage=30,
+            case_id=upload_session.case_id,
+            original_link=link_entry.link,
+            sas_retrieval_link="",
+            upload_complete=True,
+            users_with_access=link_entry.users_with_access,
+        )
+
+        db.add(record)
+
+        upload_session.completed = True
+        upload_session.last_activity = now
+
+        db.commit()
 
     except HTTPException:
+        db.rollback()
         raise
 
     except Exception:
+        db.rollback()
         traceback.print_exc()
-        raise HTTPException(
-            status_code=500,
-            detail="Failed to complete upload"
-        )
-
+        raise HTTPException(status_code=500, detail="Failed to complete upload")
+    
     return {
         "filename": upload_session.original_filename,
         "size": upload_session.expected_size,

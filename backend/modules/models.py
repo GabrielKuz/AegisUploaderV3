@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 import enum
 
 from sqlalchemy import UUID, BigInteger, Column, String, Integer, DateTime, Boolean, Text, JSON, UniqueConstraint
+import sqlalchemy
 from sqlalchemy.orm import declarative_base
 
 Base = declarative_base()
@@ -34,14 +35,14 @@ class UploadSession(Base):
     content_type = Column(Text, nullable=True) # mime
     expected_size = Column(BigInteger, nullable=False)
     expected_sha256 = Column(Text, nullable=False)
-    received_ranges = Column(MutableList.asMutable(JSON), nullable=False,default=lambda: [])# inclusive start, exclusive end, list of lists [[start1, end1], [start2, end2], ...]
+    received_ranges = Column(MutableList.as_mutable(JSON), nullable=False,default=lambda: [])# inclusive start, exclusive end, list of lists [[start1, end1], [start2, end2], ...]
     received_size = Column(BigInteger, nullable=False, default=0)
     chunk_size = Column(BigInteger, nullable=False) # so if we change size we can still continue old sessions
     completed = Column(Boolean, nullable=False, default=False)
     created = Column(DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
     last_activity = Column(DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
     itar_status = Column(Boolean, default=False, nullable=False)
-    storage_region = Column(enum.Enum(StorageRegion), nullable=False)
+    storage_region = Column(sqlalchemy.Enum(StorageRegion), nullable=False)
 
 class UploadRecord(Base): # "LinkDB".uploads table
     __tablename__ = "uploads"

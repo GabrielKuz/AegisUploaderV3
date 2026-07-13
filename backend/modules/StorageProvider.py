@@ -107,15 +107,22 @@ class LocalStorageProvider(StorageProvider):
     def prepare_file(self, file_path: str, size: int) -> None:
         path = self._resolve_path(file_path)
 
+        print("\n\nPREPARED FILE", path, size, "\n\n")
+
         path.parent.mkdir(parents=True, exist_ok=True)
 
         with open(path, "wb") as f:
             f.truncate(size)
 
     async def write_stream_range(self, stream: AsyncIterator[bytes], destination_path: str, offset: int, size: int) -> None:
+        print("\n\nWRITING STREAM RANGE", destination_path, offset, size, "\n\n")
         destination = self._resolve_path(destination_path)
 
         destination.parent.mkdir(parents=True, exist_ok=True)
+
+        if not destination.exists():
+            with open(destination, "wb") as f:
+                f.truncate(offset + size)
 
         with open(destination, "r+b") as f:
             f.seek(offset)
@@ -130,7 +137,7 @@ class LocalStorageProvider(StorageProvider):
 
             if bytes_written != size:
                 raise ValueError("Stream size does not match the specified size.")
-
+            
     async def upload_stream(self, stream: AsyncIterator[bytes], destination_path: str) -> None:
         destination = self._resolve_path(destination_path)
 
