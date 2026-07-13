@@ -8,7 +8,8 @@ backend/_pycache_/
 
 # C extensions
 *.so
-
+storage/
+*.bin
 # Distribution / packaging
 .Python
 build/

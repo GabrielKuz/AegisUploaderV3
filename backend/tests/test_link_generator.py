@@ -56,7 +56,6 @@ def test_create_link_endpoint_returns_generated_link():
 def test_store_link_persists_data():
     link_request = LinkRequest(
         case_id="AIS-4567",
-        itar=False
     )
 
     result = generate_links(link_request, current_user)

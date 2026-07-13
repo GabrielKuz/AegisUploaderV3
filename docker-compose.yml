@@ -9,6 +9,8 @@ services:
       context: ./backend
     expose: # not published to host
       - "8000"
+    volumes:
+    - ./storage:/app/storage
     restart: unless-stopped
     environment: # Move from env variables to azure key vault later
       DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
@@ -17,7 +19,7 @@ services:
       CLIENT_ID: ${CLIENT_ID}
       BACKEND_URL: ${BACKEND_URL}
       TESTING: ${TESTING}
-      STORAGE_ROOT: ${FILE_STORAGE_ROOT}
+      STORAGE_ROOT: /app/storage
       AZURE_STORAGE_CONNECTION_STRING: DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://azurite:10000/devstoreaccount1;QueueEndpoint=http://azurite:10001/devstoreaccount1;
       AZURE_CONTAINER_NAME: ${AZURE_CONTAINER_NAME}
       HUBSPOT_ACCESS_TOKEN: ${HUBSPOT_ACCESS_TOKEN}
