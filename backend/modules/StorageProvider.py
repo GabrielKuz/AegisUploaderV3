@@ -30,6 +30,10 @@ class StorageProvider(ABC):
         pass
 
     @abstractmethod
+    def get_file_stream(self, file_path: str) -> BinaryIO:
+        pass
+
+    @abstractmethod
     def delete_file(self, file_path: str) -> None:
         pass
 
@@ -70,6 +74,12 @@ class LocalStorageProvider(StorageProvider):
 
         with open(destination, "wb") as f:
             f.write(file)
+    
+    def get_file_stream(self, file_path: str) -> BinaryIO:
+        try:
+            return open(self._resolve_path(file_path), "rb")
+        except FileNotFoundError:
+            raise FileNotFoundError(f"File '{file_path}' does not exist.") from None
 
     def download_file(self, source_path: str) -> bytes:
         source = self._resolve_path(source_path)
@@ -198,6 +208,13 @@ class AzureFileStorageProvider(StorageProvider):
             return client.download_file().readall()
         except ResourceNotFoundError:
             raise FileNotFoundError(f"File '{source_path}' does not exist.") from None
+    def get_file_stream(self, file_path: str) -> BinaryIO:
+        client = self._get_client(file_path)
+
+        try:
+            return client.download_file()
+        except ResourceNotFoundError:
+            raise FileNotFoundError(f"File '{file_path}' does not exist.") from None
         
     def prepare_file(self, file_path: str, size: int) -> None:
         directory = str(Path(self.base_path) / Path(file_path).parent).replace("\\", "/")
