@@ -4,40 +4,36 @@ import {
   LinksIcon,
 } from "../../components/LinkActionCard";
 
-import "../support/SupportHomePage.css";
+import "./SupportHomePage.css";
 
-export function AdminHomePage() {
+export function SupportHomePage() {
   return (
     <section
       className="support-home"
-      aria-labelledby="admin-home-heading"
+      aria-labelledby="support-home-heading"
     >
       <header className="support-page-heading">
-        <p className="support-page-eyebrow">
-          Administrator
-        </p>
-
-        <h1 id="admin-home-heading">
-          Admin dashboard
+        <h1 id="support-home-heading">
+          How can we help?
         </h1>
 
         <p className="support-page-description">
-          Manage upload links, review customer files, and adjust retention when needed.
+          Create secure customer upload links and review existing link activity.
         </p>
       </header>
 
-      <div className="admin-home-actions">
+      <div className="support-home-actions">
         <LinkActionCard
-          to="/admin/links"
+          to="/support/links"
           number="01"
-          title="View links"
+          title="View your links"
           description="Review generated upload links, case IDs, creators, and expiration dates."
-          actionLabel="View links"
+          actionLabel="Go to links"
           icon={<LinksIcon />}
         />
 
         <LinkActionCard
-          to="/admin/links/new"
+          to="/support/links/new"
           number="02"
           title="Create a link"
           description="Generate a temporary customer upload link for a support case."

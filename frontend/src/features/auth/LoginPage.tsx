@@ -13,36 +13,18 @@ import {
 
 import "./LoginPage.css";
 
-/**
- * Optional navigation state supplied by protected routes.
- *
- * When a user is redirected to login, `from` stores the internal
- * route they originally attempted to access.
- */
 type LoginLocationState = {
   from?: unknown;
 };
 
-/**
- * Data structure used to render the security highlight cards.
- */
 type SecurityItem = {
   number: string;
   title: string;
   description: string;
 };
 
-/**
- * Default route used when no valid redirect destination is provided.
- */
 const DEFAULT_DESTINATION = "/support";
 
-/**
- * Security features displayed in the left branding panel.
- *
- * Keeping this content in an array avoids repeated JSX and makes
- * future additions easier to maintain.
- */
 const securityItems: SecurityItem[] = [
   {
     number: "01",
@@ -64,12 +46,6 @@ const securityItems: SecurityItem[] = [
   },
 ];
 
-/**
- * Returns a safe internal route for post-login navigation.
- *
- * External URLs and protocol-relative URLs are rejected to prevent
- * untrusted redirects from being used after authentication.
- */
 function getSafeDestination(state: unknown): string {
   if (
     typeof state !== "object" ||
@@ -86,20 +62,9 @@ function getSafeDestination(state: unknown): string {
     from.startsWith("/") &&
     !from.startsWith("//");
 
-  return isValidInternalPath
-    ? from
-    : DEFAULT_DESTINATION;
+  return isValidInternalPath ? from : DEFAULT_DESTINATION;
 }
 
-/**
- * Login screen for the secure customer-data portal.
- *
- * The page contains:
- * - Portal branding and security highlights
- * - Theme and support controls
- * - Development SSO authentication
- * - Identity-provider and legal information
- */
 export function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -148,32 +113,19 @@ export function LoginPage() {
 
   return (
     <main className="login-page">
-      {/* ================================================================
-          BRANDING PANEL
-          Contains the portal message and security highlights.
-          ================================================================ */}
       <section
         className="brand-side"
         aria-labelledby="portal-heading"
       >
-        {/* Decorative background grid. */}
-        <div
-          className="brand-grid"
-          aria-hidden="true"
-        />
+        <div className="brand-grid" aria-hidden="true" />
 
-        {/* Decorative diamond shapes. */}
-        <div
-          className="brand-shapes"
-          aria-hidden="true"
-        >
+        <div className="brand-shapes" aria-hidden="true">
           <span className="shape shape-one" />
           <span className="shape shape-two" />
           <span className="shape shape-three" />
           <span className="shape shape-outline" />
         </div>
 
-        {/* Company branding. */}
         <header className="brand-header">
           <img
             className="brand-logo"
@@ -182,7 +134,6 @@ export function LoginPage() {
           />
         </header>
 
-        {/* Primary portal message. */}
         <div className="brand-message">
           <h1 id="portal-heading">
             Secure access for{" "}
@@ -190,26 +141,18 @@ export function LoginPage() {
           </h1>
 
           <p className="brand-description">
-            A protected portal for transferring ITAR and CUI-related
-            files with clear access control, expiration, and audit
-            visibility.
+            A protected portal for transferring controlled files with
+            clear access control, expiration, and audit visibility.
           </p>
         </div>
 
-        {/* Security capabilities rendered from shared data. */}
         <section
           className="security-list"
           aria-label="Security highlights"
         >
           {securityItems.map((item) => (
-            <article
-              className="security-item"
-              key={item.number}
-            >
-              <span
-                className="security-number"
-                aria-hidden="true"
-              >
+            <article className="security-item" key={item.number}>
+              <span className="security-number" aria-hidden="true">
                 {item.number}
               </span>
 
@@ -222,15 +165,10 @@ export function LoginPage() {
         </section>
       </section>
 
-      {/* ================================================================
-          AUTHENTICATION PANEL
-          Contains theme controls, login actions, and legal information.
-          ================================================================ */}
       <section
         className="auth-side"
         aria-labelledby="login-heading"
       >
-        {/* Page-level controls remain visible at the top of the panel. */}
         <div className="auth-controls">
           <ThemeToggle />
 
@@ -242,24 +180,21 @@ export function LoginPage() {
           </a>
         </div>
 
-        {/* Primary authentication card. */}
         <section className="auth-card">
-          <div aria-hidden="true">
-            <img
-              className="auth-icon"
-              src="/images/Aegis-Icon.png"
-              alt="Aegis Logo"
-            />
-            <span />
-          </div>
+          <img
+            className="auth-icon"
+            src="/images/Aegis-Icon.png"
+            alt=""
+            aria-hidden="true"
+          />
 
           <h2 id="login-heading">
             Welcome back
           </h2>
 
           <p className="auth-copy">
-            Continue with your company Single Sign-On account to
-            access the secure data portal.
+            Continue with your company Single Sign-On account to access
+            secure customer upload tools.
           </p>
 
           <button
@@ -267,21 +202,18 @@ export function LoginPage() {
             type="button"
             onClick={handleSsoLogin}
           >
-
             <img
               className="sso-button-logo"
               src="/images/Microsoft-Logo.png"
-              alt="Microsoft Logo"
+              alt=""
+              aria-hidden="true"
             />
 
             <span className="sso-button-label">
               Continue with Microsoft Entra ID
             </span>
 
-            <span
-              className="sso-button-arrow"
-              aria-hidden="true"
-            >
+            <span className="sso-button-arrow" aria-hidden="true">
               ↗
             </span>
           </button>
@@ -295,24 +227,15 @@ export function LoginPage() {
           </div>
         </section>
 
-        {/* Security notice and legal navigation. */}
         <footer className="auth-footer">
           <span>
             Protected by enterprise security controls
           </span>
 
           <nav aria-label="Legal links">
-            <a href="/privacy">
-              Privacy Policy
-            </a>
-
-            <span aria-hidden="true">
-              /
-            </span>
-
-            <a href="/terms">
-              Terms of Use
-            </a>
+            <a href="/privacy">Privacy Policy</a>
+            <span aria-hidden="true">/</span>
+            <a href="/terms">Terms of Use</a>
           </nav>
         </footer>
       </section>
