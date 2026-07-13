@@ -94,7 +94,7 @@ class LocalStorageProvider(StorageProvider):
         with open(destination, "wb") as f:
             async for chunk in stream:
                 f.write(chunk)
-
+ 
     def get_file(self, file_path: str) -> BinaryIO:
         try:
             return open(self._resolve_path(file_path), "rb")
