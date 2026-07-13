@@ -4,6 +4,7 @@ import uuid
 from datetime import datetime, timedelta
 from sqlalchemy import create_engine, select, update
 from typing import Dict
+from modules.HubSpotIntegration import get_caseITARstatus
 from modules.auth import User
 from modules.models import LinkRecord, UploadRecord, update_other_from_self, update_similar_between_LinkDB_and_UploadDB
 import os
@@ -66,7 +67,7 @@ def store_link(link_request: LinkRequest, uuid_str: str, current_user: User):
             uuid=uuid_str,
             link=url + uuid_str,
             case_id=link_request.case_id,
-            itar=link_request.itar,
+            itar=get_caseITARstatus(link_request.case_id),
             creator=current_user.username,
             timestamp=datetime.now(),
             expiration_date=datetime.now() + timedelta(days=2), # Always expires 48 hours from creation
