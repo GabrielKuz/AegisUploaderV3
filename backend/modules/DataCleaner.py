@@ -3,7 +3,7 @@ from datetime import datetime, timedelta, timezone
 from sqlalchemy import select
 
 from modules import Session
-from modules.models import LinkRecord, UploadRecord
+from modules.models import LinkRecord, UploadRecord, update_other_from_self, update_similar_between_LinkDB_and_UploadDB
 from modules.HubSpotIntegration import is_caseExpirable
 from modules.StorageProvider import StorageProvider  # adjust import to your structure
 from modules import usFileStorageProvider, euFileStorageProvider, itarFileStorageProvider
@@ -53,6 +53,7 @@ def _expireLinks():
                 link.expired = True
 
         session.commit()
+        update_similar_between_LinkDB_and_UploadDB(session)
 
 def _deleteExpiredUploads(storage: StorageProvider):
     with Session() as session:
@@ -81,6 +82,7 @@ def _deleteExpiredLinks():
             synchronize_session=False
         )
         session.commit()
+        update_similar_between_LinkDB_and_UploadDB(session)
 
 
 
