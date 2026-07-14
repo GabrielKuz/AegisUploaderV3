@@ -62,9 +62,14 @@ def get_caseCloseDate(ais_id: str) -> Optional[str]:
     return quikSrch(ais_id,"closedate")
 
 def get_caseITARstatus(ais_id: str) -> Optional[bool]:
-    if quikSrch(ais_id,"itar") is "true":
-        return True
-    return False
+    value = quikSrch(ais_id,"itar")
+    match value:
+        case "true":
+            return True
+        case "false":
+            return False
+        case _:
+            return None
 
 def get_caseCompany(ais_id: str) -> Optional[str]:
     return quikSrch(ais_id,"company_name")
