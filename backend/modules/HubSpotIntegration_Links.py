@@ -1,4 +1,5 @@
 import os
+import traceback
 from typing import Optional
 
 from hubspot import HubSpot
@@ -27,7 +28,7 @@ def get_link_case_id(link: str) -> Optional[str]:
             return None
 
     except ApiException as e:
-        print(f"Exception when calling HubSpot API: {e}")
+        traceback.print_exc(e)
         return None
     
 def get_link_case_status(link: str) -> Optional[str]:
@@ -50,7 +51,7 @@ def get_link_case_status(link: str) -> Optional[str]:
             return None
 
     except ApiException as e:
-        print(f"Exception when calling HubSpot API: {e}")
+        traceback.print_exc()
         return None
     
 def is_link_case_expirable(link: str) -> bool:
@@ -86,5 +87,5 @@ def get_ticket_by_link(link: str):
             return None
 
     except ApiException as e:
-        print(f"Exception when calling HubSpot API: {e}")
+        traceback.print_exc()
         return None
