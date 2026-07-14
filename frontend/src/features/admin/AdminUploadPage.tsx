@@ -122,10 +122,6 @@ export function AdminUploadPage() {
     >
       <header className="links-page-header">
         <div className="links-page-heading">
-          <p className="links-page-eyebrow">
-            Administrator
-          </p>
-
           <h1 id="upload-management-heading">
             Upload management
           </h1>

@@ -1,5 +1,8 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { useMsal } from "@azure/msal-react";
 
+import { isEntraConfigured } from "../features/auth/authConfig";
+import { getActiveAccount } from "../features/auth/entraAuth";
 import { getDevUser, signOutDevUser } from "../features/auth/devAuth";
 import { ThemeToggle } from "../theme/ThemeToggle";
 
@@ -16,6 +19,7 @@ type PortalLayoutProps = {
     sectionName: string;
     navLabel?: string;
     navItems?: PortalNavItem[];
+    sidebarContent?: React.ReactNode;
     defaultUserName?: string;
     showUserMenu?: boolean;
     showSignOut?: boolean;
@@ -30,16 +34,45 @@ export function PortalLayout({
     sectionName,
     navLabel = "Portal navigation",
     navItems = [],
+    sidebarContent,
     defaultUserName = "Support User",
     showUserMenu = true,
     showSignOut = true,
 }: PortalLayoutProps) {
     const navigate = useNavigate();
-    const user = getDevUser();
-    const hasSidebar = navItems.length > 0;
+    const { accounts, instance } = useMsal();
 
-    const handleSignOut = () => {
+    const devUser = getDevUser();
+    const entraAccount = getActiveAccount(instance) ?? accounts[0];
+    const hasSidebar = navItems.length > 0 || Boolean(sidebarContent);
+
+    const displayName =
+        entraAccount?.name ??
+        devUser?.name ??
+        defaultUserName;
+
+    const displayEmail =
+        entraAccount?.username ??
+        devUser?.email;
+
+    const handleSignOut = async () => {
         signOutDevUser();
+
+        if (isEntraConfigured) {
+            const account = getActiveAccount(instance) ?? accounts[0];
+
+            if (account && !instance.getActiveAccount()) {
+                instance.setActiveAccount(account);
+            }
+
+            await instance.logoutRedirect({
+                account: account ?? undefined,
+                postLogoutRedirectUri: window.location.origin,
+            });
+
+            return;
+        }
+
         navigate("/", { replace: true });
     };
 
@@ -56,7 +89,7 @@ export function PortalLayout({
                     <div className="divide" aria-hidden="true" />
 
                     <div className="title">
-                        <strong className="product-name">{productName}</strong>
+                        <span className="product-name">{productName}</span>
                         <span className="section-name">{sectionName}</span>
                     </div>
                 </div>
@@ -65,12 +98,12 @@ export function PortalLayout({
                     {showUserMenu && (
                         <div className="user-details">
                             <strong className="user-name">
-                                {user?.name ?? defaultUserName}
+                                {displayName}
                             </strong>
 
-                            {user?.email && (
+                            {displayEmail && (
                                 <span className="email">
-                                    {user.email}
+                                    {displayEmail}
                                 </span>
                             )}
                         </div>
@@ -80,11 +113,11 @@ export function PortalLayout({
 
                     {showSignOut && (
                         <button
-                            className="sign-out"
+                            className="user-button"
                             type="button"
                             onClick={handleSignOut}
                         >
-                            Sign Out
+                            Sign out
                         </button>
                     )}
                 </div>
@@ -92,18 +125,22 @@ export function PortalLayout({
 
             {hasSidebar && (
                 <aside className="sidebar">
-                    <nav aria-label={navLabel}>
-                        {navItems.map((item) => (
-                            <NavLink
-                                key={item.to}
-                                to={item.to}
-                                end={item.end}
-                                className={getNavLinkClassName}
-                            >
-                                {item.label}
-                            </NavLink>
-                        ))}
-                    </nav>
+                    {sidebarContent ? (
+                        sidebarContent
+                    ) : (
+                        <nav aria-label={navLabel}>
+                            {navItems.map((item) => (
+                                <NavLink
+                                    key={item.to}
+                                    to={item.to}
+                                    end={item.end}
+                                    className={getNavLinkClassName}
+                                >
+                                    {item.label}
+                                </NavLink>
+                            ))}
+                        </nav>
+                    )}
                 </aside>
             )}
 

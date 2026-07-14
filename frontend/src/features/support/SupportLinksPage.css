@@ -48,10 +48,11 @@
 
 .links-page-description {
   display: block;
-  max-width: 700px;
+  max-width: 725px;
   margin: 12px 0 0;
   font-size: 16px;
   line-height: 1.6;
+  padding-left: 10px;
 }
 
 /* ==========================================================================
@@ -63,14 +64,14 @@
   padding: 0 20px;
   border-radius: var(--radius-md);
   font: inherit;
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 700;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   flex: 0 0 auto;
-  border: 1px solid var(--portal-accent-border);
-  color: #ffffff;
+  border: 2px solid var(--portal-primary-button-border);
+  color: var(--theme-text);
   background: transparent;
   text-decoration: none;
   transition:
@@ -82,8 +83,9 @@
 }
 
 .new-link-link:hover {
-  background: var(--portal-accent-soft);
-  border-color: var(--portal-accent-hover);
+  background: var(--portal-primary-button-border);
+  border-color: var(--portal-accent-border);
+  color: var(--portal-accent);
   transform: translateY(-1px);
 }
 
@@ -151,8 +153,8 @@
 }
 
 .links-table a {
-  color: var(--current-theme);
-  font-weight: 700;
+  color: var(--portal-accent);
+  font-weight: 600;
   text-decoration: underline;
   text-underline-offset: 3px;
 }
@@ -189,6 +191,8 @@
   border: 1px solid var(--portal-accent-border);
   border-radius: var(--radius-lg);
   box-shadow: var(--theme-card-shadow);
+  font-size: 16px;
+  font-weight: 500;
 }
 
 /* ==========================================================================
@@ -211,20 +215,21 @@
 
 .table-action-button,
 .table-action-link {
-  min-height: 36px;
-  padding: 0 14px;
-  border: 1px solid transparent;
+  color: var(--theme-text) !important;
+  background: var(--portal-accent-soft);
+  border: 2px solid var(--portal-primary-button-border);
   border-radius: var(--radius-md);
-  background: var(--portal-accent);
-  color: #ffffff !important;
+  min-height: 36px;
+  padding: 14px 14px;
   font: inherit;
   font-size: 13px;
   font-weight: 700;
   cursor: pointer;
   text-decoration: none !important;
   display: inline-flex;
-  align-items: center;
+  align-self: center;
   justify-content: center;
+  text-align: center;
   transition:
     background-color 160ms ease,
     transform 160ms ease;
@@ -232,7 +237,8 @@
 
 .table-action-button:hover,
 .table-action-link:hover {
-  background: var(--portal-accent-hover);
+  color: var(--portal-accent);
+  background: var(--portal-primary-button-border);
   transform: translateY(-1px);
 }
 

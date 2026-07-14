@@ -322,7 +322,7 @@ export function LinksTablePage({
                                                     className="table-action-link"
                                                     to={`${uploadActionPathPrefix}/${supportLink.uuid}`}
                                                 >
-                                                    View uploads
+                                                    View Uploads
                                                 </Link>
                                             ) : (
                                                 <span className="table-muted-text">
