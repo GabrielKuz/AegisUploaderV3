@@ -4,7 +4,7 @@ import {
     type ChangeEvent,
 } from "react";
 import { useParams } from "react-router-dom";
-import { sha256 } from "@noble/hashes/sha2.js";
+import { blake3 } from "@noble/hashes/blake3.js";
 import { bytesToHex } from "@noble/hashes/utils.js";
 import "./CustomerUpload.css";
 
@@ -17,54 +17,63 @@ type SelectedFile = {
 async function runWithConcurrency<T>(
     items: T[],
     limit: number,
-    worker: (item: T) => Promise<void>
+    worker: (item:T)=>Promise<void>
 ) {
-    const queue = [...items];
-    const active: Promise<void>[] = [];
+    let index = 0;
 
-    const runNext = async () => {
-        if (queue.length === 0) return;
-
-        const item = queue.shift()!;
-        const p = worker(item).finally(() => {
-            active.splice(active.indexOf(p), 1);
-        });
-
-        active.push(p);
-
-        if (active.length < limit) {
-            await runNext();
+    async function runner() {
+        while (index < items.length) {
+            const current = index++;
+            await worker(items[current]);
         }
-    };
-
-    const starters = Array.from({ length: limit }, runNext);
-
-    await Promise.all(starters);
-    await Promise.all(active);
-}
-
-async function sha256File(file: File): Promise<string> {
-    const hasher = sha256.create();
-    const reader = file.stream().getReader();
-
-    try {
-        while (true) {
-            const { value, done } = await reader.read();
-
-            if (done) {
-                break;
-            }
-
-            hasher.update(value);
-        }
-
-        return bytesToHex(hasher.digest());
-    } finally {
-        reader.releaseLock();
     }
+
+    await Promise.all(
+        Array.from(
+            {length: limit},
+            runner
+        )
+    );
 }
-async function sha256Blob(blob: Blob): Promise<string> {
-    const hasher = sha256.create();
+
+async function blake3FileMerkle(
+    file: File,
+    chunkSize: number
+): Promise<string> {
+
+    const hashes: string[] = [];
+
+    let offset = 0;
+
+
+    while (offset < file.size) {
+
+        const end = Math.min(
+            offset + chunkSize,
+            file.size
+        );
+
+
+        const chunk = file.slice(
+            offset,
+            end
+        );
+
+
+        hashes.push(
+            await blake3Blob(chunk)
+        );
+
+
+        offset = end;
+    }
+
+
+    return merkleRoot(hashes);
+}
+async function blake3Blob(blob: Blob): Promise<string> {
+    const hasher = blake3.create();
+
     const reader = blob.stream().getReader();
 
     try {
@@ -83,7 +92,51 @@ async function sha256Blob(blob: Blob): Promise<string> {
         reader.releaseLock();
     }
 }
+function merkleRoot(hashes: string[]): string {
+    if (hashes.length === 0) {
+        throw new Error("No hashes");
+    }
+    let level: Uint8Array<ArrayBufferLike>[] = hashes.map(
+        h => Uint8Array.from(
+            h.match(/.{1,2}/g)!.map(
+                byte => parseInt(byte, 16)
+            )
+        )
+    );
 
+
+    while (level.length > 1) {
+        const next: Uint8Array<ArrayBufferLike>[] = [];
+
+        for (let i = 0; i < level.length; i += 2) {
+
+            const left = level[i];
+
+            const right =
+                i + 1 < level.length
+                    ? level[i + 1]
+                    : left;
+
+
+            const combined = new Uint8Array(
+                left.length + right.length
+            );
+
+            combined.set(left, 0);
+            combined.set(right, left.length);
+
+
+            next.push(
+                blake3(combined)
+            );
+        }
+
+        level = next;
+    }
+
+
+    return bytesToHex(level[0]);
+}
 async function uploadChunk(
     uuid: string,
     uploadToken: string,
@@ -91,7 +144,7 @@ async function uploadChunk(
     offset: number,
     chunkSize: number,
 ) {
-    const hash = await sha256Blob(chunk);
+    const hash = await blake3Blob(chunk);
 
     const response = await fetch(
         `/api/uploadfile/${uuid}/${uploadToken}`,
@@ -201,7 +254,12 @@ export function CustomerUpload() {
                         [item.file.name]: "starting",
                     }));
 
-                    const fileHash = await sha256File(item.file);
+                    const chunkSizes = 32 * 1024 * 1024;
+
+                    const fileHash = await blake3FileMerkle(
+                        item.file,
+                        chunkSizes
+                    );
 
                     const startResponse = await fetch(
                         `/api/uploadfile/${uuid}/start`,
@@ -234,44 +292,39 @@ export function CustomerUpload() {
                         [item.file.name]: "uploading",
                     }));
 
+                    const chunks = [];
+
                     let offset = 0;
 
                     while (offset < item.file.size) {
                         const end = Math.min(
                             offset + chunkSize,
-                            item.file.size,
+                            item.file.size
                         );
 
-                        const chunk = item.file.slice(offset, end);
-
-                        let uploaded = false;
-                        let attempts = 0;
-
-                        while (!uploaded && attempts < 3) {
-                            try {
-                                await uploadChunk(
-                                    uuid,
-                                    uploadToken,
-                                    chunk,
-                                    offset,
-                                    chunk.size,
-                                );
-
-                                uploaded = true;
-                            } catch {
-                                attempts++;
-
-                                if (attempts >= 3) {
-                                    throw new Error(
-                                        "Chunk failed after retries",
-                                    );
-                                }
-                            }
-                        }
+                        chunks.push({
+                            blob: item.file.slice(offset, end),
+                            offset
+                        });
 
                         offset = end;
                     }
 
+                    await runWithConcurrency(
+                        chunks,
+                        6,
+                        async ({blob, offset}) => {
+
+                            await uploadChunk(
+                                uuid,
+                                uploadToken,
+                                blob,
+                                offset,
+                                blob.size
+                            );
+
+                        }
+                    );
 
                     const completeResponse = await fetch(
                         `/api/uploadfile/${uuid}/${uploadToken}/complete`,
