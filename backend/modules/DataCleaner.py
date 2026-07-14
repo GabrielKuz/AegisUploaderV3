@@ -5,7 +5,7 @@ from sqlalchemy import select
 from modules import Session
 from modules.models import LinkRecord, UploadRecord, update_other_from_self, update_similar_between_LinkDB_and_UploadDB
 from modules.HubSpotIntegration import is_caseExpirable
-from modules.StorageProvider import StorageProvider  # adjust import to your structure
+from modules.StorageProvider import StorageProvider 
 from modules import usFileStorageProvider, euFileStorageProvider, itarFileStorageProvider
 logger = logging.getLogger(__name__)
 
@@ -69,18 +69,14 @@ def _deleteExpiredUploads(storage: StorageProvider):
                 session.delete(upload)
 
             except Exception as e:
-                logger.error(
-                    f"Failed deleting file for upload {upload.id} ({upload.blob_name}): {e}"
-                )
+                logger.error(f"Failed deleting file for upload {upload.id} ({upload.blob_name}): {e}")
 
         session.commit()
 
 
 def _deleteExpiredLinks():
     with Session() as session:
-        session.query(LinkRecord).filter(LinkRecord.expired.is_(True)).delete(
-            synchronize_session=False
-        )
+        session.query(LinkRecord).filter(LinkRecord.expired.is_(True)).delete(synchronize_session=False)
         session.commit()
         update_similar_between_LinkDB_and_UploadDB(session)
 
