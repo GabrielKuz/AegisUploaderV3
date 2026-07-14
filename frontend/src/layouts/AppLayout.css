@@ -187,12 +187,14 @@
    ========================================================================== */
 
 .main {
+  position: relative;
   grid-column: 2;
   grid-row: 2;
   min-width: 0;
   min-height: 0;
   padding: clamp(28px, 4vw, 48px);
-  overflow: auto;
+  overflow-y: auto;
+  overflow-x: hidden;
   background: var(--theme-page);
   color: var(--theme-text);
 }
@@ -210,6 +212,10 @@
 
   .layout-no-sidebar {
     grid-template-rows: auto minmax(0, 1fr);
+  }
+
+  .layout-no-sidebar .main {
+    grid-column: 1;
   }
 
   .header {
@@ -263,7 +269,8 @@
     grid-column: 1;
     grid-row: 3;
     padding: 28px 20px;
-    overflow: visible;
+    overflow-y: auto;
+    overflow-x: hidden;
   }
 
   .layout-no-sidebar .main {

@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useMsal } from "@azure/msal-react";
+
 import { ThemeToggle } from "../../theme/ThemeToggle";
 import { isEntraConfigured, loginRequest } from "./authConfig";
 import { signInDevUser } from "./devAuth";
@@ -71,13 +72,6 @@ export function LoginPage() {
   const { accounts, instance } = useMsal();
   const account = getActiveAccount(instance);
 
-  /**
-   * Simulates SSO authentication during development.
-   *
-   * The destination route determines which mock role is assigned:
-   * upload routes receive the customer role, while all other routes
-   * receive the support role.
-   */
   useEffect(() => {
     if (!instance.getActiveAccount() && accounts[0]) {
       instance.setActiveAccount(accounts[0]);
@@ -89,7 +83,10 @@ export function LoginPage() {
       return;
     }
 
-    const destination = getPostLoginRedirect(getSafeDestination(location.state));
+    const destination = getPostLoginRedirect(
+      getSafeDestination(location.state),
+    );
+
     clearPostLoginRedirect();
     navigate(destination, { replace: true });
   }, [account, location.state, navigate]);
@@ -113,6 +110,39 @@ export function LoginPage() {
 
   return (
     <main className="login-page">
+      <header className="login-header">
+        <div className="login-header-brand">
+          <img
+            className="login-header-logo"
+            src="/images/Aegis-Logo.svg"
+            alt="Aegis Software"
+          />
+
+          <div className="login-header-divider" aria-hidden="true" />
+
+          <div className="login-header-title">
+            <span className="login-product-name">
+              Secure Data Portal
+            </span>
+
+            <span className="login-section-name">
+              Customer Data Access
+            </span>
+          </div>
+        </div>
+
+        <div className="login-header-actions">
+          <ThemeToggle />
+
+          <a
+            className="support-link"
+            href="mailto:support@aegissoftware.com"
+          >
+            Help &amp; Support
+          </a>
+        </div>
+      </header>
+
       <section
         className="brand-side"
         aria-labelledby="portal-heading"
@@ -125,14 +155,6 @@ export function LoginPage() {
           <span className="shape shape-three" />
           <span className="shape shape-outline" />
         </div>
-
-        <header className="brand-header">
-          <img
-            className="brand-logo"
-            src="/images/Aegis-Logo.svg"
-            alt="Aegis Software"
-          />
-        </header>
 
         <div className="brand-message">
           <h1 id="portal-heading">
@@ -169,17 +191,6 @@ export function LoginPage() {
         className="auth-side"
         aria-labelledby="login-heading"
       >
-        <div className="auth-controls">
-          <ThemeToggle />
-
-          <a
-            className="support-link"
-            href="mailto:support@aegissoftware.com"
-          >
-            Help &amp; Support
-          </a>
-        </div>
-
         <section className="auth-card">
           <img
             className="auth-icon"

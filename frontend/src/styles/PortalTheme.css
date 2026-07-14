@@ -61,8 +61,8 @@
     --portal-resolved-border: #aaa09a;
 
     /* Primary portal button */
-    --portal-primary-button-background: var(--portal-accent);
-    --portal-primary-button-background-hover: var(--portal-accent-hover);
+    --portal-primary-button-background: var(--theme-accent);
+    --portal-primary-button-background-hover: var(--theme-accent-hover);
     --portal-primary-button-background-active: var(--portal-accent-active);
     --portal-primary-button-text: #ffffff;
     --portal-primary-button-border: rgba(201, 72, 66, 0.34);

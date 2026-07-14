@@ -4,12 +4,14 @@ import {
 } from "react";
 import { useNavigate } from "react-router-dom";
 import { useMsal } from "@azure/msal-react";
+
 import { isEntraConfigured } from "../features/auth/authConfig";
 import {
     getActiveAccount,
     getApiAccessToken,
 } from "../features/auth/entraAuth";
 import { getDevToken } from "../features/auth/devAuth";
+
 import "../features/support/CreateSupportLinkPage.css";
 
 type CreateUploadLinkFormProps = {
@@ -19,82 +21,98 @@ type CreateUploadLinkFormProps = {
 };
 
 type LinkForm = {
-    caseID: string;
+    caseId: string;
 };
 
 const INITIAL_FORM: LinkForm = {
-    caseID: "",
+    caseId: "",
 };
 
 export function CreateUploadLinkForm({
     cancelPath,
+    successPath,
     eyebrow,
 }: CreateUploadLinkFormProps) {
     const navigate = useNavigate();
-    const { instance } = useMsal();
-    const account = getActiveAccount(instance);
+    const { accounts, instance } = useMsal();
 
     const [form, setForm] = useState<LinkForm>(INITIAL_FORM);
     const [error, setError] = useState<string | null>(null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
+    async function getAccessToken() {
+        if (!isEntraConfigured) {
+            return getDevToken();
+        }
 
-    /**
-     * Validates the form before submitting.
-     *
-     * Replace the console statement with the real API request once the
-     * backend endpoint is available.
-     */
+        const account = getActiveAccount(instance) ?? accounts[0];
+
+        if (!account) {
+            return null;
+        }
+
+        if (!instance.getActiveAccount()) {
+            instance.setActiveAccount(account);
+        }
+
+        return getApiAccessToken(instance, account);
+    }
+
     const handleSubmit = async (
         event: FormEvent<HTMLFormElement>,
     ) => {
         event.preventDefault();
 
-        const hasRequiredFields =
-            form.caseID.trim() !== "";
+        const caseId = form.caseId.trim();
 
-        if (!hasRequiredFields) {
-            setError(
-                "Case ID is required.",
-            );
+        if (!caseId) {
+            setError("Case ID is required.");
             return;
         }
 
         setError(null);
+        setIsSubmitting(true);
 
-        if (isEntraConfigured && !account) {
-            setError("Please sign in before creating a support link.");
-            return;
+        try {
+            const accessToken = await getAccessToken();
+
+            if (!accessToken) {
+                setError("Please sign in before creating a support link.");
+                return;
+            }
+
+            const response = await fetch("/api/links/create/", {
+                method: "POST",
+                headers: {
+                    Authorization: `Bearer ${accessToken}`,
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    case_id: caseId,
+
+                    // Keep this until the backend no longer requires ITAR.
+                    itar: false,
+                }),
+            });
+
+            if (!response.ok) {
+                const message = await response.text();
+
+                setError(
+                    message ||
+                    `Failed to create support link. Status: ${response.status}`,
+                );
+
+                return;
+            }
+
+            navigate(successPath, { state: { refresh: true } });
+        } catch {
+            setError("Something went wrong while creating the support link.");
+        } finally {
+            setIsSubmitting(false);
         }
-
-        //console.info("Support link submitted:", form);
-        const accessToken = isEntraConfigured
-            ? await getApiAccessToken(instance, account)
-            : getDevToken();
-
-        if (!accessToken) {
-            setError("Please sign in before creating a support link.");
-            return;
-        }
-
-        const response = await fetch("/api/links/create/", {
-            method: "POST",
-            headers: {
-                Authorization: `Bearer ${accessToken}`,
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ case_id: form.caseID }),
-        });
-        if (!response.ok) {
-            setError("Failed to create support link.");
-            return;
-        }
-        const data = await response.json();
-        console.log(data.uuid);
-        console.log(data.link);
-        navigate("/support/links", { state: { refresh: true } });
     };
-
-
 
     return (
         <section
@@ -134,11 +152,11 @@ export function CreateUploadLinkForm({
 
                         <input
                             name="caseId"
-                            value={form.caseID}
+                            value={form.caseId}
                             placeholder="Example: AIS-12345"
                             onChange={(event) =>
                                 setForm({
-                                    caseID: event.target.value,
+                                    caseId: event.target.value,
                                 })
                             }
                             required
@@ -150,6 +168,7 @@ export function CreateUploadLinkForm({
                             type="button"
                             className="link-cancel-button"
                             onClick={() => navigate(cancelPath)}
+                            disabled={isSubmitting}
                         >
                             Cancel
                         </button>
@@ -157,7 +176,9 @@ export function CreateUploadLinkForm({
                         <button
                             type="submit"
                             className="link-submit-button"
+                            disabled={isSubmitting}
                         >
+                            {isSubmitting ? "Creating..." : "Submit"}
                         </button>
                     </div>
                 </form>
