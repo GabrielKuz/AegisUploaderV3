@@ -17,6 +17,8 @@ export function CustomerLayout() {
                 productName="Customer Upload"
                 sectionName="Provide Files"
                 sidebarContent={<CustomerUploadSidebar />}
+                showUserMenu={false}
+                showSignOut={false}
             />
         </CustomerUploadProvider>
     );

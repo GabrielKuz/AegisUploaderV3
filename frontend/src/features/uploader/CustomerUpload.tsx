@@ -51,8 +51,9 @@ export function CustomerUpload() {
     const [selectedFiles, setSelectedFiles] = useState<SelectedFile[]>([]);
     const [uploading, setUploading] = useState(false);
     type UploadState = {
-    status: "uploading" | "done" | "error";
+    status: "uploading" | "retrying" | "done" | "error";
     progress: number;
+    retry?: number;
     };
 
     const [uploadStatus, setUploadStatus] = useState<Record<string, UploadState>>({});
@@ -183,11 +184,12 @@ export function CustomerUpload() {
                 if (xhr.status >= 200 && xhr.status < 300) {
                     resolve();
                 } else {
-                    reject();
+                    reject(xhr.status);
                 }
             };
 
-            xhr.onerror = () => reject();
+            xhr.onerror = () => reject("network");
+            xhr.onabort = () => reject("network");
 
             const formData = new FormData();
             formData.append("file", file);
@@ -195,6 +197,47 @@ export function CustomerUpload() {
             xhr.send(formData);
         });
     };
+
+    const uploadWithRetry = async (
+        file: File,
+        sha256: string,
+        uuid: string,
+        onProgress: (progress: number) => void,
+        onRetry?: (attempt: number) => void,
+        maxRetries = 3
+    ) => {
+        let attempt = 0;
+
+        while (true) {
+            try {
+                await uploadSingleFile(file, sha256, uuid, onProgress);
+                return;
+            } catch (status) {
+
+                // Don't retry permanent client errors.
+                if (
+                    typeof status === "number" &&
+                    status < 500 &&
+                    status !== 429
+                ) {
+                    throw status;
+                }
+
+                attempt++;
+
+                if (attempt > maxRetries) {
+                    throw status;
+                }
+
+                onRetry?.(attempt);
+
+                await new Promise((resolve) =>
+                    setTimeout(resolve, 1000 * Math.pow(2, attempt - 1))
+                );
+            }
+        }
+    };
+
     const uploadFiles = async () => {
         setUploading(true);
 
@@ -220,10 +263,9 @@ export function CustomerUpload() {
                         .map((b) => b.toString(16).padStart(2, "0"))
                         .join("");
 
-                    const formData = new FormData();
-                    formData.append("file", item.file);
+                    
 
-                    await uploadSingleFile(
+                    await uploadWithRetry(
                         item.file,
                         sha256,
                         uuid,
@@ -235,9 +277,18 @@ export function CustomerUpload() {
                                     progress,
                                 },
                             }));
+                        },
+                        (attempt) => {
+                            setUploadStatus((s) => ({
+                                ...s,
+                                [item.file.name]: {
+                                    status: "retrying",
+                                    progress: 0,
+                                    retry: attempt,
+                                },
+                            }));
                         }
                     );
-
                    setUploadStatus((s) => ({
                         ...s,
                         [item.file.name]: {
@@ -328,14 +379,20 @@ export function CustomerUpload() {
                                             {uploadStatus[item.file.name]?.status === "error" &&
                                                 "Failed"
                                             }
+                                            {uploadStatus[item.file.name]?.status === "retrying" &&
+                                                `Retrying... (${uploadStatus[item.file.name].retry}/3)`
+                                            }
                                         </small>
 
-                                        {uploadStatus[item.file.name]?.status === "uploading" && (
-                                            <progress
-                                                value={uploadStatus[item.file.name].progress}
-                                                max="100"
-                                            />
-                                        )}
+                                        {(
+                                            uploadStatus[item.file.name]?.status === "uploading" ||
+                                            uploadStatus[item.file.name]?.status === "retrying"
+                                        ) && (
+                                                <progress
+                                                    value={uploadStatus[item.file.name].progress}
+                                                    max="100"
+                                                />
+                                            )}
                                     </div>
 
                                     <div className="selected-file-actions">

@@ -1,3 +1,4 @@
+import React from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useMsal } from "@azure/msal-react";
 
@@ -23,7 +24,6 @@ type PortalLayoutProps = {
     defaultUserName?: string;
     showUserMenu?: boolean;
     showSignOut?: boolean;
-    sidebarContent?: React.ReactNode;
 };
 
 function getNavLinkClassName({ isActive }: { isActive: boolean }) {
@@ -39,14 +39,13 @@ export function PortalLayout({
     defaultUserName = "Support User",
     showUserMenu = true,
     showSignOut = true,
-    sidebarContent,
 }: PortalLayoutProps) {
     const navigate = useNavigate();
     const { accounts, instance } = useMsal();
 
     const devUser = getDevUser();
     const entraAccount = getActiveAccount(instance) ?? accounts[0];
-    const hasSidebar = navItems.length > 0 || Boolean(sidebarContent);
+    const showSidebar = navItems.length > 0 || Boolean(sidebarContent);
 
     const displayName =
         entraAccount?.name ??
@@ -143,22 +142,7 @@ export function PortalLayout({
                             ))}
                         </nav>
                     )}
-                    {sidebarContent ? (
-                        sidebarContent
-                    ) : (
-                        <nav aria-label={navLabel}>
-                            {navItems.map((item) => (
-                                <NavLink
-                                    key={item.to}
-                                    to={item.to}
-                                    end={item.end}
-                                    className={getNavLinkClassName}
-                                >
-                                    {item.label}
-                                </NavLink>
-                            ))}
-                        </nav>
-                    )}
+                    
                 </aside>
             )}
 
