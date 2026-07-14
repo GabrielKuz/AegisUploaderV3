@@ -32,6 +32,7 @@ COPY --from=builder \
     /usr/share/nginx/html
 
 COPY nginx/docker-entrypoint.sh /docker-entrypoint.sh
+COPY nginx/nginx.azure.conf.template /etc/nginx/templates/nginx.conf.template
 
 RUN sed -i 's/\r$//' /docker-entrypoint.sh \
     && chmod +x /docker-entrypoint.sh \
