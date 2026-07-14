@@ -431,19 +431,31 @@ def upload_status(link_uuid: str, upload_token: str, db: Annotated[sqlalchemy.or
         db.query(UploadSession).filter(
             UploadSession.upload_token == upload_token,
             UploadSession.link_uuid == link_uuid,
-        ).first())
+        ).first()
+    )
 
     if upload_session is None:
-        raise HTTPException(status_code=404, detail="Upload session not found")
+        raise HTTPException(status_code=404,detail="Upload session not found")
+
+    chunks = (
+        db.query(UploadChunk).filter(
+            UploadChunk.upload_id == upload_session.upload_id,
+            UploadChunk.uploaded == True
+        ).order_by(UploadChunk.chunk_index).all()
+    )
+
+    received_size = sum(chunk.size for chunk in chunks)
+
+    received_ranges = [[ chunk.offset,chunk.offset + chunk.size] for chunk in chunks]
 
     return {
-        "receivedRanges": upload_session.received_ranges or [],
-        "receivedSize": upload_session.received_size,
+        "receivedRanges": received_ranges,
+        "receivedSize": received_size,
         "expectedSize": upload_session.expected_size,
         "chunkSize": upload_session.chunk_size,
         "completed": upload_session.completed,
+        "chunksReceived": len(chunks),
     }
-
 @router.post("/uploadfile/{link_uuid}/{upload_token}/complete")
 async def complete_upload(link_uuid: str, upload_token: str, db: Annotated[sqlalchemy.orm.Session, Depends(get_db)]):
     if not IsUUID(link_uuid):
