@@ -18,7 +18,6 @@ if DATABASE_URL is None:
 
 class LinkRequest(BaseModel): # structure of a link request from the client
     case_id: str = Field(..., description="ID of the case associated with the link")
-    itar: bool = Field(..., description="Indicates if the link is ITAR compliant")
 
 
 link_data: Dict[str, LinkRequest] = {} # mapping uuid to case info
@@ -49,10 +48,7 @@ def generate_links(link_request: LinkRequest, current_user: User):
     store_link(link_request, uuid_str, current_user) # add to db
 
     if not url or not uuid_str:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Link or UUID not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Link or UUID not found")
 
     return {
         "link": url + uuid_str,
