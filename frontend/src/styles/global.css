@@ -1,4 +1,3 @@
-
 /* ==========================================================================
    GLOBAL RESET
    ========================================================================== */
@@ -106,8 +105,8 @@ svg {
   --transition-base: 220ms ease;
 
   /* Current accent: softer Aegis-red-inspired light accent */
-  --theme-accent: #c94842;
-  --theme-accent-hover: #a93430;
+  --theme-accent: var(--color-aegis-red-deep);
+  --theme-accent-hover: var(--color-aegis-red);
   --theme-accent-soft: rgba(201, 72, 66, 0.1);
   --theme-mode: var(--theme-accent);
 }
@@ -118,8 +117,8 @@ svg {
 
 :root {
   /* Page surfaces */
-  --theme-page: #f2eeeb;
-  --theme-card: rgba(255, 252, 249, 0.94);
+  --theme-page: #ffffff;
+  --theme-card: #f2eeeb;
   --theme-surface: rgba(255, 250, 247, 0.82);
   --theme-surface-secondary: rgba(250, 244, 240, 0.86);
 
@@ -196,9 +195,10 @@ svg {
 .links-page-description,
 .create-link-description,
 .upload-note {
-  color: var(--current-theme);
+  color: var(--theme-accent);
   font-style: italic;
   font-weight: 600;
+
 }
 
 /* ==========================================================================

@@ -13,10 +13,6 @@ export function AdminHomePage() {
       aria-labelledby="admin-home-heading"
     >
       <header className="support-page-heading">
-        <p className="support-page-eyebrow">
-          Administrator
-        </p>
-
         <h1 id="admin-home-heading">
           Admin dashboard
         </h1>

@@ -4,11 +4,13 @@ import uuid
 from datetime import datetime, timedelta
 from sqlalchemy import create_engine, select, update
 from typing import Dict
+from modules.HubSpotIntegration import get_caseITARstatus, caseIDExists
 from modules.auth import User
-from modules.models import LinkRecord, UploadRecord
+from modules.models import LinkRecord, UploadRecord, update_other_from_self, update_similar_between_LinkDB_and_UploadDB
 import os
 from warnings import warn, deprecated
 from modules import Session, engine
+from Utils import IsCaseID
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 if DATABASE_URL is None:
@@ -16,7 +18,6 @@ if DATABASE_URL is None:
 
 class LinkRequest(BaseModel): # structure of a link request from the client
     case_id: str = Field(..., description="ID of the case associated with the link")
-    itar: bool = Field(..., description="Indicates if the link is ITAR compliant")
 
 
 link_data: Dict[str, LinkRequest] = {} # mapping uuid to case info
@@ -34,21 +35,20 @@ def generate_links(link_request: LinkRequest, current_user: User):
             detail="User not authenticated"
         )
     
-    if not link_request.case_id.startswith("AIS-") and not link_request.case_id[link_request.case_id.index("-")+1:].isdigit():
+    if not IsCaseID(link_request.case_id):
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid Case-ID: Bad Request"
-        )
-
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid Case-ID: Bad Request"
+            )
+    if not caseIDExists(link_request.case_id):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Case-ID not found")
+        
     uuid_str = str(uuid.uuid4()) # New uuidv4 on every link. We assume no collissions due to large space and link expiration
 
     store_link(link_request, uuid_str, current_user) # add to db
 
     if not url or not uuid_str:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Link or UUID not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Link or UUID not found")
 
     return {
         "link": url + uuid_str,
@@ -65,7 +65,7 @@ def store_link(link_request: LinkRequest, uuid_str: str, current_user: User):
             uuid=uuid_str,
             link=url + uuid_str,
             case_id=link_request.case_id,
-            itar=link_request.itar,
+            itar=get_caseITARstatus(link_request.case_id),
             creator=current_user.username,
             timestamp=datetime.now(),
             expiration_date=datetime.now() + timedelta(days=2), # Always expires 48 hours from creation
@@ -78,7 +78,8 @@ def store_link(link_request: LinkRequest, uuid_str: str, current_user: User):
         # print("FULLNAME:", LinkRecord.__table__.fullname)
 
         session.add(record) # add new reccord to session
-        session.commit() # commit session to db so it persists 
+        session.commit() # commit session to db so it persists
+        update_similar_between_LinkDB_and_UploadDB(session)
 
 @deprecated("This doesn't work in all cases. alternative will be merged into main branch soon.")
 def expire_old_links(expiry_days: int = 2) -> bool:

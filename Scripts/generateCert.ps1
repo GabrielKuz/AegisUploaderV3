@@ -1,5 +1,5 @@
 
-mkdir certs -ErrorAction SilentlyContinue
+mkdir C:\certs -ErrorAction SilentlyContinue
 
 mkcert `
   -cert-file C:\certs\localhost-fullchain.pem `

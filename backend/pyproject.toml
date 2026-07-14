@@ -23,4 +23,5 @@ dependencies = [
     "requests>=2.34.2",
     "sqlalchemy>=2.0.51",
     "uvicorn>=0.30.0",
+    "pathvalidate>=3.3.1",
 ]

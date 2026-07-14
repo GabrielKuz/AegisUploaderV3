@@ -4,11 +4,10 @@ import {
     useMemo,
     useState,
 } from "react";
-import { useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { useMsal } from "@azure/msal-react";
 
-import "../../styles/PortalTheme.css";
-import "./SupportUploadPage.css";
+import "./SupportLinksPage.css";
 import { isEntraConfigured } from "../auth/authConfig";
 import {
     getActiveAccount,
@@ -28,13 +27,34 @@ type Upload = {
 type SortKey = keyof Upload;
 type SortDirection = "asc" | "desc";
 
+const DATE_KEYS = new Set<SortKey>(["date_uploaded"]);
+
 function getSortIcon(
-    column: string,
-    sortKey: string,
-    sortDirection: SortDirection
+    column: SortKey,
+    sortKey: SortKey,
+    sortDirection: SortDirection,
 ) {
     if (column !== sortKey) return "⇅";
     return sortDirection === "asc" ? "▲" : "▼";
+}
+
+function formatDate(value: string) {
+    return new Date(value).toLocaleString();
+}
+
+function formatBytes(bytes: number) {
+    if (bytes === 0) return "0 B";
+
+    const units = ["B", "KB", "MB", "GB", "TB"];
+    const index = Math.min(
+        Math.floor(Math.log(bytes) / Math.log(1024)),
+        units.length - 1,
+    );
+
+    const value = bytes / 1024 ** index;
+    const precision = value >= 10 || index === 0 ? 0 : 1;
+
+    return `${value.toFixed(precision)} ${units[index]}`;
 }
 
 export function SupportUploadPage() {
@@ -45,9 +65,9 @@ export function SupportUploadPage() {
         useState<SortKey>("date_uploaded");
     const [sortDirection, setSortDirection] =
         useState<SortDirection>("desc");
+    const [error, setError] = useState<string | null>(null);
 
     const { accounts, instance } = useMsal();
-    const account = getActiveAccount(instance);
 
     useEffect(() => {
         if (!instance.getActiveAccount() && accounts[0]) {
@@ -55,46 +75,57 @@ export function SupportUploadPage() {
         }
     }, [accounts, instance]);
 
+    const getAccessToken = useCallback(async () => {
+        if (!isEntraConfigured) {
+            return getDevToken();
+        }
+
+        const account = getActiveAccount(instance) ?? accounts[0];
+
+        if (!account) {
+            return null;
+        }
+
+        if (!instance.getActiveAccount()) {
+            instance.setActiveAccount(account);
+        }
+
+        return getApiAccessToken(instance, account);
+    }, [accounts, instance]);
+
     const loadUploads = useCallback(async () => {
         if (!uuid) {
-            return;
-        }
-
-        if (isEntraConfigured && !account) {
-            console.error("No signed-in account found.");
-            return;
-        }
-
-        const accessToken = isEntraConfigured
-            ? await getApiAccessToken(instance, account)
-            : getDevToken();
-
-        if (!accessToken) {
-            console.error("No access token available.");
+            setError("No upload link was selected.");
             return;
         }
 
         try {
-            const response = await fetch(
-                `/api/links/${uuid}/files`,
-                {
-                    headers: {
-                        Authorization: `Bearer ${accessToken}`,
-                    },
-                }
-            );
+            const accessToken = await getAccessToken();
+
+            if (!accessToken) {
+                setError("Please sign in before viewing uploads.");
+                return;
+            }
+
+            const response = await fetch(`/api/links/${uuid}/files`, {
+                headers: {
+                    Authorization: `Bearer ${accessToken}`,
+                },
+            });
 
             if (!response.ok) {
-                console.error("Failed to load uploads.");
+                setError("Failed to load uploads.");
                 return;
             }
 
             const data: Upload[] = await response.json();
+
             setUploads(data);
-        } catch (err) {
-            console.error(err);
+            setError(null);
+        } catch {
+            setError("Something went wrong while loading uploads.");
         }
-    }, [account, instance, uuid]);
+    }, [getAccessToken, uuid]);
 
     useEffect(() => {
         void loadUploads();
@@ -102,148 +133,139 @@ export function SupportUploadPage() {
 
     function handleSort(key: SortKey) {
         if (key === sortKey) {
-            setSortDirection((prev) =>
-                prev === "asc" ? "desc" : "asc"
+            setSortDirection((currentDirection) =>
+                currentDirection === "asc" ? "desc" : "asc",
             );
-        } else {
-            setSortKey(key);
-
-            if (key === "date_uploaded") {
-                setSortDirection("desc");
-            } else {
-                setSortDirection("asc");
-            }
+            return;
         }
+
+        setSortKey(key);
+        setSortDirection(DATE_KEYS.has(key) ? "desc" : "asc");
     }
 
     const sortedUploads = useMemo(() => {
-        const copy = [...uploads];
+        return [...uploads].sort((a, b) => {
+            const aValue = a[sortKey];
+            const bValue = b[sortKey];
 
-        copy.sort((a, b) => {
-            if (sortKey === "date_uploaded") {
-                const aTime = new Date(a.date_uploaded).getTime();
-                const bTime = new Date(b.date_uploaded).getTime();
+            if (DATE_KEYS.has(sortKey)) {
+                const comparison =
+                    new Date(String(aValue)).getTime() -
+                    new Date(String(bValue)).getTime();
 
-                return sortDirection === "asc"
-                    ? aTime - bTime
-                    : bTime - aTime;
+                return sortDirection === "asc" ? comparison : -comparison;
             }
 
-            const aVal = a[sortKey];
-            const bVal = b[sortKey];
-
-            if (
-                typeof aVal === "number" &&
-                typeof bVal === "number"
-            ) {
-                return sortDirection === "asc"
-                    ? aVal - bVal
-                    : bVal - aVal;
+            if (typeof aValue === "number" && typeof bValue === "number") {
+                const comparison = aValue - bValue;
+                return sortDirection === "asc" ? comparison : -comparison;
             }
 
-            const comparison = String(aVal).localeCompare(
-                String(bVal)
+            const comparison = String(aValue ?? "").localeCompare(
+                String(bValue ?? ""),
             );
 
-            return sortDirection === "asc"
-                ? comparison
-                : -comparison;
+            return sortDirection === "asc" ? comparison : -comparison;
         });
-
-        return copy;
     }, [uploads, sortKey, sortDirection]);
 
     return (
-        <section className="links-page">
+        <section
+            className="links-page"
+            aria-labelledby="support-upload-heading"
+        >
             <header className="links-page-header">
                 <div className="links-page-heading">
-                    <h1>Upload Management</h1>
+                    <p className="links-page-eyebrow">
+                        Uploaded files
+                    </p>
+
+                    <h1 id="support-upload-heading">
+                        Upload management
+                    </h1>
 
                     <p className="links-page-description">
-                        View uploads of a specific link.
+                        View files uploaded for this support link.
                     </p>
                 </div>
+
+                <Link to="/support/links" className="new-link-link">
+                    Back to links
+                </Link>
             </header>
 
-            <div className="links-table-wrapper">
-                <table className="links-table">
-                    <thead>
-                        <tr>
-                            <th
-                                onClick={() => handleSort("filename")}
-                                style={{ cursor: "pointer" }}
-                            >
-                                File{" "}
-                                {getSortIcon(
-                                    "filename",
-                                    sortKey,
-                                    sortDirection
-                                )}
-                            </th>
+            {error && (
+                <p className="table-message" role="alert">
+                    {error}
+                </p>
+            )}
 
-                            <th
-                                onClick={() => handleSort("size")}
-                                style={{ cursor: "pointer" }}
-                            >
-                                Size{" "}
-                                {getSortIcon(
-                                    "size",
-                                    sortKey,
-                                    sortDirection
-                                )}
-                            </th>
+            {!error && sortedUploads.length === 0 && (
+                <p className="table-message">
+                    No uploads found for this link.
+                </p>
+            )}
 
-                            <th
-                                onClick={() =>
-                                    handleSort("content_type")
-                                }
-                                style={{ cursor: "pointer" }}
-                            >
-                                Type{" "}
-                                {getSortIcon(
-                                    "content_type",
-                                    sortKey,
-                                    sortDirection
-                                )}
-                            </th>
+            {sortedUploads.length > 0 && (
+                <div className="links-table-wrapper">
+                    <table className="links-table">
+                        <thead>
+                            <tr>
+                                <th>
+                                    <button
+                                        className="table-sort-button"
+                                        type="button"
+                                        onClick={() => handleSort("filename")}
+                                    >
+                                        File {getSortIcon("filename", sortKey, sortDirection)}
+                                    </button>
+                                </th>
 
-                            <th
-                                onClick={() =>
-                                    handleSort("date_uploaded")
-                                }
-                                style={{ cursor: "pointer" }}
-                            >
-                                Uploaded{" "}
-                                {getSortIcon(
-                                    "date_uploaded",
-                                    sortKey,
-                                    sortDirection
-                                )}
-                            </th>
-                        </tr>
-                    </thead>
+                                <th>
+                                    <button
+                                        className="table-sort-button"
+                                        type="button"
+                                        onClick={() => handleSort("size")}
+                                    >
+                                        Size {getSortIcon("size", sortKey, sortDirection)}
+                                    </button>
+                                </th>
 
-                    <tbody>
-                        {sortedUploads.map((upload) => (
-                            <tr key={upload.upload_id}>
-                                <td>{upload.filename}</td>
+                                <th>
+                                    <button
+                                        className="table-sort-button"
+                                        type="button"
+                                        onClick={() => handleSort("content_type")}
+                                    >
+                                        Type {getSortIcon("content_type", sortKey, sortDirection)}
+                                    </button>
+                                </th>
 
-                                <td>
-                                    {(upload.size / 1024).toFixed(1)} KB
-                                </td>
-
-                                <td>{upload.content_type}</td>
-
-                                <td>
-                                    {new Date(
-                                        upload.date_uploaded
-                                    ).toLocaleString()}
-                                </td>
+                                <th>
+                                    <button
+                                        className="table-sort-button"
+                                        type="button"
+                                        onClick={() => handleSort("date_uploaded")}
+                                    >
+                                        Uploaded {getSortIcon("date_uploaded", sortKey, sortDirection)}
+                                    </button>
+                                </th>
                             </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
+                        </thead>
+
+                        <tbody>
+                            {sortedUploads.map((upload) => (
+                                <tr key={upload.upload_id}>
+                                    <td>{upload.filename}</td>
+                                    <td>{formatBytes(upload.size)}</td>
+                                    <td>{upload.content_type}</td>
+                                    <td>{formatDate(upload.date_uploaded)}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            )}
         </section>
     );
 }

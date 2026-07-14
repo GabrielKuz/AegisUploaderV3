@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from io import BufferedReader, BytesIO
 from pathlib import Path
-from typing import BinaryIO
+from typing import AsyncIterator, BinaryIO
 from azure.core.exceptions import ResourceExistsError, ResourceNotFoundError
 from azure.storage.fileshare import ShareDirectoryClient,ShareFileClient
 
@@ -15,6 +15,22 @@ class StorageProvider(ABC):
 
     @abstractmethod
     def download_file(self, source_path: str) -> bytes:
+        pass
+    
+    @abstractmethod
+    async def upload_stream(self, stream: AsyncIterator[bytes], destination_path: str) -> None:
+        pass
+
+    @abstractmethod
+    async def write_stream_range(self, stream: AsyncIterator[bytes], destination_path: str, offset: int, size: int) -> None:
+        pass
+
+    @abstractmethod
+    def prepare_file(self, file_path: str, size: int) -> None:
+        pass
+
+    @abstractmethod
+    def get_file_stream(self, file_path: str) -> BinaryIO:
         pass
 
     @abstractmethod
@@ -58,6 +74,12 @@ class LocalStorageProvider(StorageProvider):
 
         with open(destination, "wb") as f:
             f.write(file)
+    
+    def get_file_stream(self, file_path: str) -> BinaryIO:
+        try:
+            return open(self._resolve_path(file_path), "rb")
+        except FileNotFoundError:
+            raise FileNotFoundError(f"File '{file_path}' does not exist.") from None
 
     def download_file(self, source_path: str) -> bytes:
         source = self._resolve_path(source_path)
@@ -78,10 +100,51 @@ class LocalStorageProvider(StorageProvider):
 
     def exists(self, file_path: str) -> bool:
         return self._resolve_path(file_path).exists()
-
+            
     def get_file_url(self, file_path: str) -> str:
         return str(self._resolve_path(file_path))
+    
+    def prepare_file(self, file_path: str, size: int) -> None:
+        path = self._resolve_path(file_path)
 
+
+        path.parent.mkdir(parents=True, exist_ok=True)
+
+        with open(path, "wb") as f:
+            f.truncate(size)
+
+    async def write_stream_range(self, stream: AsyncIterator[bytes], destination_path: str, offset: int, size: int) -> None:
+        destination = self._resolve_path(destination_path)
+
+        destination.parent.mkdir(parents=True, exist_ok=True)
+
+        if not destination.exists():
+            with open(destination, "wb") as f:
+                f.truncate(offset + size)
+
+        with open(destination, "r+b") as f:
+            f.seek(offset)
+            bytes_written = 0
+
+            async for chunk in stream:
+                if bytes_written + len(chunk) > size:
+                    raise ValueError("Stream exceeds the specified size.")
+
+                f.write(chunk)
+                bytes_written += len(chunk)
+
+            if bytes_written != size:
+                raise ValueError("Stream size does not match the specified size.")
+            
+    async def upload_stream(self, stream: AsyncIterator[bytes], destination_path: str) -> None:
+        destination = self._resolve_path(destination_path)
+
+        destination.parent.mkdir(parents=True, exist_ok=True)
+
+        with open(destination, "wb") as f:
+            async for chunk in stream:
+                f.write(chunk)
+ 
     def get_file(self, file_path: str) -> BinaryIO:
         try:
             return open(self._resolve_path(file_path), "rb")
@@ -150,6 +213,68 @@ class AzureFileStorageProvider(StorageProvider):
             return client.download_file().readall()
         except ResourceNotFoundError:
             raise FileNotFoundError(f"File '{source_path}' does not exist.") from None
+    def get_file_stream(self, file_path: str) -> BinaryIO:
+        client = self._get_client(file_path)
+
+        try:
+            return client.download_file()
+        except ResourceNotFoundError:
+            raise FileNotFoundError(f"File '{file_path}' does not exist.") from None
+        
+    def prepare_file(self, file_path: str, size: int) -> None:
+        directory = str(Path(self.base_path) / Path(file_path).parent).replace("\\", "/")
+
+        self._ensure_directory_exists(directory)
+
+        client = self._get_client(file_path)
+
+        try:
+            client.create_file(size)
+        except ResourceExistsError:
+            raise FileExistsError(f"File '{file_path}' already exists.") from None
+        
+    async def write_stream_range(self, stream: AsyncIterator[bytes], destination_path: str, offset: int, size: int) -> None:
+        client = self._get_client(destination_path)
+
+        bytes_written = 0
+
+        async for chunk in stream:
+            if bytes_written + len(chunk) > size:
+                raise ValueError("Stream exceeds the specified size.")
+
+            client.upload_range(
+                data=chunk,
+                offset=offset + bytes_written,
+                length=len(chunk),
+            )
+
+            bytes_written += len(chunk)
+
+        if bytes_written != size:
+            raise ValueError("Stream size does not match the specified size.")
+    
+    async def upload_stream(self, stream: AsyncIterator[bytes], destination_path: str) -> None:
+        directory = str(Path(self.base_path) / Path(destination_path).parent).replace("\\", "/")
+
+        self._ensure_directory_exists(directory)
+
+        client = self._get_client(destination_path)
+
+        file_size = 0
+        chunks: list[tuple[int, bytes]] = []
+
+        async for chunk in stream:
+            chunks.append((file_size, chunk))
+            file_size += len(chunk)
+
+        client.create_file(file_size)
+
+        for offset, chunk in chunks:
+            client.upload_range(
+                data=chunk,
+                offset=offset,
+                length=len(chunk),
+            )
 
     def delete_file(self, file_path: str) -> None:
         client = self._get_client(file_path)

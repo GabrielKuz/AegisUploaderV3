@@ -35,17 +35,19 @@
   margin: 0;
   color: var(--theme-text);
   font-family: var(--font-heading);
-  font-size: clamp(38px, 4.5vw, 52px);
+  font-size: clamp(46px, 5vw, 68px);
   font-weight: 400;
   line-height: 1.04;
   letter-spacing: -0.055em;
 }
 
+
 .create-link-description {
-  max-width: 650px;
+  display: block;
+  max-width: 700px;
   margin: 12px 0 0;
-  font-size: 15px;
-  line-height: 1.55;
+  font-size: 16px;
+  line-height: 1.6;
 }
 
 /* ==========================================================================
@@ -185,7 +187,6 @@
 .link-form-actions button {
   min-height: 44px;
   padding: 0 20px;
-  border: 1px solid transparent;
   border-radius: var(--radius-md);
   font: inherit;
   font-size: 14px;
@@ -215,21 +216,23 @@
 .link-cancel-button {
   color: var(--theme-text);
   background: transparent;
-  border-color: var(--portal-accent-border);
+  border: 2px solid var(--portal-primary-button-border);
 }
 
 .link-cancel-button:hover {
   color: var(--portal-accent);
-  background: var(--portal-accent-soft);
+  background: var(--portal-primary-button-border);
 }
 
 .link-submit-button {
-  color: #ffffff;
-  background: var(--portal-accent);
+  color: var(--theme-text);
+  background: var(--portal-accent-soft);
+  border: 2px solid var(--portal-primary-button-border)
 }
 
 .link-submit-button:hover {
-  background: var(--portal-accent-hover);
+  color: var(--portal-accent);
+  background: var(--portal-primary-button-border);
 }
 
 /* ==========================================================================

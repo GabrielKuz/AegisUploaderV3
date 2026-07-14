@@ -82,19 +82,21 @@ export function LinksTablePage({
     }, [accounts, instance]);
 
     const getAccessToken = useCallback(async () => {
+        if (!isEntraConfigured) {
+            return getDevToken();
+        }
+
         const account = getActiveAccount(instance) ?? accounts[0];
 
-        if (isEntraConfigured && !account) {
+        if (!account) {
             return null;
         }
 
-        if (account && !instance.getActiveAccount()) {
+        if (!instance.getActiveAccount()) {
             instance.setActiveAccount(account);
         }
 
-        return isEntraConfigured
-            ? getApiAccessToken(instance, account)
-            : getDevToken();
+        return getApiAccessToken(instance, account);
     }, [accounts, instance]);
 
     const loadLinks = useCallback(async () => {
@@ -320,7 +322,7 @@ export function LinksTablePage({
                                                     className="table-action-link"
                                                     to={`${uploadActionPathPrefix}/${supportLink.uuid}`}
                                                 >
-                                                    View uploads
+                                                    View Uploads
                                                 </Link>
                                             ) : (
                                                 <span className="table-muted-text">
