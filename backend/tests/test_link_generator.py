@@ -15,7 +15,6 @@ from datetime import datetime, timedelta
 from modules.auth import User, getCurrentActiveUser
 import os
 
-
 client = TestClient(app)
 current_user = User(username="testuser", disabled=False, roles=["User"])  # Mock user for testing
 url = f"http://{os.getenv('FRONTEND_URL')}/links/"  # Assuming this is the base URL for links
@@ -26,11 +25,12 @@ async def override_get_current_active_user() -> User:
 app.dependency_overrides[getCurrentActiveUser] = override_get_current_active_user
 app.dependency_overrides[requireRoles] = lambda *roles, strict=False: override_get_current_active_user()
 
-def test_generate_links_returns_link_and_uuid():
+def test_generate_links_returns_link_and_uuid(monkeypatch):
     link_request = LinkRequest(
-        case_id="AIS-123",
-        itar=False
+        case_id="AIS-1234",
     )
+    monkeypatch.setattr("modules.LinkGenerator.caseIDExists", lambda case_id: True)
+    monkeypatch.setattr("modules.LinkGenerator.get_caseITARstatus", lambda case_id: False)  
 
     result = generate_links(link_request, current_user)
 
@@ -40,11 +40,12 @@ def test_generate_links_returns_link_and_uuid():
     assert result["link"].endswith(result["uuid"])
 
 
-def test_create_link_endpoint_returns_generated_link():
+def test_create_link_endpoint_returns_generated_link(monkeypatch):
     payload = {
-        "case_id": "AIS-123",
-        "itar": False
+        "case_id": "AIS-1234",
     }
+    monkeypatch.setattr("modules.LinkGenerator.caseIDExists", lambda case_id: True)
+    monkeypatch.setattr("modules.LinkGenerator.get_caseITARstatus", lambda case_id: False)  
     
     response = client.post("/links/create/", json=payload)
 
@@ -53,11 +54,12 @@ def test_create_link_endpoint_returns_generated_link():
 
 
 
-def test_store_link_persists_data():
+def test_store_link_persists_data(monkeypatch):
     link_request = LinkRequest(
-        case_id="AIS-456",
-        itar=False
+        case_id="AIS-4567",
     )
+    monkeypatch.setattr("modules.LinkGenerator.caseIDExists", lambda case_id: True)
+    monkeypatch.setattr("modules.LinkGenerator.get_caseITARstatus", lambda case_id: False)  
 
     result = generate_links(link_request, current_user)
 
@@ -70,7 +72,7 @@ def test_store_link_persists_data():
     data = response.json()
     assert data["uuid"] == uuid
     assert data["link"].endswith(uuid)
-    assert data["case_id"] == "AIS-456"
+    assert data["case_id"] == "AIS-4567"
     assert data["itar"] is False
     assert data["creator"]  # Assuming the creator is set to the current user
     assert data["timestamp"]  # Assuming the timestamp is set to the current time
@@ -78,12 +80,13 @@ def test_store_link_persists_data():
     assert data["expired"] is False
     assert data["expiration_date"]  # Assuming the expiration date is set to 2 days from now
 
-def test_get_all_links_returns_links_for_user():
+def test_get_all_links_returns_links_for_user(monkeypatch):
     # Create a link for the test user
     link_request = LinkRequest(
-        case_id="AIS-789",
-        itar=False
+        case_id="AIS-7890",
     )
+    monkeypatch.setattr("modules.LinkGenerator.caseIDExists", lambda case_id: True)
+    monkeypatch.setattr("modules.LinkGenerator.get_caseITARstatus", lambda case_id: False)  
     
     generate_links(link_request, current_user)
 
@@ -92,7 +95,7 @@ def test_get_all_links_returns_links_for_user():
     assert response.status_code == 200
     data = response.json()
     assert isinstance(data, list)
-    assert any(link["case_id"] == "AIS-789" for link in data)  # Check if the created link is in the list
+    assert any(link["case_id"] == "AIS-7890" for link in data)  # Check if the created link is in the list
 
 # def test_link_expiration(): # fixed on another branch
 #     # Create a link
@@ -141,10 +144,12 @@ def test_get_all_links_returns_links_for_user():
 #     assert expiration_date >= datetime.now() + timedelta(days=extension_days)  # The expiration date should be in the future
 #     assert data["expired"] is False  # The link should not be expired after extension
 
-def test_get_files_for_link():
+def test_get_files_for_link(monkeypatch):
+    monkeypatch.setattr("modules.LinkGenerator.caseIDExists", lambda case_id: True)
+    monkeypatch.setattr("modules.LinkGenerator.get_caseITARstatus", lambda case_id: False)
+
     link_request = LinkRequest(
         case_id="AIS-1234",
-        itar=False,
     )
     result = generate_links(link_request, current_user)
     link_uuid = result["uuid"]
@@ -183,7 +188,10 @@ def test_get_files_for_link():
     )
 
 
-def test_updating_link_update_other_from_self():
+def test_updating_link_update_other_from_self(monkeypatch):
+    monkeypatch.setattr("modules.LinkGenerator.caseIDExists", lambda case_id: True)
+    monkeypatch.setattr("modules.LinkGenerator.get_caseITARstatus", lambda case_id: False)
+
     with Session() as session:
         link = LinkRecord(
             uuid=str(uuid.uuid4()),
@@ -229,7 +237,10 @@ def test_updating_link_update_other_from_self():
         assert upload.timestamp == link.timestamp
         assert upload.link_uuid == link.uuid
 
-def test_updating_link_update_similar_between_LinkDB_and_UploadDB():
+def test_updating_link_update_similar_between_LinkDB_and_UploadDB(monkeypatch):
+    monkeypatch.setattr("modules.LinkGenerator.caseIDExists", lambda case_id: True)
+    monkeypatch.setattr("modules.LinkGenerator.get_caseITARstatus", lambda case_id: False)
+
     with Session() as session:
         link = LinkRecord(
             uuid=str(uuid.uuid4()),
