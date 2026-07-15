@@ -64,22 +64,37 @@ def _deleteExpiredUploads(storage: StorageProvider):
         for upload in uploads:
             try:
                 if upload.blob_name:
-                    storage.delete_file(upload.blob_name)
+                    storage.delete_file(f"{upload.case_id}/{upload.blob_name}")
 
                 session.delete(upload)
 
+            except FileNotFoundError:
+                session.delete(upload)
+
             except Exception as e:
-                logger.error(f"Failed deleting file for upload {upload.id} ({upload.blob_name}): {e}")
+                logger.error(f"Failed deleting file for upload {upload.upload_id} ({upload.blob_name}): {e}")
 
         session.commit()
 
 
 def _deleteExpiredLinks():
-    with Session() as session:
-        session.query(LinkRecord).filter(LinkRecord.expired.is_(True)).delete(synchronize_session=False)
-        session.commit()
-        update_similar_between_LinkDB_and_UploadDB(session)
+    with Session() as session: # delete expired likns only once their assoiciated uploads have for_deletion set to True and they are marked as expired
+        links = session.scalars(
+            select(LinkRecord).where(LinkRecord.expired.is_(True))
+        ).all()
 
+        for link in links:
+            uploads = session.scalars(
+                select(UploadRecord)
+                .where(UploadRecord.link_uuid == link.uuid)
+                .where(UploadRecord.for_deletion.is_(False))
+            ).all()
+
+            if not uploads:
+                session.delete(link)
+
+        session.commit()
+        
 
 
 def expireAndDeleteOldData():

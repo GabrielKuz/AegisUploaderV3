@@ -7,7 +7,6 @@ from datetime import datetime, timedelta
 from modules.auth import User, getCurrentActiveUser, requireRoles
 from modules import Session
 from modules.models import UploadRecord, LinkRecord, update_other_from_self, update_similar_between_LinkDB_and_UploadDB
-from modules.uploader import ensure_uploads_table
 import os
 import uuid
 from modules.LinkGenerator import LinkRequest, generate_links, get_all_links

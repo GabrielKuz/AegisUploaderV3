@@ -28,7 +28,7 @@ def get_link_case_id(link: str) -> Optional[str]:
             return None
 
     except ApiException as e:
-        traceback.print_exc(e)
+        traceback.print_exc()
         return None
     
 def get_link_case_status(link: str) -> Optional[str]:

@@ -108,7 +108,6 @@ class LocalStorageProvider(StorageProvider):
     async def prepare_file(self, file_path: str, size: int) -> None: # async because azure storage provider is async, but local storage is sync
         path = self._resolve_path(file_path)
 
-
         path.parent.mkdir(parents=True, exist_ok=True)
 
         with open(path, "wb") as f:
@@ -272,10 +271,10 @@ class AzureFileStorageProvider(StorageProvider):
             chunks.append((file_size, chunk))
             file_size += len(chunk)
 
-        client.create_file(file_size)
+        await client.create_file(file_size)
 
-        for offset, chunk in chunks:
-            client.upload_range(
+        async for offset, chunk in chunks:
+            await client.upload_range(
                 data=chunk,
                 offset=offset,
                 length=len(chunk),

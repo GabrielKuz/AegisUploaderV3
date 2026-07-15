@@ -27,6 +27,7 @@ from cryptography.hazmat.backends import default_backend
 from fastapi import APIRouter, Depends, File, Header, HTTPException, UploadFile
 from fastapi.responses import JSONResponse
 from fastapi import Query
+from datetime import timezone, timedelta
 from modules import Session
 from fastapi import Request
 from pathvalidate import sanitize_filename, validate_filename
@@ -35,7 +36,7 @@ from modules.models import Base, StorageRegion, UploadChunk, UploadRecord, LinkR
 
 router = APIRouter()
 #session = Session()
-
+MAX_FILE_SIZE = 3 * 1024 * 1024 * 1024 * 1024  # 3 TiB (nginx limits to 2.5 TiB)
 def get_db():
     db = Session()
 
@@ -47,6 +48,21 @@ def get_db():
 def hash_bytes(data: bytes) -> str:
     return blake3(data).hexdigest()
 
+def validate_upload_link(link_entry: LinkRecord):
+    now = datetime.datetime.now(timezone.utc)
+    expiration = link_entry.expiration_date
+
+    if expiration is None:
+        raise HTTPException(status_code=500, detail="Link has no expiration date")
+
+    if expiration.tzinfo is None:
+        expiration = expiration.replace(tzinfo=timezone.utc)
+
+    if expiration <= now:
+        raise HTTPException(status_code=410, detail="Upload link expired")
+
+    if link_entry.expired:
+        raise HTTPException(status_code=410, detail="Upload link expired")
 
 def compute_merkle_root(chunk_hashes: list[str]) -> str:
     if not chunk_hashes:
@@ -72,7 +88,6 @@ def compute_merkle_root(chunk_hashes: list[str]) -> str:
     return current[0].hex()
 
 def validate_file_hash(contents: bytes, file_hash_clientside: str | None) -> str: # Used to check file integrity
-    """Validate that the client-side hash matches the payload and return the computed hash."""
     if not file_hash_clientside:
         raise ValueError("X-File-Hash header is required")
 
@@ -83,12 +98,6 @@ def validate_file_hash(contents: bytes, file_hash_clientside: str | None) -> str
 
     return computed_hash
 
-@deprecated("Replaced by create_tables.py at startup time")
-def ensure_uploads_table(db_session):
-    """Create the uploads table if it does not exist using the provided session's bind."""
-    engine = db_session.get_bind()
-    # Create only the uploads table if missing
-    Base.metadata.create_all(bind=engine, tables=[UploadRecord.__table__])
 
 
 def find_link_entry(link_uuid: str, db):
@@ -146,8 +155,11 @@ async def start_upload(
     if not file_hash:
         raise HTTPException(status_code=400, detail="X-File-Hash header required")
 
-    if file_size is None or file_size < 0:
+    if file_size is None or file_size <= 0:
         raise HTTPException(status_code=400, detail="X-File-Size header required")
+
+    if file_size > MAX_FILE_SIZE:
+        raise HTTPException(status_code=400, detail="File size exceeds the maximum allowed size")
 
     try:
         link_entry = find_link_entry(link_uuid, db)
@@ -272,6 +284,7 @@ async def upload_file_chunk(
     chunk_size: Annotated[int | None, Header(alias="X-Chunk-Size")] = None,
     chunk_hash: Annotated[str | None, Header(alias="X-Chunk-Hash")] = None,
 ):
+    received_size = int(request.headers.get("Content-Length", 0))
     if not IsUUID(link_uuid):
         raise HTTPException(status_code=400, detail="Invalid uuid")
 
@@ -281,6 +294,9 @@ async def upload_file_chunk(
     if not chunk_hash:
         raise HTTPException(status_code=400, detail="X-Chunk-Hash header required")
 
+    if chunk_size is None or chunk_size <= 0 or received_size != chunk_size or chunk_size > 32 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="X-Chunk-Size invalid or missing, must be > 0 and <= 32 MiB and match Content-Length")
+
     upload_session = (
         db.query(UploadSession).filter(
             UploadSession.upload_token == upload_token,
@@ -289,24 +305,42 @@ async def upload_file_chunk(
 
     if upload_session is None:
         raise HTTPException(status_code=404, detail="Upload session not found")
+    
+    if chunk_offset != 0 and chunk_offset % upload_session.chunk_size != 0 and chunk_offset + received_size != upload_session.expected_size: # Raise unless final chunk, which can be smaller than the chunk size
+        raise HTTPException(status_code=400, detail="Chunk offset must align with upload chunk size")
 
     if upload_session.completed:
         raise HTTPException(status_code=400, detail="Upload already completed")
 
     if chunk_offset >= upload_session.expected_size:
         raise HTTPException(status_code=400, detail="Chunk offset outside file size")
+    
+    link_entry = find_link_entry(link_uuid, db)
 
-    for start, end in upload_session.received_ranges or []:
-        if chunk_offset >= start and chunk_offset + upload_session.chunk_size <= end:
-            return {
-                "received": upload_session.chunk_size,
-                "offset": chunk_offset,
-                "hash": chunk_hash,
-                "ranges": upload_session.received_ranges,
-            }
+    if link_entry is None:
+        raise HTTPException(404, "Link not found")
+
+    validate_upload_link(link_entry) # returns 410 if expired
+
+    existing_chunk = db.query(UploadChunk).filter(
+            UploadChunk.upload_id == upload_session.upload_id,
+            UploadChunk.offset == chunk_offset,
+        ).first()
+    
+
+    if existing_chunk:
+        if existing_chunk.hash.lower() != chunk_hash.strip().lower():
+            raise HTTPException(status_code=409, detail="Chunk offset already uploaded with different content")
+
+        return {
+            "received": existing_chunk.size,
+            "offset": existing_chunk.offset,
+            "hash": existing_chunk.hash,
+            "ranges": upload_session.received_ranges,
+        }
 
     if chunk_offset + upload_session.chunk_size > upload_session.expected_size:
-        if chunk_offset + chunk_size != upload_session.expected_size:
+        if chunk_offset + received_size != upload_session.expected_size:
             raise HTTPException(status_code=400, detail="Invalid chunk size")
 
     if upload_session.itar_status:

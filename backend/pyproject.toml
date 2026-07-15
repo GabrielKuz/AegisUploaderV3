@@ -25,4 +25,5 @@ dependencies = [
     "uvicorn>=0.30.0",
     "pathvalidate>=3.3.1",
     "blake3>=1.0.9",
+    "pytest-asyncio>=1.4.0",
 ]

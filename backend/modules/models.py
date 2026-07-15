@@ -1,6 +1,6 @@
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 import enum
-
+from sqlalchemy import DateTime
 from sqlalchemy import UUID, BigInteger, Column, String, Integer, DateTime, Boolean, Text, JSON, UniqueConstraint
 import sqlalchemy
 from sqlalchemy.orm import declarative_base
@@ -69,7 +69,7 @@ class UploadRecord(Base): # "LinkDB".uploads table
     __table_args__ = {"schema": "LinkDB"}
     link_uuid: Mapped[str] = mapped_column(UUID(as_uuid=False), ForeignKey("LinkDB.links.uuid"), nullable=False, index=True)
     case_id: Mapped[str | None] = mapped_column(String, nullable=True)
-    timestamp: Mapped[object | None] = mapped_column(DateTime)
+    timestamp: Mapped[object | None] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     itar_status: Mapped[bool | None] = mapped_column(Boolean, default=False)
     users_with_access: Mapped[object | None] = mapped_column(JSON, nullable=True)
     parent: Mapped["LinkRecord"] = relationship(back_populates="child", primaryjoin="UploadRecord.link_uuid == LinkRecord.uuid",)
@@ -78,7 +78,7 @@ class UploadRecord(Base): # "LinkDB".uploads table
     blob_name = Column(Text, nullable=True) # Azure
     content_type = Column(Text, nullable=True) # MIME
     file_hash = Column(Text, nullable=True) # server side hash
-    date_uploaded = Column(DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
+    date_uploaded = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
     combined_file_size = Column(BigInteger)
     max_days_in_storage = Column(Integer, default=30)
     original_link = Column(Text, nullable=True)
@@ -92,14 +92,13 @@ class LinkRecord(Base): # "LinkDB".links table
     __table_args__ = {"schema": "LinkDB"}
     uuid: Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True, default=lambda: str(uuid.uuid4()))
     case_id: Mapped[str | None] = mapped_column(String)
-    timestamp: Mapped[object | None] = mapped_column(DateTime)
+    timestamp: Mapped[object | None] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     itar: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     users_with_access: Mapped[object | None] = mapped_column(JSON)
     child: Mapped[list["UploadRecord"]] = relationship(back_populates="parent")
     link = Column(String)
     creator = Column(String) # From entra token
-    timestamp = Column(DateTime, default=lambda: datetime.now(timezone.utc))
-    expiration_date = Column(DateTime, nullable=False)# 48 hours from creation
+    expiration_date = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc) + timedelta(hours=48))# 48 hours from creation
     expired = Column(Boolean)
 
 
