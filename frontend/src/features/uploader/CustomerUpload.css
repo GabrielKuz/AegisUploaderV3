@@ -93,7 +93,7 @@
   min-height: 44px;
   padding: 0 20px;
   color: #ffffff;
-  background: var(--button-background);
+  background: var(--portal-primary-button-variation);
   border: 0;
   border-radius: var(--radius-md);
   font: inherit;
@@ -246,3 +246,27 @@
   }
 }
 
+.upload-progress {
+  width: 100%;
+  height: 8px;
+  margin-top: 6px;
+  border-radius: 999px;
+  background: #e5e7eb;
+  overflow: hidden;
+}
+
+.upload-progress-fill.uploading {
+  background: #2563eb;
+}
+
+.upload-progress-fill.retrying {
+  background: #f59e0b;
+}
+
+.upload-progress-fill.done {
+  background: #16a34a;
+}
+
+.upload-progress-fill.error {
+  background: #dc2626;
+}

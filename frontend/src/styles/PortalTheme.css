@@ -111,6 +111,8 @@
     --portal-primary-button-border-hover: var(--theme-accent-soft);
     --portal-primary-button-shadow: 0 4px 12px rgba(63, 35, 30, 0.07);
 
+    --portal-primary-button-variation: var(--color-aegis-red-deep);
+
     /* ----------------------------------------------------------------------
        Secondary portal button
        ---------------------------------------------------------------------- */
@@ -236,6 +238,8 @@
 
     --portal-primary-button-shadow:
         0 10px 28px rgba(0, 0, 0, 0.32);
+
+    --portal-primary-button-variation: var(--color-aegis-blue);
 
     /* ----------------------------------------------------------------------
        Secondary portal button

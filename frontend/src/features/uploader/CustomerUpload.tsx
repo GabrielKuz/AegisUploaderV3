@@ -1,15 +1,18 @@
 import {
     useRef,
     useState,
+    useEffect,
     type ChangeEvent,
 } from "react";
 import { useParams } from "react-router-dom";
 import { sha256 } from "@noble/hashes/sha2.js";
 import { bytesToHex } from "@noble/hashes/utils.js";
 import "./CustomerUpload.css";
+import { useCustomerUpload } from "../../layouts/CustomerLayoutContext";
 
 
 type SelectedFile = {
+    id: string;
     file: File;
     preview: string;
 };
@@ -115,12 +118,45 @@ async function uploadChunk(
 export function CustomerUpload() {
     const { uuid } = useParams();
     const fileInputRef = useRef<HTMLInputElement>(null);
-
+    const { setUploadStats } = useCustomerUpload();
     const [selectedFiles, setSelectedFiles] = useState<SelectedFile[]>([]);
     const [uploading, setUploading] = useState(false);
-    const [uploadStatus, setUploadStatus] = useState<Record<string, string>>({});
+    
     const [dragActive, setDragActive] = useState(false);
+    type UploadState = {
+        status: "waiting" | "uploading" | "retrying" | "done" | "error";
+        progress: number;
+        retry?: number;
+    };
 
+    const [uploadStatus, setUploadStatus] =
+        useState<Record<string, UploadState>>({});
+    const uploadedFiles = selectedFiles.filter(
+        (item) => uploadStatus[item.id]?.status === "done"
+    );
+
+    const uploadedBytes = uploadedFiles.reduce(
+        (total, item) => total + item.file.size,
+        0
+    );
+    useEffect(() => {
+        setUploadStats(
+            uploadedFiles.length,
+            uploadedBytes
+        );
+    }, [
+        uploadedFiles.length,
+        uploadedBytes,
+        setUploadStats,
+    ]);
+
+    useEffect(() => {
+        return () => {
+            selectedFiles.forEach((item) => {
+                URL.revokeObjectURL(item.preview);
+            });
+        };
+    }, []);
     if (!uuid) {
         return <p>Invalid upload link.</p>;
     }
@@ -130,6 +166,7 @@ export function CustomerUpload() {
     };
     const addFiles = (files: FileList | File[]) => {
         const newFiles = Array.from(files).map((file) => ({
+            id: crypto.randomUUID(),
             file,
             preview: URL.createObjectURL(file),
         }));
@@ -161,9 +198,17 @@ export function CustomerUpload() {
     };
 
     const removeFile = (indexToRemove: number) => {
-        setSelectedFiles((currentFiles) =>
-            currentFiles.filter((_, index) => index !== indexToRemove),
-        );
+        setSelectedFiles((currentFiles) => {
+            const removed = currentFiles[indexToRemove];
+
+            if (removed) {
+                URL.revokeObjectURL(removed.preview);
+            }
+
+            return currentFiles.filter(
+                (_, index) => index !== indexToRemove
+            );
+        });
     };
 
     const handleDragOver = (
@@ -198,7 +243,10 @@ export function CustomerUpload() {
                 try {
                     setUploadStatus((s) => ({
                         ...s,
-                        [item.file.name]: "starting",
+                        [item.id]: {
+                            status: "uploading",
+                            progress: 0,
+                        },
                     }));
 
                     const fileHash = await sha256File(item.file);
@@ -229,10 +277,7 @@ export function CustomerUpload() {
                     } = await startResponse.json();
 
 
-                    setUploadStatus((s) => ({
-                        ...s,
-                        [item.file.name]: "uploading",
-                    }));
+                    
 
                     let offset = 0;
 
@@ -247,6 +292,7 @@ export function CustomerUpload() {
                         let uploaded = false;
                         let attempts = 0;
 
+
                         while (!uploaded && attempts < 3) {
                             try {
                                 await uploadChunk(
@@ -258,18 +304,43 @@ export function CustomerUpload() {
                                 );
 
                                 uploaded = true;
+
+                                setUploadStatus((s) => ({
+                                    ...s,
+                                    [item.id]: {
+                                        ...s[item.id],
+                                        status: "uploading",
+                                    },
+                                }));
                             } catch {
                                 attempts++;
 
+                                setUploadStatus((s) => ({
+                                    ...s,
+                                    [item.id]: {
+                                        ...s[item.id],
+                                        status: "retrying",
+                                        retry: attempts,
+                                    },
+                                }));
+
                                 if (attempts >= 3) {
-                                    throw new Error(
-                                        "Chunk failed after retries",
-                                    );
+                                    throw new Error("Chunk failed after retries");
                                 }
+
+                                await new Promise((resolve) => setTimeout(resolve, 1000));
                             }
                         }
-
                         offset = end;
+                        const percent = Math.round((offset / item.file.size) * 100);
+
+                        setUploadStatus((s) => ({
+                            ...s,
+                            [item.id]: {
+                                ...s[item.id],
+                                progress: percent,
+                            },
+                        }));
                     }
 
 
@@ -286,13 +357,19 @@ export function CustomerUpload() {
 
                     setUploadStatus((s) => ({
                         ...s,
-                        [item.file.name]: "done",
+                        [item.id]: {
+                            status: "done",
+                            progress: 100,
+                        },
                     }));
 
                 } catch {
                     setUploadStatus((s) => ({
                         ...s,
-                        [item.file.name]: "error",
+                        [item.id]: {
+                            ...s[item.id],
+                            status: "error",
+                        },
                     }));
                 }
             });
@@ -307,10 +384,7 @@ export function CustomerUpload() {
             aria-labelledby="customer-upload-heading"
         >
             <div className="upload-panel">
-                <p className="upload-eyebrow">
-                    Secure upload
-                </p>
-
+                
                 <h1 id="customer-upload-heading">
                     Upload your files
                 </h1>
@@ -353,20 +427,37 @@ export function CustomerUpload() {
                         <div className="selected-files">
                             {selectedFiles.map((item, index) => (
                                 <div
-                                    key={`${item.file.name}-${index}`}
+                                    key={`${item.id}-${index}`}
                                     className="selected-file"
                                 >
                                     <div className="selected-file-info">
                                         <span>{item.file.name}</span>
 
-                                        <small>
-                                            {uploadStatus[item.file.name] === "uploading" &&
-                                                "Uploading..."}
-                                            {uploadStatus[item.file.name] === "done" &&
-                                                "Uploaded"}
-                                            {uploadStatus[item.file.name] === "error" &&
-                                                "Failed"}
-                                        </small>
+                                        {uploadStatus[item.id] && (
+                                            <small>
+                                                {uploadStatus[item.id].status === "uploading" &&
+                                                    `Uploading (${uploadStatus[item.id].progress}%)`}
+
+                                                {uploadStatus[item.id].status === "retrying" &&
+                                                    `Retrying... (${uploadStatus[item.id].retry}/3)`}
+
+                                                {uploadStatus[item.id].status === "done" &&
+                                                    "Uploaded"}
+
+                                                {uploadStatus[item.id].status === "error" &&
+                                                    "Failed"}
+                                            </small>
+                                        )}
+                                        {uploadStatus[item.id] && (
+                                            <div className="upload-progress">
+                                                <div
+                                                    className={`upload-progress-fill ${uploadStatus[item.id].status}`}
+                                                    style={{
+                                                        width: `${uploadStatus[item.id].progress}%`,
+                                                    }}
+                                                />
+                                            </div>
+                                        )}
                                     </div>
 
                                     <div className="selected-file-actions">
@@ -381,6 +472,7 @@ export function CustomerUpload() {
                                         <button
                                             className="delete-button"
                                             type="button"
+                                            disabled = {uploading}
                                             onClick={() => removeFile(index)}
                                         >
                                             Delete
