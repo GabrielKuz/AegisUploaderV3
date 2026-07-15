@@ -136,7 +136,7 @@ export function LoginPage() {
 
           <a
             className="support-link"
-            href="mailto:support@aegissoftware.com"
+            href="mailto:helpdesk@AISCorp.com"
           >
             Help &amp; Support
           </a>
@@ -244,9 +244,9 @@ export function LoginPage() {
           </span>
 
           <nav aria-label="Legal links">
-            <a href="/privacy">Privacy Policy</a>
+            <a href="https://www.aiscorp.com/privacy-policy/">Privacy Policy</a>
             <span aria-hidden="true">/</span>
-            <a href="/terms">Terms of Use</a>
+            <a href="https://www.aiscorp.com/support-addendum/">Terms of Use</a>
           </nav>
         </footer>
       </section>

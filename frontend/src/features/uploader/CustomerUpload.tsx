@@ -392,7 +392,7 @@ export function CustomerUpload() {
         }
     };
 
-        return (
+    return (
         <section
             className="customer-upload-page"
             aria-labelledby="customer-upload-heading"

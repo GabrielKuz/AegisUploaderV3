@@ -7,8 +7,10 @@
   max-width: 940px;
   min-height: 100%;
   margin-inline: auto;
+
   display: grid;
   align-content: center;
+
   color: var(--theme-text);
 }
 
@@ -22,7 +24,9 @@
 
 .create-link-eyebrow {
   margin: 0 0 10px;
+
   color: var(--current-theme);
+
   font-family: var(--font-mono, monospace);
   font-size: 12px;
   font-weight: 700;
@@ -33,7 +37,9 @@
 
 .create-link-header h1 {
   margin: 0;
+
   color: var(--theme-text);
+
   font-family: var(--font-heading);
   font-size: clamp(46px, 5vw, 68px);
   font-weight: 400;
@@ -41,11 +47,13 @@
   letter-spacing: -0.055em;
 }
 
-
 .create-link-description {
   display: block;
   max-width: 700px;
   margin: 12px 0 0;
+
+  color: var(--theme-subtext);
+
   font-size: 16px;
   line-height: 1.6;
 }
@@ -67,16 +75,21 @@
 
 .link-form,
 .create-link-info {
-  border: 1px solid var(--theme-border);
+  border: 1px solid var(--portal-card-border);
   border-radius: var(--radius-lg);
+
   background:
-    linear-gradient(135deg, var(--portal-accent-soft), transparent 42%),
+    linear-gradient(135deg,
+      var(--portal-accent-soft),
+      transparent 42%),
     var(--theme-surface);
-  box-shadow: var(--theme-card-shadow);
+
+  box-shadow: var(--portal-card-shadow);
 }
 
 .link-form {
   padding: clamp(24px, 4vw, 34px);
+
   display: grid;
   grid-template-columns: 1fr;
   gap: 20px;
@@ -84,12 +97,14 @@
 
 .link-form-field {
   min-width: 0;
+
   display: grid;
   gap: 8px;
 }
 
 .link-form-field>span {
-  color: var(--theme-muted);
+  color: var(--theme-text);
+
   font-size: 13px;
   font-weight: 700;
 }
@@ -98,11 +113,17 @@
 .link-form select,
 .link-form textarea {
   width: 100%;
+
   border: 1px solid var(--portal-control-border);
   border-radius: var(--radius-md);
+
   background: var(--portal-control-background);
   color: var(--theme-text);
+
   font: inherit;
+
+  box-shadow: var(--theme-control-shadow);
+
   transition:
     border-color 160ms ease,
     background-color 160ms ease,
@@ -118,6 +139,7 @@
 .link-form textarea {
   min-height: 130px;
   padding: 12px 14px;
+
   resize: vertical;
 }
 
@@ -126,12 +148,21 @@
   color: var(--theme-muted);
 }
 
+.link-form input:hover,
+.link-form select:hover,
+.link-form textarea:hover {
+  border-color: var(--portal-control-border-hover);
+}
+
 .link-form input:focus-visible,
 .link-form select:focus-visible,
 .link-form textarea:focus-visible {
   border-color: var(--portal-accent);
+
   outline: 3px solid var(--portal-focus-ring);
   outline-offset: 1px;
+
+  box-shadow: none;
 }
 
 /* ==========================================================================
@@ -144,7 +175,9 @@
 
 .create-link-info h2 {
   margin: 0 0 12px;
+
   color: var(--theme-text);
+
   font-family: var(--font-heading);
   font-size: 22px;
   font-weight: 500;
@@ -154,7 +187,9 @@
 
 .create-link-info p {
   margin: 0;
+
   color: var(--theme-text-secondary);
+
   font-size: 14px;
   line-height: 1.6;
 }
@@ -165,10 +200,13 @@
 
 .link-form-error {
   padding: 14px 16px;
+
   color: var(--portal-error-text);
   background: var(--portal-error-background);
+
   border-left: 4px solid var(--portal-error-border);
   border-radius: var(--radius-md);
+
   font-size: 14px;
   line-height: 1.5;
 }
@@ -179,6 +217,7 @@
 
 .link-form-actions {
   padding-top: 4px;
+
   display: flex;
   justify-content: flex-end;
   gap: 12px;
@@ -187,52 +226,73 @@
 .link-form-actions button {
   min-height: 44px;
   padding: 0 20px;
+
   border-radius: var(--radius-md);
+
   font: inherit;
   font-size: 14px;
   font-weight: 700;
+
   cursor: pointer;
+
   transition:
     color 160ms ease,
     background-color 160ms ease,
     border-color 160ms ease,
+    box-shadow 160ms ease,
     transform 160ms ease,
     opacity 160ms ease;
 }
 
-.link-form-actions button:hover {
+.link-form-actions button:hover:not(:disabled) {
   transform: translateY(-1px);
 }
 
-.link-form-actions button:active {
+.link-form-actions button:active:not(:disabled) {
   transform: translateY(0);
 }
 
 .link-form-actions button:disabled {
   opacity: 0.68;
+  cursor: not-allowed;
   transform: none;
 }
 
+/* --------------------------------------------------------------------------
+   Cancel button
+   -------------------------------------------------------------------------- */
+
 .link-cancel-button {
   color: var(--theme-text);
-  background: transparent;
+  background: var(--portal-primary-button-background);
   border: 2px solid var(--portal-primary-button-border);
 }
 
-.link-cancel-button:hover {
-  color: var(--portal-accent);
-  background: var(--portal-primary-button-border);
+.link-cancel-button:hover:not(:disabled) {
+  color: var(--portal-primary-button-text);
+  background: var(--portal-primary-button-background-hover);
+  border-color: var(--portal-primary-button-border-hover);
 }
+
+/* --------------------------------------------------------------------------
+   Submit button
+   -------------------------------------------------------------------------- */
 
 .link-submit-button {
   color: var(--theme-text);
-  background: var(--portal-accent-soft);
-  border: 2px solid var(--portal-primary-button-border)
+  background: var(--portal-primary-button-background);
+  border: 2px solid var(--portal-primary-button-border);
+  box-shadow: var(--portal-primary-button-shadow);
 }
 
-.link-submit-button:hover {
-  color: var(--portal-accent);
-  background: var(--portal-primary-button-border);
+.link-submit-button:hover:not(:disabled) {
+  color: var(--portal-primary-button-text);
+  background: var(--portal-primary-button-background-hover);
+  border-color: var(--portal-primary-button-border-hover);
+}
+
+.link-submit-button:active:not(:disabled) {
+  background: var(--portal-primary-button-background-active);
 }
 
 /* ==========================================================================

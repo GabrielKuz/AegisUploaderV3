@@ -259,25 +259,20 @@
 .auth-side {
   grid-column: 2;
   grid-row: 2;
-
   position: relative;
   min-width: 0;
   height: 100%;
   min-height: 0;
   overflow: hidden;
-
   padding: clamp(14px, 2.2vh, 28px) clamp(28px, 4vw, 56px);
-
   display: grid;
   grid-template-rows: minmax(0, 1fr) auto;
   row-gap: clamp(10px, 1.8vh, 20px);
-
   background:
     linear-gradient(90deg,
       var(--theme-panel-gradient),
       transparent 28%),
     var(--theme-page);
-
   transition: background-color 180ms ease;
 }
 
@@ -365,13 +360,13 @@
 }
 
 .auth-card p {
-  color: var(--theme-muted);
+  color: var(--theme-text-secondary);
 }
 
 .auth-copy {
   max-width: 470px;
   margin: clamp(14px, 2vh, 22px) auto clamp(20px, 3vh, 32px);
-  color: var(--theme-text-secondary);
+  color: var(--theme-text);
   font-size: clamp(14px, 1.25vw, 20px);
   line-height: 1.45;
   text-align: center;
@@ -382,41 +377,27 @@
    ========================================================================== */
 
 .sso-button {
-  width: min(100%, 400px);
-  min-height: clamp(48px, 6vh, 58px);
-  padding: 0 clamp(14px, 2vw, 16px);
-
+  align-items: center;
+  border: 2px solid var(--portal-primary-button-border);
+  border-radius: var(--radius-md);
+  background: transparent;
+  box-shadow: var(--portal-primary-button-shadow);
+  cursor: pointer;
+  column-gap: clamp(8px, 1.4vw, 14px);
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: center;
-  column-gap: clamp(8px, 1.4vw, 14px);
-
   justify-self: center;
-
-  border: 1px solid var(--portal-primary-button-border);
-  border-radius: var(--radius-md);
-  background: var(--portal-primary-button-background);
-  box-shadow: var(--portal-primary-button-shadow);
-  color: var(--portal-primary-button-text);
-
-  font: inherit;
-  cursor: pointer;
-
+  min-height: clamp(48px, 6vh, 58px);
+  padding: 0 clamp(12px, 2vw, 14px);
   transition:
     color 160ms ease,
     transform 160ms ease,
     background-color 160ms ease,
     border-color 160ms ease;
-}
-
-.sso-button:hover {
-  background: var(--portal-primary-button-background-hover);
-  border-color: var(--portal-primary-button-border);
-  transform: translateY(-1px);
+  width: min(100%, 400px);
 }
 
 .sso-button:active {
-  background: var(--portal-primary-button-background-active);
   transform: translateY(0);
 }
 
@@ -432,13 +413,20 @@
 }
 
 .sso-button-label {
+  color: var(--portal-page);
   min-width: 0;
   overflow: hidden;
   text-align: center;
-  font-family: var(--font-mono);
-  font-size: clamp(12px, 1.1vw, 14px);
+  font-family: var(--font-microsoft);
+  font-size: clamp(14px, 1.1vw, 16px);
   font-weight: 500;
   letter-spacing: -0.02em;
+}
+
+.sso-button:hover {
+  background: var(--portal-primary-button-border);
+  color: var(--portal-accent);
+  transform: translateY(-1px);
 }
 
 .sso-button-arrow {
@@ -468,7 +456,7 @@
 }
 
 .access-note a {
-  color: var(--current-theme);
+  color: var(--portal-accent);
   font-size: clamp(13px, 1.2vw, 18px);
   font-weight: 600;
   text-decoration: none;
