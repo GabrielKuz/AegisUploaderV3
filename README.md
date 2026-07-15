@@ -8,6 +8,7 @@ Project of Aegis Software interns during the summer of 2026
 - nginx
 - Docker
 - uv
+- Alembic
 - Azure/Azurite
 - PostgreSQL
 
