@@ -7,7 +7,6 @@ from datetime import datetime, timedelta
 from modules.auth import User, getCurrentActiveUser, requireRoles
 from modules import Session
 from modules.models import UploadRecord, LinkRecord, update_other_from_self, update_similar_between_LinkDB_and_UploadDB
-from modules.uploader import ensure_uploads_table
 import os
 import uuid
 from modules.LinkGenerator import LinkRequest, generate_links, get_all_links
@@ -162,7 +161,7 @@ def test_get_files_for_link(monkeypatch):
             original_filename="report.txt",
             blob_name="report.txt",
             content_type="text/plain",
-            sha256="1234567890abcdef",
+            file_hash="1234567890abcdef",
             date_uploaded=datetime.now(),
             itar_status=False,
             combined_file_size=42,
@@ -211,7 +210,7 @@ def test_updating_link_update_other_from_self(monkeypatch):
             original_filename="report.txt",
             blob_name="report.txt",
             content_type="text/plain",
-            sha256="1234567890abcdef",
+            file_hash="1234567890abcdef",
             date_uploaded=datetime.now() - timedelta(days=1),
             itar_status=False,
             combined_file_size=42,
@@ -260,7 +259,7 @@ def test_updating_link_update_similar_between_LinkDB_and_UploadDB(monkeypatch):
             original_filename="report.txt",
             blob_name="report.txt",
             content_type="text/plain",
-            sha256="1234567890abcdef",
+            file_hash="1234567890abcdef",
             date_uploaded=datetime.now() - timedelta(days=1),
             itar_status=False,
             combined_file_size=42,

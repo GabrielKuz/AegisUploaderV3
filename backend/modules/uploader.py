@@ -8,7 +8,7 @@ import psycopg
 import uuid
 import re
 import sqlalchemy
-
+from blake3 import blake3
 from sqlalchemy.orm import Session
 from Utils import IsUUID
 from pathlib import Path
@@ -25,15 +25,19 @@ from cryptography.hazmat.primitives import padding
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.backends import default_backend
 from fastapi import APIRouter, Depends, File, Header, HTTPException, UploadFile
+from fastapi.responses import JSONResponse
+from fastapi import Query
+from modules.uploadSchemas import  StartUploadHeaders,StartUploadResponse, UploadChunkHeaders, UploadChunkResponse, UploadStatusResponse, CompleteUploadResponse, UploadedFileInfo, MarkForDeletionResponse, ExtendExpirationResponse
+from datetime import timezone, timedelta
 from modules import Session
 from fastapi import Request
 from pathvalidate import sanitize_filename, validate_filename
 from modules.auth import getCurrentActiveUser, User, requireRoles
-from modules.models import Base, StorageRegion, UploadRecord, LinkRecord, UploadSession
+from modules.models import Base, StorageRegion, UploadChunk, UploadRecord, LinkRecord, UploadSession
 
 router = APIRouter()
 #session = Session()
-
+MAX_FILE_SIZE = 3 * 1024 * 1024 * 1024 * 1024  # 3 TiB (nginx limits to 2.5 TiB)
 def get_db():
     db = Session()
 
@@ -42,13 +46,49 @@ def get_db():
     finally:
         db.close()
 
-def hash_bytes(data: bytes) -> str: # Used to check file integrity
-    """Return the SHA-256 hash for the provided bytes."""
-    return hashlib.sha256(data).hexdigest()
+def hash_bytes(data: bytes) -> str:
+    return blake3(data).hexdigest()
 
+def validate_upload_link(link_entry: LinkRecord):
+    now = datetime.datetime.now(timezone.utc)
+    expiration = link_entry.expiration_date
+
+    if expiration is None:
+        raise HTTPException(status_code=500, detail="Link has no expiration date")
+
+    if expiration.tzinfo is None:
+        expiration = expiration.replace(tzinfo=timezone.utc)
+
+    if expiration <= now:
+        raise HTTPException(status_code=410, detail="Upload link expired")
+
+    if link_entry.expired:
+        raise HTTPException(status_code=410, detail="Upload link expired")
+
+def compute_merkle_root(chunk_hashes: list[str]) -> str:
+    if not chunk_hashes:
+        raise ValueError("No chunk hashes provided")
+
+    current = [bytes.fromhex(h) for h in chunk_hashes]
+
+    while len(current) > 1:
+        next_level = []
+
+        for i in range(0, len(current), 2):
+            left = current[i]
+
+            if i + 1 < len(current):
+                right = current[i + 1]
+            else:
+                right = left
+
+            next_level.append(blake3(left + right).digest())
+
+        current = next_level
+
+    return current[0].hex()
 
 def validate_file_hash(contents: bytes, file_hash_clientside: str | None) -> str: # Used to check file integrity
-    """Validate that the client-side hash matches the payload and return the computed hash."""
     if not file_hash_clientside:
         raise ValueError("X-File-Hash header is required")
 
@@ -59,12 +99,6 @@ def validate_file_hash(contents: bytes, file_hash_clientside: str | None) -> str
 
     return computed_hash
 
-@deprecated("Replaced by create_tables.py at startup time")
-def ensure_uploads_table(db_session):
-    """Create the uploads table if it does not exist using the provided session's bind."""
-    engine = db_session.get_bind()
-    # Create only the uploads table if missing
-    Base.metadata.create_all(bind=engine, tables=[UploadRecord.__table__])
 
 
 def find_link_entry(link_uuid: str, db):
@@ -103,7 +137,7 @@ if not ITAR_CONNECTION_STRING:
 #     except ResourceExistsError:
 #         pass
 
-@router.post("/uploadfile/{link_uuid}/start")
+@router.post("/uploadfile/{link_uuid}/start", response_model=StartUploadResponse)
 async def start_upload(
     link_uuid: str,
     db: Annotated[sqlalchemy.orm.Session, Depends(get_db)],
@@ -122,8 +156,11 @@ async def start_upload(
     if not file_hash:
         raise HTTPException(status_code=400, detail="X-File-Hash header required")
 
-    if file_size is None or file_size < 0:
+    if file_size is None or file_size <= 0:
         raise HTTPException(status_code=400, detail="X-File-Size header required")
+
+    if file_size > MAX_FILE_SIZE:
+        raise HTTPException(status_code=400, detail="File size exceeds the maximum allowed size")
 
     try:
         link_entry = find_link_entry(link_uuid, db)
@@ -198,7 +235,8 @@ async def start_upload(
             original_filename=filename,
             content_type=None,
             expected_size=file_size,
-            expected_sha256=file_hash.strip().lower(),
+            expected_hash=file_hash.strip().lower(),
+            hash_algorithm="blake3",
             received_ranges=[],
             received_size=0,
             chunk_size=chunk_size,
@@ -213,6 +251,10 @@ async def start_upload(
 
         upload_token = upload_session.upload_token
         db.commit()
+        
+    except sqlalchemy.exc.IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="A conflicting upload session already exists.")
 
     except Exception:
         db.rollback()
@@ -220,7 +262,7 @@ async def start_upload(
         raise HTTPException(status_code=500, detail="Failed to create upload session")
 
     try:
-        service_client.prepare_file(f"{link_entry.case_id}/{blob_name}", file_size)
+        await service_client.prepare_file(f"{link_entry.case_id}/{blob_name}", file_size)
 
     except Exception:
         try:
@@ -237,7 +279,7 @@ async def start_upload(
         "chunkSize": chunk_size,
     }
 
-@router.post("/uploadfile/{link_uuid}/{upload_token}")
+@router.post("/uploadfile/{link_uuid}/{upload_token}", response_model=UploadChunkResponse)
 async def upload_file_chunk(
     link_uuid: str,
     upload_token: str,
@@ -247,6 +289,7 @@ async def upload_file_chunk(
     chunk_size: Annotated[int | None, Header(alias="X-Chunk-Size")] = None,
     chunk_hash: Annotated[str | None, Header(alias="X-Chunk-Hash")] = None,
 ):
+    received_size = int(request.headers.get("Content-Length", 0))
     if not IsUUID(link_uuid):
         raise HTTPException(status_code=400, detail="Invalid uuid")
 
@@ -256,6 +299,9 @@ async def upload_file_chunk(
     if not chunk_hash:
         raise HTTPException(status_code=400, detail="X-Chunk-Hash header required")
 
+    if chunk_size is None or chunk_size <= 0 or received_size != chunk_size or chunk_size > 32 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="X-Chunk-Size invalid or missing, must be > 0 and <= 32 MiB and match Content-Length")
+
     upload_session = (
         db.query(UploadSession).filter(
             UploadSession.upload_token == upload_token,
@@ -264,24 +310,42 @@ async def upload_file_chunk(
 
     if upload_session is None:
         raise HTTPException(status_code=404, detail="Upload session not found")
+    
+    if chunk_offset != 0 and chunk_offset % upload_session.chunk_size != 0 and chunk_offset + received_size != upload_session.expected_size: # Raise unless final chunk, which can be smaller than the chunk size
+        raise HTTPException(status_code=400, detail="Chunk offset must align with upload chunk size")
 
     if upload_session.completed:
         raise HTTPException(status_code=400, detail="Upload already completed")
 
     if chunk_offset >= upload_session.expected_size:
         raise HTTPException(status_code=400, detail="Chunk offset outside file size")
+    
+    link_entry = find_link_entry(link_uuid, db)
 
-    for start, end in upload_session.received_ranges or []:
-        if chunk_offset >= start and chunk_offset + upload_session.chunk_size <= end:
-            return {
-                "received": upload_session.chunk_size,
-                "offset": chunk_offset,
-                "hash": chunk_hash,
-                "ranges": upload_session.received_ranges,
-            }
+    if link_entry is None:
+        raise HTTPException(404, "Link not found")
+
+    validate_upload_link(link_entry) # returns 410 if expired
+
+    existing_chunk = db.query(UploadChunk).filter(
+            UploadChunk.upload_id == upload_session.upload_id,
+            UploadChunk.offset == chunk_offset,
+        ).first()
+    
+
+    if existing_chunk:
+        if existing_chunk.hash.lower() != chunk_hash.strip().lower():
+            raise HTTPException(status_code=409, detail="Chunk offset already uploaded with different content")
+
+        return UploadChunkResponse(
+            received=existing_chunk.size,
+            offset=existing_chunk.offset,
+            hash=existing_chunk.hash,
+            ranges=upload_session.received_ranges,
+        )
 
     if chunk_offset + upload_session.chunk_size > upload_session.expected_size:
-        if chunk_offset + chunk_size != upload_session.expected_size:
+        if chunk_offset + received_size != upload_session.expected_size:
             raise HTTPException(status_code=400, detail="Invalid chunk size")
 
     if upload_session.itar_status:
@@ -291,16 +355,15 @@ async def upload_file_chunk(
     else:
         service_client = usFileStorageProvider
 
-    hasher = hashlib.sha256()
     chunk_buffer = BytesIO()
     received_size = 0
 
     async for chunk in request.stream():
-        hasher.update(chunk)
         chunk_buffer.write(chunk)
         received_size += len(chunk)
-
-    server_hash = hasher.hexdigest()
+    
+    chunk_bytes = chunk_buffer.getvalue()
+    server_hash = hash_bytes(chunk_bytes)
 
     if server_hash.lower() != chunk_hash.strip().lower():
         raise HTTPException(status_code=400, detail=f"Chunk hash mismatch, expected {chunk_hash}, got {server_hash}")
@@ -309,7 +372,7 @@ async def upload_file_chunk(
 
     async def buffered_stream():
         while True:
-            chunk = chunk_buffer.read(1024 * 1024)
+            chunk = chunk_buffer.read(32 * 1024 * 1024) # read 32 MiB chunks 
 
             if not chunk:
                 break
@@ -326,6 +389,18 @@ async def upload_file_chunk(
             chunk_offset,
             received_size,
         )
+        chunk_index = chunk_offset // upload_session.chunk_size
+
+        chunk_record = UploadChunk(
+            upload_id=upload_session.upload_id,
+            offset=chunk_offset,
+            size=received_size,
+            chunk_index=chunk_index,
+            hash=server_hash,
+            algorithm="blake3",
+        )
+
+        db.merge(chunk_record)
 
     except Exception:
         traceback.print_exc()
@@ -379,36 +454,70 @@ async def upload_file_chunk(
         db.rollback()
         traceback.print_exc()
         raise HTTPException(status_code=500, detail="Failed to update upload session")
-    return {
-        "received": received_size,
-        "offset": chunk_offset,
-        "hash": server_hash,
-        "ranges": upload_session.received_ranges,
-    }
+    return UploadChunkResponse(
+        received=received_size,
+        offset=chunk_offset,
+        hash=server_hash,
+        ranges=upload_session.received_ranges,
+    )
 
-@router.get("/uploadfile/{link_uuid}/{upload_token}/status")
-def upload_status(link_uuid: str, upload_token: str, db: Annotated[sqlalchemy.orm.Session, Depends(get_db)]):
+@router.get("/uploadfile/{link_uuid}/{upload_token}/status", response_model=UploadStatusResponse)
+def upload_status(
+    link_uuid: str,
+    upload_token: str,
+    db: Annotated[sqlalchemy.orm.Session, Depends(get_db)]
+):
     if not IsUUID(link_uuid):
         raise HTTPException(status_code=400, detail="Invalid uuid")
 
     upload_session = (
-        db.query(UploadSession).filter(
+        db.query(UploadSession)
+        .filter(
             UploadSession.upload_token == upload_token,
             UploadSession.link_uuid == link_uuid,
-        ).first())
+        )
+        .first()
+    )
 
     if upload_session is None:
         raise HTTPException(status_code=404, detail="Upload session not found")
 
-    return {
-        "receivedRanges": upload_session.received_ranges or [],
-        "receivedSize": upload_session.received_size,
-        "expectedSize": upload_session.expected_size,
-        "chunkSize": upload_session.chunk_size,
-        "completed": upload_session.completed,
-    }
+    chunks = (
+        db.query(UploadChunk).filter(
+            UploadChunk.upload_id == upload_session.upload_id,
+            UploadChunk.uploaded == True
+        ).all()
+    )
 
-@router.post("/uploadfile/{link_uuid}/{upload_token}/complete")
+    ranges = sorted(
+        [[chunk.offset, chunk.offset + chunk.size] for chunk in chunks],
+        key=lambda r: r[0]
+    )
+
+    merged_ranges = []
+    for start, end in ranges:
+        if not merged_ranges:
+            merged_ranges.append([start, end])
+            continue
+
+        last_start, last_end = merged_ranges[-1]
+        if start <= last_end:  
+            merged_ranges[-1][1] = max(last_end, end)
+        else:
+            merged_ranges.append([start, end])
+
+    received_size = sum(end - start for start, end in merged_ranges)
+
+    return UploadStatusResponse(
+        receivedRanges=merged_ranges,
+        receivedSize=received_size,
+        expectedSize=upload_session.expected_size,
+        chunkSize=upload_session.chunk_size,
+        completed=upload_session.completed,
+        chunksReceived=len(chunks),
+    )
+
+@router.post("/uploadfile/{link_uuid}/{upload_token}/complete", response_model=CompleteUploadResponse)
 async def complete_upload(link_uuid: str, upload_token: str, db: Annotated[sqlalchemy.orm.Session, Depends(get_db)]):
     if not IsUUID(link_uuid):
         raise HTTPException(status_code=400, detail="Invalid uuid")
@@ -442,28 +551,19 @@ async def complete_upload(link_uuid: str, upload_token: str, db: Annotated[sqlal
     else:
         service_client = usFileStorageProvider
 
-    hasher = hashlib.sha256()
+    chunks = db.query(UploadChunk).filter(UploadChunk.upload_id == upload_session.upload_id).order_by(UploadChunk.chunk_index).all()
+    
 
-    try:
-        file_stream = service_client.get_file_stream(f"{upload_session.case_id}/{upload_session.blob_name}")
 
-        while True:
-            chunk = file_stream.read(1024 * 1024)# read 1 mib chunks
+    if len(chunks) == 0:
+        raise HTTPException(status_code=400, detail="No chunk hashes found" )
 
-            if not chunk:
-                break
 
-            hasher.update(chunk)
+    chunk_hashes = [chunk.hash for chunk in chunks] 
+    
+    server_hash = compute_merkle_root(chunk_hashes)
 
-        file_stream.close()
-
-    except Exception:
-        traceback.print_exc()
-        raise HTTPException(status_code=500, detail="Failed to verify uploaded file")
-
-    server_hash = hasher.hexdigest()
-
-    if server_hash.lower() != upload_session.expected_sha256.lower():
+    if server_hash.lower() != upload_session.expected_hash.lower():
         raise HTTPException(status_code=400,detail="File hash mismatch")
 
     try:
@@ -490,7 +590,7 @@ async def complete_upload(link_uuid: str, upload_token: str, db: Annotated[sqlal
             for_deletion=False,
             blob_name=upload_session.blob_name,
             content_type=upload_session.content_type,
-            sha256=server_hash,
+            file_hash=server_hash,
             date_uploaded=now,
             itar_status=upload_session.itar_status,
             combined_file_size=upload_session.expected_size,
@@ -519,17 +619,17 @@ async def complete_upload(link_uuid: str, upload_token: str, db: Annotated[sqlal
         traceback.print_exc()
         raise HTTPException(status_code=500, detail="Failed to complete upload")
     
-    return {
-        "filename": upload_session.original_filename,
-        "size": upload_session.expected_size,
-        "sha256": server_hash,
-        "completed": True,
-    }
+    return CompleteUploadResponse(
+        filename=upload_session.original_filename,
+        size=upload_session.expected_size,
+        file_hash=server_hash,
+        completed=True,
+    )
 
 def get_uploads_for_link(link_uuid: str, db: Annotated[sqlalchemy.orm.Session, Depends(get_db)]): # Get all uploads for a given link uuid from the db
     return db.query(UploadRecord).filter(UploadRecord.link_uuid == link_uuid).all()
 
-@router.post("/uploads/{upload_id}/mark_for_deletion")
+@router.post("/uploads/{upload_id}/mark_for_deletion", response_model=MarkForDeletionResponse)
 def mark_for_deletion(upload_id: str, current_user: Annotated[User, Depends(requireRoles("Admin", strict=True))], db: Annotated[sqlalchemy.orm.Session, Depends(get_db)]):
     if not IsUUID(upload_id):
         badUUID = HTTPException(400,detail={"message": "Invalid uuid"})
@@ -539,9 +639,9 @@ def mark_for_deletion(upload_id: str, current_user: Annotated[User, Depends(requ
         raise HTTPException(status_code=404, detail="Upload not found")
     upload_record.for_deletion = True
     db.commit()
-    return {"message": f"Upload {upload_id} marked for deletion"}
+    return MarkForDeletionResponse(message=f"Upload {upload_id} marked for deletion")
 
-@router.get("/links/{linkUUID}/files") # Get all files for a given link uuid from the db. Only returns files the user has access to
+@router.get("/links/{linkUUID}/files", response_model=list[UploadedFileInfo]) # Get all files for a given link uuid from the db. Only returns files the user has access to
 def listFiles(linkUUID: str, current_user: Annotated[User, Depends(requireRoles("User", "Admin"))], db: Annotated[sqlalchemy.orm.Session, Depends(get_db)]):
     if not IsUUID(linkUUID):
         badUUID = HTTPException(400,detail={"message": "Invalid uuid"})
@@ -561,18 +661,18 @@ def listFiles(linkUUID: str, current_user: Annotated[User, Depends(requireRoles(
         )
 
     return [ # Return file information to allow for them to later query for the download link without exposing more sensitive information than needed
-        {
-            "upload_id": upload.upload_id,
-            "filename": upload.original_filename,
-            "size": upload.combined_file_size,
-            "blob_name": upload.blob_name,
-            "content_type": upload.content_type,
-            "date_uploaded": upload.date_uploaded.isoformat() if upload.date_uploaded else None,
-        }
+        UploadedFileInfo(
+            upload_id=upload.upload_id,
+            filename=upload.original_filename,
+            size=upload.combined_file_size,
+            blob_name=upload.blob_name,
+            content_type=upload.content_type,
+            date_uploaded=upload.date_uploaded if upload.date_uploaded else None,
+        )
         for upload in authorized_uploads]
 
-@router.post("/uploads/{upload_id}/extend_expiration")
-def extendFileExpiration(upload_id: str, additional_days: int, current_user: Annotated[User, Depends(requireRoles("Admin", strict=True))], db: Annotated[sqlalchemy.orm.Session, Depends(get_db)]):  # Only admin can extend expiration
+@router.post("/uploads/{upload_id}/extend_expiration", response_model=ExtendExpirationResponse)
+def extendFileExpiration(upload_id: str, additional_days: Annotated[int, Query(gt=0, le=365)], current_user: Annotated[User, Depends(requireRoles("Admin", strict=True))], db: Annotated[sqlalchemy.orm.Session, Depends(get_db)]):  # Only admin can extend expiration
     if type(additional_days) is not int:
         raise HTTPException(status_code=400, detail="Additional days must be an integer")
     if not IsUUID(upload_id):
@@ -591,5 +691,9 @@ def extendFileExpiration(upload_id: str, additional_days: int, current_user: Ann
 
     upload_record.max_days_in_storage += additional_days
     db.commit()
-    return {"message": f"File expiration extended by {additional_days} days", "newExpiration": upload_record.max_days_in_storage, "newExpirationDate": (upload_record.date_uploaded + datetime.timedelta(days=upload_record.max_days_in_storage)).isoformat() if upload_record.date_uploaded else None}
+    return ExtendExpirationResponse(
+        message=f"File expiration extended by {additional_days} days",
+        newExpiration=upload_record.max_days_in_storage,
+        newExpirationDate=(upload_record.date_uploaded + datetime.timedelta(days=upload_record.max_days_in_storage)).isoformat() if upload_record.date_uploaded else None
+    )
 

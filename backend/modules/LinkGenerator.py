@@ -1,7 +1,7 @@
 from fastapi import HTTPException, status
 from pydantic import BaseModel, Field
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from sqlalchemy import create_engine, select, update
 from typing import Dict
 from modules.HubSpotIntegration import get_caseITARstatus, caseIDExists
@@ -67,8 +67,8 @@ def store_link(link_request: LinkRequest, uuid_str: str, current_user: User):
             case_id=link_request.case_id,
             itar=get_caseITARstatus(link_request.case_id),
             creator=current_user.username,
-            timestamp=datetime.now(),
-            expiration_date=datetime.now() + timedelta(days=2), # Always expires 48 hours from creation
+            timestamp=datetime.now(timezone.utc),
+            expiration_date=datetime.now(timezone.utc) + timedelta(hours=48), # Always expires 48 hours from creation
             users_with_access=[current_user.username], # TODO: Change to inclide the admin list
             expired=False,
         )
@@ -263,7 +263,7 @@ def get_all_files_for_link(uuid_str: str, current_user: User):
         records = session.scalars(stmt2).all()
         result = []
         for r in records:
-            if (r.timestamp - datetime.now()).days >= r.max_days_in_storage:
+            if (r.timestamp - datetime.datetime.now(timezone.utc)).days >= r.max_days_in_storage:
                 raise HTTPException(
                     status_code=status.HTTP_410_GONE,
                     detail="Associated data is expired"
