@@ -3,7 +3,8 @@ from io import BufferedReader, BytesIO
 from pathlib import Path
 from typing import AsyncIterator, BinaryIO
 from azure.core.exceptions import ResourceExistsError, ResourceNotFoundError
-from azure.storage.fileshare import ShareDirectoryClient,ShareFileClient
+from azure.storage.fileshare.aio import ShareDirectoryClient,ShareFileClient
+from azure.core.exceptions import ResourceExistsError, ResourceNotFoundError
 
 class StorageProvider(ABC):
     def __init__(self, base_path: str):
@@ -104,9 +105,8 @@ class LocalStorageProvider(StorageProvider):
     def get_file_url(self, file_path: str) -> str:
         return str(self._resolve_path(file_path))
     
-    def prepare_file(self, file_path: str, size: int) -> None:
+    async def prepare_file(self, file_path: str, size: int) -> None: # async because azure storage provider is async, but local storage is sync
         path = self._resolve_path(file_path)
-
 
         path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -221,7 +221,7 @@ class AzureFileStorageProvider(StorageProvider):
         except ResourceNotFoundError:
             raise FileNotFoundError(f"File '{file_path}' does not exist.") from None
         
-    def prepare_file(self, file_path: str, size: int) -> None:
+    async def prepare_file(self, file_path: str, size: int) -> None:
         directory = str(Path(self.base_path) / Path(file_path).parent).replace("\\", "/")
 
         self._ensure_directory_exists(directory)
@@ -229,29 +229,33 @@ class AzureFileStorageProvider(StorageProvider):
         client = self._get_client(file_path)
 
         try:
-            client.create_file(size)
+            await client.create_file(size)
         except ResourceExistsError:
             raise FileExistsError(f"File '{file_path}' already exists.") from None
         
     async def write_stream_range(self, stream: AsyncIterator[bytes], destination_path: str, offset: int, size: int) -> None:
         client = self._get_client(destination_path)
 
-        bytes_written = 0
+        buffer = BytesIO()
+        bytes_received = 0
 
         async for chunk in stream:
-            if bytes_written + len(chunk) > size:
+            if bytes_received + len(chunk) > size:
                 raise ValueError("Stream exceeds the specified size.")
 
-            client.upload_range(
-                data=chunk,
-                offset=offset + bytes_written,
-                length=len(chunk),
-            )
+            buffer.write(chunk)
+            bytes_received += len(chunk)
 
-            bytes_written += len(chunk)
-
-        if bytes_written != size:
+        if bytes_received != size:
             raise ValueError("Stream size does not match the specified size.")
+
+        buffer.seek(0)
+
+        await client.upload_range(
+            data=buffer,
+            offset=offset,
+            length=size,
+        )
     
     async def upload_stream(self, stream: AsyncIterator[bytes], destination_path: str) -> None:
         directory = str(Path(self.base_path) / Path(destination_path).parent).replace("\\", "/")
@@ -267,10 +271,10 @@ class AzureFileStorageProvider(StorageProvider):
             chunks.append((file_size, chunk))
             file_size += len(chunk)
 
-        client.create_file(file_size)
+        await client.create_file(file_size)
 
-        for offset, chunk in chunks:
-            client.upload_range(
+        async for offset, chunk in chunks:
+            await client.upload_range(
                 data=chunk,
                 offset=offset,
                 length=len(chunk),
