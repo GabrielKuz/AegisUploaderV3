@@ -24,7 +24,7 @@ RUN npm run build
 # runtime
 FROM nginx:1.31-alpine
 
-COPY nginx/nginx.conf.template /etc/nginx/nginx.conf.template
+COPY nginx/nginx.azure.conf.template /etc/nginx/nginx.conf.template
 
 COPY --from=builder \
     --chown=nginx:nginx \
@@ -32,7 +32,6 @@ COPY --from=builder \
     /usr/share/nginx/html
 
 COPY nginx/docker-entrypoint.sh /docker-entrypoint.sh
-COPY nginx/nginx.azure.conf.template /etc/nginx/templates/nginx.conf.template
 
 RUN sed -i 's/\r$//' /docker-entrypoint.sh \
     && chmod +x /docker-entrypoint.sh \
