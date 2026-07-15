@@ -20,7 +20,7 @@ from zoneinfo import ZoneInfo
 from modules.DataCleaner import expireAndDeleteOldData
 from sqlalchemy import text
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
-from modules.telemetry import setup_telemetry, telemetry_middleware
+from modules.telemetry import setup_telemetry, TelemetryMiddleware
 from contextlib import asynccontextmanager
 import logging
 
@@ -49,7 +49,7 @@ app.include_router(uploader_router)
 app.include_router(deletionRequest_router)
 FastAPIInstrumentor.instrument_app(app)
 setup_telemetry(app)  # init opentelemetry
-app.add_middleware(telemetry_middleware)
+app.add_middleware(TelemetryMiddleware)
 @app.post("/links/create/")
 def create_link(link_request: LinkRequest, current_user: Annotated[User, Depends(requireRoles("User", "Admin"))]):  # TODO: Change to getCurrentActiveUser after testing
     #authentication: bool = userAuthenticated(getCurrentUser())
