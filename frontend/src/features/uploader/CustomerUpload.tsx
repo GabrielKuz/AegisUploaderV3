@@ -4,8 +4,10 @@ import {
     type ChangeEvent,
 } from "react";
 import { useParams } from "react-router-dom";
+import { sha256 } from "@noble/hashes/sha2.js";
+import { bytesToHex } from "@noble/hashes/utils.js";
 import "./CustomerUpload.css";
-import { useCustomerUpload } from "../../layouts/CustomerLayoutContext";
+
 
 type SelectedFile = {
     file: File;
@@ -35,49 +37,90 @@ async function runWithConcurrency<T>(
         }
     };
 
-    // start initial batch
     const starters = Array.from({ length: limit }, runNext);
 
     await Promise.all(starters);
     await Promise.all(active);
 }
 
+async function sha256File(file: File): Promise<string> {
+    const hasher = sha256.create();
+    const reader = file.stream().getReader();
+
+    try {
+        while (true) {
+            const { value, done } = await reader.read();
+
+            if (done) {
+                break;
+            }
+
+            hasher.update(value);
+        }
+
+        return bytesToHex(hasher.digest());
+    } finally {
+        reader.releaseLock();
+    }
+}
+async function sha256Blob(blob: Blob): Promise<string> {
+    const hasher = sha256.create();
+    const reader = blob.stream().getReader();
+
+    try {
+        while (true) {
+            const { value, done } = await reader.read();
+
+            if (done) {
+                break;
+            }
+
+            hasher.update(value);
+        }
+
+        return bytesToHex(hasher.digest());
+    } finally {
+        reader.releaseLock();
+    }
+}
+
+async function uploadChunk(
+    uuid: string,
+    uploadToken: string,
+    chunk: Blob,
+    offset: number,
+    chunkSize: number,
+) {
+    const hash = await sha256Blob(chunk);
+
+    const response = await fetch(
+        `/api/uploadfile/${uuid}/${uploadToken}`,
+        {
+            method: "POST",
+            headers: {
+                "X-Chunk-Offset": offset.toString(),
+                "X-Chunk-Size": chunkSize.toString(),
+                "X-Chunk-Hash": hash,
+                "Content-Type": "application/octet-stream",
+            },
+            body: chunk,
+        },
+    );
+
+    if (!response.ok) {
+        throw new Error("Chunk upload failed");
+    }
+}
+
 export function CustomerUpload() {
     const { uuid } = useParams();
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const {
-        setUploadStats
-    } = useCustomerUpload();
+
     const [selectedFiles, setSelectedFiles] = useState<SelectedFile[]>([]);
     const [uploading, setUploading] = useState(false);
-    type UploadState = {
-    status: "uploading" | "retrying" | "done" | "error";
-    progress: number;
-    retry?: number;
-    };
-
-    const [uploadStatus, setUploadStatus] = useState<Record<string, UploadState>>({});
+    const [uploadStatus, setUploadStatus] = useState<Record<string, string>>({});
     const [dragActive, setDragActive] = useState(false);
 
-    const uploadedFiles = selectedFiles.filter(
-        (item) => uploadStatus[item.file.name]?.status === "done"
-    );
-
-    //const uploadedCount = uploadedFiles.length;
-
-    const uploadedBytes = uploadedFiles.reduce(
-        (total, item) => total + item.file.size,
-        0
-    );
-
-    /*const formatBytes = (bytes: number) => {
-        if (bytes === 0) return "0 B";
-
-        const units = ["B", "KB", "MB", "GB", "TB"];
-        const i = Math.floor(Math.log(bytes) / Math.log(1024));
-
-        return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${units[i]}`;
-    };*/
     if (!uuid) {
         return <p>Invalid upload link.</p>;
     }
@@ -122,6 +165,7 @@ export function CustomerUpload() {
             currentFiles.filter((_, index) => index !== indexToRemove),
         );
     };
+
     const handleDragOver = (
         event: React.DragEvent<HTMLDivElement>
     ) => {
@@ -146,168 +190,109 @@ export function CustomerUpload() {
             addFiles(event.dataTransfer.files);
         }
     };
-    const uploadSingleFile = (
-        file: File,
-        sha256: string,
-        uuid: string,
-        onProgress: (progress: number) => void
-    ) => {
-        return new Promise<void>((resolve, reject) => {
-            const xhr = new XMLHttpRequest();
-
-            xhr.open(
-                "POST",
-                `/api/uploadfile/${uuid}`
-            );
-
-            xhr.setRequestHeader(
-                "X-File-Hash",
-                sha256
-            );
-
-            xhr.setRequestHeader(
-                "X-User-Location",
-                "US"
-            );
-
-            xhr.upload.onprogress = (event) => {
-                if (event.lengthComputable) {
-                    const percent = Math.round(
-                        (event.loaded / event.total) * 100
-                    );
-
-                    onProgress(percent);
-                }
-            };
-
-            xhr.onload = () => {
-                if (xhr.status >= 200 && xhr.status < 300) {
-                    resolve();
-                } else {
-                    reject(xhr.status);
-                }
-            };
-
-            xhr.onerror = () => reject("network");
-            xhr.onabort = () => reject("network");
-
-            const formData = new FormData();
-            formData.append("file", file);
-
-            xhr.send(formData);
-        });
-    };
-
-    const uploadWithRetry = async (
-        file: File,
-        sha256: string,
-        uuid: string,
-        onProgress: (progress: number) => void,
-        onRetry?: (attempt: number) => void,
-        maxRetries = 3
-    ) => {
-        let attempt = 0;
-
-        while (true) {
-            try {
-                await uploadSingleFile(file, sha256, uuid, onProgress);
-                return;
-            } catch (status) {
-
-                // Don't retry permanent client errors.
-                if (
-                    typeof status === "number" &&
-                    status < 500 &&
-                    status !== 429
-                ) {
-                    throw status;
-                }
-
-                attempt++;
-
-                if (attempt > maxRetries) {
-                    throw status;
-                }
-
-                onRetry?.(attempt);
-
-                await new Promise((resolve) =>
-                    setTimeout(resolve, 1000 * Math.pow(2, attempt - 1))
-                );
-            }
-        }
-    };
-
     const uploadFiles = async () => {
         setUploading(true);
 
         try {
             await runWithConcurrency(selectedFiles, 3, async (item) => {
-                setUploadStatus((s) => ({
-                    ...s,
-                    [item.file.name]: {
-                        status: "uploading",
-                        progress: 0,
-                    },
-                }));
-
                 try {
-                    const fileBuffer = await item.file.arrayBuffer();
-
-                    const hashBuffer = await crypto.subtle.digest(
-                        "SHA-256",
-                        fileBuffer
-                    );
-
-                    const sha256 = Array.from(new Uint8Array(hashBuffer))
-                        .map((b) => b.toString(16).padStart(2, "0"))
-                        .join("");
-
-                    
-
-                    await uploadWithRetry(
-                        item.file,
-                        sha256,
-                        uuid,
-                        (progress) => {
-                            setUploadStatus((s) => ({
-                                ...s,
-                                [item.file.name]: {
-                                    status: "uploading",
-                                    progress,
-                                },
-                            }));
-                        },
-                        (attempt) => {
-                            setUploadStatus((s) => ({
-                                ...s,
-                                [item.file.name]: {
-                                    status: "retrying",
-                                    progress: 0,
-                                    retry: attempt,
-                                },
-                            }));
-                        }
-                    );
-                   setUploadStatus((s) => ({
+                    setUploadStatus((s) => ({
                         ...s,
-                        [item.file.name]: {
-                            status: "done",
-                            progress: 100,
-                        },
+                        [item.file.name]: "starting",
                     }));
 
-                    setUploadStats(
-                        uploadedFiles.length + 1,
-                        uploadedBytes + item.file.size
+                    const fileHash = await sha256File(item.file);
+
+                    const startResponse = await fetch(
+                        `/api/uploadfile/${uuid}/start`,
+                        {
+                            method: "POST",
+                            headers: {
+                                "X-File-Name": item.file.name,
+                                "X-File-Hash": fileHash,
+                                "X-File-Size": item.file.size.toString(),
+                                "X-User-Location": "US",
+                            },
+                        },
                     );
+
+                    if (!startResponse.ok) {
+                        throw new Error("Failed to start upload");
+                    }
+
+                    const {
+                        uploadToken,
+                        chunkSize,
+                    }: {
+                        uploadToken: string;
+                        chunkSize: number;
+                    } = await startResponse.json();
+
+
+                    setUploadStatus((s) => ({
+                        ...s,
+                        [item.file.name]: "uploading",
+                    }));
+
+                    let offset = 0;
+
+                    while (offset < item.file.size) {
+                        const end = Math.min(
+                            offset + chunkSize,
+                            item.file.size,
+                        );
+
+                        const chunk = item.file.slice(offset, end);
+
+                        let uploaded = false;
+                        let attempts = 0;
+
+                        while (!uploaded && attempts < 3) {
+                            try {
+                                await uploadChunk(
+                                    uuid,
+                                    uploadToken,
+                                    chunk,
+                                    offset,
+                                    chunk.size,
+                                );
+
+                                uploaded = true;
+                            } catch {
+                                attempts++;
+
+                                if (attempts >= 3) {
+                                    throw new Error(
+                                        "Chunk failed after retries",
+                                    );
+                                }
+                            }
+                        }
+
+                        offset = end;
+                    }
+
+
+                    const completeResponse = await fetch(
+                        `/api/uploadfile/${uuid}/${uploadToken}/complete`,
+                        {
+                            method: "POST",
+                        },
+                    );
+
+                    if (!completeResponse.ok) {
+                        throw new Error("Failed to complete upload");
+                    }
+
+                    setUploadStatus((s) => ({
+                        ...s,
+                        [item.file.name]: "done",
+                    }));
+
                 } catch {
                     setUploadStatus((s) => ({
                         ...s,
-                        [item.file.name]: {
-                            status: "error",
-                            progress: 0,
-                        },
+                        [item.file.name]: "error",
                     }));
                 }
             });
@@ -315,17 +300,24 @@ export function CustomerUpload() {
             setUploading(false);
         }
     };
-    return (
-        <section className="customer-upload-page">
-            <div className="upload-panel">
 
-                
-                
-        <div className="upload-panel">
+    return (
+        <section
+            className="customer-upload-page"
+            aria-labelledby="customer-upload-heading"
+        >
+            <div className="upload-panel">
+                <p className="upload-eyebrow">
+                    Secure upload
+                </p>
 
                 <h1 id="customer-upload-heading">
                     Upload your files
                 </h1>
+
+                <p className="upload-link-id">
+                    Upload link ID: {uuid}
+                </p>
 
                 <p className="upload-note">
                     This link is temporary and will stop working after the
@@ -368,31 +360,13 @@ export function CustomerUpload() {
                                         <span>{item.file.name}</span>
 
                                         <small>
-                                            {uploadStatus[item.file.name]?.status === "uploading" &&
-                                                `Uploading... ${uploadStatus[item.file.name].progress}%`
-                                            }
-
-                                            {uploadStatus[item.file.name]?.status === "done" &&
-                                                "Uploaded"
-                                            }
-
-                                            {uploadStatus[item.file.name]?.status === "error" &&
-                                                "Failed"
-                                            }
-                                            {uploadStatus[item.file.name]?.status === "retrying" &&
-                                                `Retrying... (${uploadStatus[item.file.name].retry}/3)`
-                                            }
+                                            {uploadStatus[item.file.name] === "uploading" &&
+                                                "Uploading..."}
+                                            {uploadStatus[item.file.name] === "done" &&
+                                                "Uploaded"}
+                                            {uploadStatus[item.file.name] === "error" &&
+                                                "Failed"}
                                         </small>
-
-                                        {(
-                                            uploadStatus[item.file.name]?.status === "uploading" ||
-                                            uploadStatus[item.file.name]?.status === "retrying"
-                                        ) && (
-                                                <progress
-                                                    value={uploadStatus[item.file.name].progress}
-                                                    max="100"
-                                                />
-                                            )}
                                     </div>
 
                                     <div className="selected-file-actions">
@@ -429,7 +403,6 @@ export function CustomerUpload() {
                     )}
                 </div>
             </div>
-        </div>
-    </section>
+        </section>
     );
 }

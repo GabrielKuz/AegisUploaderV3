@@ -33,6 +33,8 @@ def test_generate_links_returns_link_and_uuid(monkeypatch):
     monkeypatch.setattr("modules.LinkGenerator.get_caseITARstatus", lambda case_id: False)  
 
     result = generate_links(link_request, current_user)
+
+    print(str(result) + "\n"*5)
     assert result["link"].startswith(url)
     assert result["uuid"]
     assert result["link"].endswith(result["uuid"])
