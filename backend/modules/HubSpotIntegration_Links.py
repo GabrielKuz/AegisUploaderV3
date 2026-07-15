@@ -27,7 +27,7 @@ def get_link_case_id(link: str) -> Optional[str]:
             return None
 
     except ApiException as e:
-        traceback.print_exc()
+        print(f"Exception when calling HubSpot API: {e}")
         return None
     
 def get_link_case_status(link: str) -> Optional[str]:
