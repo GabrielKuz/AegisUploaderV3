@@ -145,7 +145,7 @@ def test_get_caseITARstatus_returns_itar_value(monkeypatch):
     ticket = DummyTicket(properties={"itar": "true"})
     monkeypatch.setattr(hs, "get_ticket", lambda value: ticket)
 
-    assert hs.get_caseITARstatus("AIS-0000") == "true"
+    assert hs.get_caseITARstatus("AIS-0000") == True
 
 
 def test_get_caseITARstatus_returns_none_when_property_missing(monkeypatch):

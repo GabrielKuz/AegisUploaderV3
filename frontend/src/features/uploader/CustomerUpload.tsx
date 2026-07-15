@@ -4,9 +4,10 @@ import {
     type ChangeEvent,
 } from "react";
 import { useParams } from "react-router-dom";
-
-import "../../styles/SupportTheme.css";
+import { sha256 } from "@noble/hashes/sha2.js";
+import { bytesToHex } from "@noble/hashes/utils.js";
 import "./CustomerUpload.css";
+
 
 type SelectedFile = {
     file: File;
@@ -36,11 +37,79 @@ async function runWithConcurrency<T>(
         }
     };
 
-    // start initial batch
     const starters = Array.from({ length: limit }, runNext);
 
     await Promise.all(starters);
     await Promise.all(active);
+}
+
+async function sha256File(file: File): Promise<string> {
+    const hasher = sha256.create();
+    const reader = file.stream().getReader();
+
+    try {
+        while (true) {
+            const { value, done } = await reader.read();
+
+            if (done) {
+                break;
+            }
+
+            hasher.update(value);
+        }
+
+        return bytesToHex(hasher.digest());
+    } finally {
+        reader.releaseLock();
+    }
+}
+async function sha256Blob(blob: Blob): Promise<string> {
+    const hasher = sha256.create();
+    const reader = blob.stream().getReader();
+
+    try {
+        while (true) {
+            const { value, done } = await reader.read();
+
+            if (done) {
+                break;
+            }
+
+            hasher.update(value);
+        }
+
+        return bytesToHex(hasher.digest());
+    } finally {
+        reader.releaseLock();
+    }
+}
+
+async function uploadChunk(
+    uuid: string,
+    uploadToken: string,
+    chunk: Blob,
+    offset: number,
+    chunkSize: number,
+) {
+    const hash = await sha256Blob(chunk);
+
+    const response = await fetch(
+        `/api/uploadfile/${uuid}/${uploadToken}`,
+        {
+            method: "POST",
+            headers: {
+                "X-Chunk-Offset": offset.toString(),
+                "X-Chunk-Size": chunkSize.toString(),
+                "X-Chunk-Hash": hash,
+                "Content-Type": "application/octet-stream",
+            },
+            body: chunk,
+        },
+    );
+
+    if (!response.ok) {
+        throw new Error("Chunk upload failed");
+    }
 }
 
 export function CustomerUpload() {
@@ -50,6 +119,7 @@ export function CustomerUpload() {
     const [selectedFiles, setSelectedFiles] = useState<SelectedFile[]>([]);
     const [uploading, setUploading] = useState(false);
     const [uploadStatus, setUploadStatus] = useState<Record<string, string>>({});
+    const [dragActive, setDragActive] = useState(false);
 
     if (!uuid) {
         return <p>Invalid upload link.</p>;
@@ -58,16 +128,7 @@ export function CustomerUpload() {
     const handleBrowseClick = () => {
         fileInputRef.current?.click();
     };
-
-    const handleFileChange = (
-        event: ChangeEvent<HTMLInputElement>,
-    ) => {
-        const files = event.target.files;
-
-        if (!files) {
-            return;
-        }
-
+    const addFiles = (files: FileList | File[]) => {
         const newFiles = Array.from(files).map((file) => ({
             file,
             preview: URL.createObjectURL(file),
@@ -75,15 +136,26 @@ export function CustomerUpload() {
 
         setSelectedFiles((currentFiles) => {
             const existingNames = new Set(
-                currentFiles.map((item) => item.file.name),
+                currentFiles.map((item) => item.file.name)
             );
 
             const uniqueNewFiles = newFiles.filter(
-                (item) => !existingNames.has(item.file.name),
+                (item) => !existingNames.has(item.file.name)
             );
 
             return [...currentFiles, ...uniqueNewFiles];
         });
+    };
+    const handleFileChange = (
+        event: ChangeEvent<HTMLInputElement>,
+    ) => {
+
+
+        if (!event.target.files) {
+            return;
+        }
+
+        addFiles(event.target.files);
 
         event.target.value = "";
     };
@@ -93,60 +165,143 @@ export function CustomerUpload() {
             currentFiles.filter((_, index) => index !== indexToRemove),
         );
     };
-const uploadFiles = async () => {
-    setUploading(true);
 
-    try {
-        await runWithConcurrency(selectedFiles, 3, async (item) => {
-            setUploadStatus((s) => ({
-                ...s,
-                [item.file.name]: "uploading",
-            }));
+    const handleDragOver = (
+        event: React.DragEvent<HTMLDivElement>
+    ) => {
+        event.preventDefault();
+        setDragActive(true);
+    };
 
-            try {
-                const fileBuffer = await item.file.arrayBuffer();
+    const handleDragLeave = (
+        event: React.DragEvent<HTMLDivElement>
+    ) => {
+        event.preventDefault();
+        setDragActive(false);
+    };
 
-                const hashBuffer = await crypto.subtle.digest(
-                    "SHA-256",
-                    fileBuffer
-                );
+    const handleDrop = (
+        event: React.DragEvent<HTMLDivElement>
+    ) => {
+        event.preventDefault();
+        setDragActive(false);
 
-                const sha256 = Array.from(new Uint8Array(hashBuffer))
-                    .map((b) => b.toString(16).padStart(2, "0"))
-                    .join("");
+        if (event.dataTransfer.files.length > 0) {
+            addFiles(event.dataTransfer.files);
+        }
+    };
+    const uploadFiles = async () => {
+        setUploading(true);
 
-                const formData = new FormData();
-                formData.append("file", item.file);
+        try {
+            await runWithConcurrency(selectedFiles, 3, async (item) => {
+                try {
+                    setUploadStatus((s) => ({
+                        ...s,
+                        [item.file.name]: "starting",
+                    }));
 
-                const response = await fetch(`/api/uploadfile/${uuid}`, {
-                    method: "POST",
-                    headers: {
-                        Region: "US",
-                        "X-File-Hash": sha256,
-                    },
-                    body: formData,
-                });
+                    const fileHash = await sha256File(item.file);
 
-                if (!response.ok) {
-                    throw new Error("upload failed");
+                    const startResponse = await fetch(
+                        `/api/uploadfile/${uuid}/start`,
+                        {
+                            method: "POST",
+                            headers: {
+                                "X-File-Name": item.file.name,
+                                "X-File-Hash": fileHash,
+                                "X-File-Size": item.file.size.toString(),
+                                "X-User-Location": "US",
+                            },
+                        },
+                    );
+
+                    if (!startResponse.ok) {
+                        throw new Error("Failed to start upload");
+                    }
+
+                    const {
+                        uploadToken,
+                        chunkSize,
+                    }: {
+                        uploadToken: string;
+                        chunkSize: number;
+                    } = await startResponse.json();
+
+
+                    setUploadStatus((s) => ({
+                        ...s,
+                        [item.file.name]: "uploading",
+                    }));
+
+                    let offset = 0;
+
+                    while (offset < item.file.size) {
+                        const end = Math.min(
+                            offset + chunkSize,
+                            item.file.size,
+                        );
+
+                        const chunk = item.file.slice(offset, end);
+
+                        let uploaded = false;
+                        let attempts = 0;
+
+                        while (!uploaded && attempts < 3) {
+                            try {
+                                await uploadChunk(
+                                    uuid,
+                                    uploadToken,
+                                    chunk,
+                                    offset,
+                                    chunk.size,
+                                );
+
+                                uploaded = true;
+                            } catch {
+                                attempts++;
+
+                                if (attempts >= 3) {
+                                    throw new Error(
+                                        "Chunk failed after retries",
+                                    );
+                                }
+                            }
+                        }
+
+                        offset = end;
+                    }
+
+
+                    const completeResponse = await fetch(
+                        `/api/uploadfile/${uuid}/${uploadToken}/complete`,
+                        {
+                            method: "POST",
+                        },
+                    );
+
+                    if (!completeResponse.ok) {
+                        throw new Error("Failed to complete upload");
+                    }
+
+                    setUploadStatus((s) => ({
+                        ...s,
+                        [item.file.name]: "done",
+                    }));
+
+                } catch {
+                    setUploadStatus((s) => ({
+                        ...s,
+                        [item.file.name]: "error",
+                    }));
                 }
+            });
+        } finally {
+            setUploading(false);
+        }
+    };
 
-                setUploadStatus((s) => ({
-                    ...s,
-                    [item.file.name]: "done",
-                }));
-            } catch {
-                setUploadStatus((s) => ({
-                    ...s,
-                    [item.file.name]: "error",
-                }));
-            }
-        });
-    } finally {
-        setUploading(false);
-    }
-};
-        return (
+    return (
         <section
             className="customer-upload-page"
             aria-labelledby="customer-upload-heading"
@@ -170,7 +325,12 @@ const uploadFiles = async () => {
                     the link expires.
                 </p>
 
-                <div className="upload-box">
+                <div
+                    className={`upload-box ${dragActive ? "drag-active" : ""}`}
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
+                >
                     <p>Choose files or drag and drop here.</p>
 
                     <button

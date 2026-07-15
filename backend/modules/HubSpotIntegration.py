@@ -6,12 +6,14 @@ from hubspot.crm.tickets import ApiException, PublicObjectSearchRequest
 from hubspot.crm.tickets.models import Filter, FilterGroup
 
 api_client = HubSpot(access_token=os.getenv("HUBSPOT_ACCESS_TOKEN"))
-
-
-
+    
 #=======================================================================================================
 # Main Functions
 #=======================================================================================================
+
+def caseIDExists(case_id: str) -> bool:
+    ticket = advancedSearchThroughHubSpot(case_id, "ais_ticket_number")
+    return ticket is not None
 
 def get_ticket(ais_id: str):
     return advancedSearchThroughHubSpot(ais_id, "ais_ticket_number")
@@ -60,7 +62,14 @@ def get_caseCloseDate(ais_id: str) -> Optional[str]:
     return quikSrch(ais_id,"closedate")
 
 def get_caseITARstatus(ais_id: str) -> Optional[bool]:
-    return quikSrch(ais_id,"itar")
+    value = quikSrch(ais_id,"itar")
+    match value:
+        case "true":
+            return True
+        case "false":
+            return False
+        case _:
+            return None
 
 def get_caseCompany(ais_id: str) -> Optional[str]:
     return quikSrch(ais_id,"company_name")

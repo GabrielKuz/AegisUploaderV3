@@ -1,0 +1,146 @@
+networks:
+  default:
+    ipam:
+      config:
+        - subnet: 172.29.0.0/16 # non-overlapping subnet for docker network to avoid conflicts with host network
+services:
+  backend:
+    build:
+      context: ./backend
+    expose: # not published to host
+      - "8000"
+    restart: unless-stopped
+    environment: # Move from env variables to azure key vault later
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      SECRET_KEY: ${SECRET_KEY}
+      TENANT_ID: ${TENANT_ID}
+      CLIENT_ID: ${CLIENT_ID}
+      BACKEND_URL: ${BACKEND_URL}
+      TESTING: ${TESTING}
+      AZURE_STORAGE_CONNECTION_STRING: DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://azurite:10000/devstoreaccount1;QueueEndpoint=http://azurite:10001/devstoreaccount1;
+      AZURE_CONTAINER_NAME: ${AZURE_CONTAINER_NAME}
+      HUBSPOT_ACCESS_TOKEN: ${HUBSPOT_ACCESS_TOKEN}
+
+      AZURE_STORAGE_CONTAINER: mycontainer
+
+      AZURE_STORAGE_CONNECTION_STRING_US: DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://azurite-us:10000/devstoreaccount1;QueueEndpoint=http://azurite-us:10001/devstoreaccount1;
+
+      AZURE_STORAGE_CONNECTION_STRING_EU: DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://azurite-eu:10000/devstoreaccount1;QueueEndpoint=http://azurite-eu:10001/devstoreaccount1;
+
+      AZURE_STORAGE_CONNECTION_STRING_ITAR: DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://azurite-itar:10000/devstoreaccount1;QueueEndpoint=http://azurite-itar:10001/devstoreaccount1;
+
+    command: ["sh", "-c", "alembic upgrade head && uvicorn main:app --host 0.0.0.0 --port 8000 --proxy-headers --forwarded-allow-ips=172.29.0.0/16"]
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    
+    cap_drop:
+      - ALL
+
+    security_opt:
+      - no-new-privileges:true
+
+    depends_on:
+      azurite-us:
+        condition: service_healthy
+      azurite-eu:
+        condition: service_healthy
+      azurite-itar:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+
+  azurite-us: # remove for prod
+    image: mcr.microsoft.com/azure-storage/azurite
+    container_name: azurite-us
+    ports: 
+      - "10000:10000"
+      - "10001:10001"
+      - "10002:10002"
+    volumes:
+      - ./azurite_data/us:/data
+    command: >
+      azurite
+      --blobHost 0.0.0.0
+      --queueHost 0.0.0.0
+      --tableHost 0.0.0.0
+      --location /data
+      --skipApiVersionCheck
+    healthcheck:
+      test: ["CMD", "nc", "-z", "127.0.0.1", "10000"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  azurite-eu: # remove for prod
+    image: mcr.microsoft.com/azure-storage/azurite
+    container_name: azurite-eu
+    ports:
+      - "10010:10000"
+      - "10011:10001"
+      - "10012:10002"
+    volumes:
+      - ./azurite_data/eu:/data
+    command: >
+      azurite
+      --blobHost 0.0.0.0
+      --queueHost 0.0.0.0
+      --tableHost 0.0.0.0
+      --location /data
+      --skipApiVersionCheck
+    healthcheck:
+      test: ["CMD", "nc", "-z", "127.0.0.1", "10000"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  azurite-itar: # remove for prod
+    image: mcr.microsoft.com/azure-storage/azurite
+    container_name: azurite-itar
+    ports:
+      - "10020:10000"
+      - "10021:10001"
+      - "10022:10002"
+    volumes:
+      - ./azurite_data/itar:/data
+    command: >
+      azurite
+      --blobHost 0.0.0.0
+      --queueHost 0.0.0.0
+      --tableHost 0.0.0.0
+      --location /data
+      --skipApiVersionCheck
+    healthcheck:
+      test: ["CMD", "nc", "-z", "127.0.0.1", "10000"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB} -h localhost"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    #ports:
+      #- "5432:5432"
+    expose:
+      - "5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+
+volumes:
+  postgres_data: # allow db persistence across container restarts

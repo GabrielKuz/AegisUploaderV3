@@ -11,8 +11,9 @@ dependencies = [
     "azure-mgmt-resource>=26.0.0",
     "azure-mgmt-storage>=25.0.0",
     "azure-storage-blob>=12.30.0",
-    "fastapi>=0.138.1",
-    "httpx2>=2.5.0",
+    "azure-storage-file-share>=12.26.0",
+    "fastapi>=0.138.0",
+    "httpx2>=2.4.0",
     "hubspot-api-client>=12.0.0",
     "opentelemetry-api>=1.43.0",
     "opentelemetry-exporter-otlp>=1.43.0",
@@ -28,4 +29,5 @@ dependencies = [
     "requests>=2.34.2",
     "sqlalchemy>=2.0.51",
     "uvicorn>=0.30.0",
+    "pathvalidate>=3.3.1",
 ]
