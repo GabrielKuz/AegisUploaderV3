@@ -64,19 +64,19 @@ http {
 
   server {
 
-    #listen 8080;
-    ssl_certificate     /etc/nginx/certs/localhost-fullchain.pem;
-    ssl_certificate_key /etc/nginx/certs/localhost-key.pem;
+    listen 8080;
+    # ssl_certificate     /etc/nginx/certs/localhost-fullchain.pem;
+    # ssl_certificate_key /etc/nginx/certs/localhost-key.pem;
 
-    listen 8443 ssl;
-    http2 on;
+    # listen 8443 ssl;
+    # http2 on;
 
-    ssl_session_cache shared:SSL:10m;
-    ssl_session_timeout 1d;
+    # ssl_session_cache shared:SSL:10m;
+    # ssl_session_timeout 1d;
 
-    ssl_protocols TLSv1.2 TLSv1.3;
+    # ssl_protocols TLSv1.2 TLSv1.3;
 
-    ssl_prefer_server_ciphers off;
+    # ssl_prefer_server_ciphers off;
 
     add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always; # Add once stable
 

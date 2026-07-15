@@ -171,7 +171,7 @@ services:
     volumes: 
       -  C:\certs:/etc/nginx/certs:ro
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--spider", "--no-check-certificate", "https://localhost:8443"]
+      test: ["CMD", "wget", "--no-verbose", "--spider", "http://localhost:8080"] # ["CMD", "wget", "--no-verbose", "--spider", "--no-check-certificate", "https://localhost:8443"]
       interval: 5s
       timeout: 5s
       retries: 10
