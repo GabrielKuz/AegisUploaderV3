@@ -21,6 +21,7 @@ body {
   font-family: var(--font-body);
   background: var(--theme-page);
   color: var(--theme-text);
+
   transition:
     color var(--transition-fast),
     background-color var(--transition-fast);
@@ -67,8 +68,8 @@ svg {
 
   /* Brand palette */
   --color-aegis-red: #ef3b32;
-  --color-aegis-red-deep: #b8322d;
-  --color-aegis-red-soft: rgba(239, 59, 50, 0.14);
+  --color-aegis-red-deep: #a92b26;
+  --color-aegis-red-soft: #f9e8e7;
 
   --color-aegis-navy: #083446;
   --color-aegis-teal: #0b3f4e;
@@ -79,15 +80,42 @@ svg {
   /* Neutral palette */
   --color-black: #000000;
   --color-white: #ffffff;
-  --color-charcoal: #404040;
+  --color-charcoal: #302b2c;
   --color-gray: #808080;
   --color-gray-medium: #999999;
   --color-gray-light: #f2f2f2;
 
   /* Type */
-  --font-heading: "Epilogue", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --font-body: "Epilogue", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --font-mono: "Geist Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  --font-heading:
+    "Epilogue",
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+
+  --font-body:
+    "Epilogue",
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+
+  --font-mono:
+    "Geist Mono",
+    "SFMono-Regular",
+    Consolas,
+    "Liberation Mono",
+    monospace;
+
+  --font-microsoft:
+    "Open Sans",
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
 
   /* Shape */
   --radius-sm: 4px;
@@ -97,18 +125,22 @@ svg {
   --radius-pill: 999px;
 
   /* Effects */
-  --shadow-soft: 0 24px 80px rgba(0, 0, 0, 0.16);
-  --shadow-glass: 0 24px 80px rgba(0, 0, 0, 0.3);
+  --shadow-soft:
+    0 24px 80px rgba(0, 0, 0, 0.16);
+
+  --shadow-glass:
+    0 24px 80px rgba(0, 0, 0, 0.3);
 
   /* Motion */
   --transition-fast: 180ms ease;
   --transition-base: 220ms ease;
 
-  /* Current accent: softer Aegis-red-inspired light accent */
+  /* Light-mode accent */
   --theme-accent: var(--color-aegis-red-deep);
   --theme-accent-hover: var(--color-aegis-red);
-  --theme-accent-soft: rgba(201, 72, 66, 0.1);
-  --theme-mode: var(--theme-accent);
+  --theme-accent-soft: rgba(239, 59, 50, 0.055);
+  --theme-subtext: var(--color-aegis-red-deep);
+  --theme-mode: var(--color-aegis-red);
 }
 
 /* ==========================================================================
@@ -117,43 +149,58 @@ svg {
 
 :root {
   /* Page surfaces */
-  --theme-page: #ffffff;
-  --theme-card: #f2eeeb;
-  --theme-surface: rgba(255, 250, 247, 0.82);
-  --theme-surface-secondary: rgba(250, 244, 240, 0.86);
+  --theme-page: #f5f3f2;
+  --theme-card: #ffffff;
+  --theme-surface: #faf9f8;
+  --theme-surface-secondary: #f0edec;
+  --theme-surface-hover: #ebe7e6;
 
   /* Text */
-  --theme-text: #171412;
-  --theme-text-secondary: #5b524e;
-  --theme-muted: #746b66;
+  --theme-text: #272324;
+  --theme-text-secondary: #625d5e;
+  --theme-muted: #898284;
 
   /* Borders and dividers */
-  --theme-border: rgba(70, 43, 38, 0.1);
-  --theme-border-strong: rgba(70, 43, 38, 0.18);
-  --theme-card-border: rgba(70, 43, 38, 0.12);
-  --theme-divider: rgba(70, 43, 38, 0.12);
+  --theme-border: #ddd8d7;
+  --theme-border-strong: rgba(255, 255, 255, 0.22);
+  --theme-card-border: #ddd8d7;
+  --theme-divider: #e2dddc;
 
   /* Decorative backgrounds */
-  --theme-pattern: rgba(99, 51, 44, 0.04);
-  --theme-pattern-secondary: rgba(99, 51, 44, 0.03);
-  --theme-panel-gradient: rgba(201, 72, 66, 0.045);
+  --theme-pattern: rgba(48, 43, 44, 0.035);
+  --theme-pattern-secondary: rgba(48, 43, 44, 0.025);
+  --theme-panel-gradient: rgba(239, 59, 50, 0.025);
 
-  /* Buttons */
-  --theme-button: #171412;
+  /* Generic button colors */
+  --theme-button: #302b2c;
+  --theme-button-hover: #403a3b;
+  --theme-button-active: #211e1f;
   --theme-button-text: #ffffff;
 
   /* Shadows */
-  --theme-card-shadow: 0 22px 54px rgba(63, 35, 30, 0.11);
-  --theme-control-shadow: 0 8px 18px rgba(63, 35, 30, 0.08);
+  --theme-card-shadow:
+    0 1px 2px rgba(39, 35, 36, 0.04),
+    0 12px 32px rgba(39, 35, 36, 0.07);
+
+  --theme-control-shadow:
+    0 4px 12px rgba(39, 35, 36, 0.06);
 }
+
+/* ==========================================================================
+   DARK MODE
+   ========================================================================== */
 
 :root[data-theme="dark"] {
   color-scheme: dark;
 
-  /* Current accent: dark mode uses blue */
+  /* Accent */
   --theme-accent: var(--color-aegis-blue-bright);
   --theme-accent-hover: #9bd7f0;
   --theme-accent-soft: rgba(120, 197, 232, 0.14);
+
+  /* Theme-colored supporting text */
+  --theme-subtext: var(--color-aegis-blue-bright);
+
   --theme-mode: var(--theme-accent);
 
   /* Page surfaces */
@@ -161,6 +208,7 @@ svg {
   --theme-card: rgba(15, 27, 33, 0.92);
   --theme-surface: rgba(17, 25, 30, 0.88);
   --theme-surface-secondary: rgba(19, 29, 35, 0.82);
+  --theme-surface-hover: rgba(255, 255, 255, 0.07);
 
   /* Text */
   --theme-text: #f4f6f7;
@@ -178,13 +226,18 @@ svg {
   --theme-pattern-secondary: rgba(255, 255, 255, 0.025);
   --theme-panel-gradient: rgba(35, 137, 176, 0.08);
 
-  /* Buttons */
+  /* Generic button colors */
   --theme-button: #f4f6f7;
+  --theme-button-hover: #ffffff;
+  --theme-button-active: #dce2e5;
   --theme-button-text: #080d10;
 
   /* Shadows */
-  --theme-card-shadow: 0 28px 70px rgba(0, 0, 0, 0.42);
-  --theme-control-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  --theme-card-shadow:
+    0 28px 70px rgba(0, 0, 0, 0.42);
+
+  --theme-control-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.3);
 }
 
 /* ==========================================================================
@@ -194,11 +247,14 @@ svg {
 .support-page-description,
 .links-page-description,
 .create-link-description,
-.upload-note {
-  color: var(--theme-accent);
+.upload-note,
+.auth-card p {
+  color: var(--theme-subtext);
   font-style: italic;
-  font-weight: 600;
+  font-weight: 400;
 
+  transition:
+    color var(--transition-fast);
 }
 
 /* ==========================================================================
@@ -213,6 +269,10 @@ svg {
 :root[data-theme="dark"] :focus-visible {
   outline-color: var(--theme-accent);
 }
+
+/* ==========================================================================
+   REDUCED MOTION
+   ========================================================================== */
 
 @media (prefers-reduced-motion: reduce) {
 

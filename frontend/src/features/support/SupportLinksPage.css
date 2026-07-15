@@ -70,9 +70,9 @@
   align-items: center;
   justify-content: center;
   flex: 0 0 auto;
-  border: 2px solid var(--portal-primary-button-border);
+  border: 3px solid var(--portal-primary-button-border);
   color: var(--theme-text);
-  background: transparent;
+  background: var(--portal-primary-button-background);
   text-decoration: none;
   transition:
     color 160ms ease,
@@ -84,8 +84,8 @@
 
 .new-link-link:hover {
   background: var(--portal-primary-button-border);
-  border-color: var(--portal-accent-border);
-  color: var(--portal-accent);
+  border: 2px solid var(--portal-primary-button-border-hover);
+  color: var(--portal-primary-button-text);
   transform: translateY(-1px);
 }
 
@@ -104,7 +104,7 @@
 
 .links-table-wrapper {
   width: 100%;
-  overflow-x: auto;
+
   border: 1px solid var(--theme-border-strong);
   border-radius: var(--radius-lg);
   background:
@@ -244,6 +244,171 @@
 
 .table-muted-text {
   color: var(--theme-muted);
+}
+
+/* ==========================================================================
+   ERROR ALERT
+   ========================================================================== */
+
+.links-error-alert {
+  width: 100%;
+  margin: 0 0 24px;
+  padding: 18px;
+
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+
+  color: var(--portal-error-text);
+  background: var(--portal-error-background);
+
+  border: 1px solid var(--portal-error-border);
+  border-left-width: 4px;
+  border-radius: var(--radius-md);
+
+  box-shadow:
+    0 8px 24px rgba(63, 35, 30, 0.08);
+}
+
+.links-error-alert-icon {
+  width: 30px;
+  height: 30px;
+  flex: 0 0 30px;
+
+  display: grid;
+  place-items: center;
+
+  color: #ffffff;
+  background: var(--portal-error-border);
+
+  border-radius: 50%;
+
+  font-family: var(--font-heading);
+  font-size: 17px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.links-error-alert-content {
+  min-width: 0;
+  flex: 1;
+}
+
+.links-error-alert-heading {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 7px;
+
+  color: var(--portal-error-text);
+
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.links-error-alert-status {
+  font-family: var(--font-mono, monospace);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.links-error-alert-status::after {
+  content: "—";
+  margin-left: 7px;
+  opacity: 0.7;
+}
+
+.links-error-alert-title {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.links-error-alert-message {
+  margin: 6px 0 0;
+
+  color: var(--portal-error-text);
+
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.links-error-retry-button {
+  min-height: 36px;
+  margin-top: 14px;
+  padding: 0 14px;
+
+  color: var(--portal-error-text);
+  background: var(--portal-primary-button-background);
+
+  border: 1px solid var(--portal-error-border);
+  border-radius: var(--radius-md);
+
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+
+  cursor: pointer;
+
+  transition:
+    color var(--transition-fast),
+    background-color var(--transition-fast),
+    border-color var(--transition-fast),
+    transform var(--transition-fast);
+}
+
+.links-error-retry-button:hover {
+  background: var(--portal-error-background);
+  transform: translateY(-1px);
+}
+
+.links-error-retry-button:active {
+  transform: translateY(0);
+}
+
+/* ==========================================================================
+   DARK MODE ERROR ALERT
+   ========================================================================== */
+
+:root[data-theme="dark"] .links-error-alert {
+  box-shadow:
+    0 10px 28px rgba(0, 0, 0, 0.28);
+}
+
+:root[data-theme="dark"] .links-error-retry-button:hover {
+  background: rgba(239, 59, 50, 0.16);
+}
+
+/* ==========================================================================
+   ERROR ALERT RESPONSIVE
+   ========================================================================== */
+
+@media (max-width: 600px) {
+  .links-error-alert {
+    padding: 16px;
+  }
+
+  .links-error-alert-icon {
+    width: 28px;
+    height: 28px;
+    flex-basis: 28px;
+  }
+}
+
+/* ==========================================================================
+   REDUCED MOTION
+   ========================================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  .links-error-retry-button {
+    transition: none;
+  }
+
+  .links-error-retry-button:hover,
+  .links-error-retry-button:active {
+    transform: none;
+  }
 }
 
 /* ==========================================================================
