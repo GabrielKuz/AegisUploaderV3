@@ -251,6 +251,10 @@ async def start_upload(
 
         upload_token = upload_session.upload_token
         db.commit()
+        
+    except sqlalchemy.exc.IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="A conflicting upload session already exists.")
 
     except Exception:
         db.rollback()
