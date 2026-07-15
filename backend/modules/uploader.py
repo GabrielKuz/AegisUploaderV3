@@ -423,39 +423,61 @@ async def upload_file_chunk(
     }
 
 @router.get("/uploadfile/{link_uuid}/{upload_token}/status")
-def upload_status(link_uuid: str, upload_token: str, db: Annotated[sqlalchemy.orm.Session, Depends(get_db)]):
+def upload_status(
+    link_uuid: str,
+    upload_token: str,
+    db: Annotated[sqlalchemy.orm.Session, Depends(get_db)]
+):
     if not IsUUID(link_uuid):
         raise HTTPException(status_code=400, detail="Invalid uuid")
 
     upload_session = (
-        db.query(UploadSession).filter(
+        db.query(UploadSession)
+        .filter(
             UploadSession.upload_token == upload_token,
             UploadSession.link_uuid == link_uuid,
-        ).first()
+        )
+        .first()
     )
 
     if upload_session is None:
-        raise HTTPException(status_code=404,detail="Upload session not found")
+        raise HTTPException(status_code=404, detail="Upload session not found")
 
     chunks = (
         db.query(UploadChunk).filter(
             UploadChunk.upload_id == upload_session.upload_id,
             UploadChunk.uploaded == True
-        ).order_by(UploadChunk.chunk_index).all()
+        ).all()
     )
 
-    received_size = sum(chunk.size for chunk in chunks)
+    ranges = sorted(
+        [[chunk.offset, chunk.offset + chunk.size] for chunk in chunks],
+        key=lambda r: r[0]
+    )
 
-    received_ranges = [[ chunk.offset,chunk.offset + chunk.size] for chunk in chunks]
+    merged_ranges = []
+    for start, end in ranges:
+        if not merged_ranges:
+            merged_ranges.append([start, end])
+            continue
+
+        last_start, last_end = merged_ranges[-1]
+        if start <= last_end:  
+            merged_ranges[-1][1] = max(last_end, end)
+        else:
+            merged_ranges.append([start, end])
+
+    received_size = sum(end - start for start, end in merged_ranges)
 
     return {
-        "receivedRanges": received_ranges,
+        "receivedRanges": merged_ranges,
         "receivedSize": received_size,
         "expectedSize": upload_session.expected_size,
         "chunkSize": upload_session.chunk_size,
         "completed": upload_session.completed,
         "chunksReceived": len(chunks),
     }
+
 @router.post("/uploadfile/{link_uuid}/{upload_token}/complete")
 async def complete_upload(link_uuid: str, upload_token: str, db: Annotated[sqlalchemy.orm.Session, Depends(get_db)]):
     if not IsUUID(link_uuid):

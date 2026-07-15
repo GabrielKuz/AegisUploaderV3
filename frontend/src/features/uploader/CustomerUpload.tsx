@@ -14,11 +14,27 @@ type SelectedFile = {
     preview: string;
 };
 
+type PreparedChunk = {
+    blob: Blob;
+    offset: number;
+    hash?: string;
+};
+
+const FILE_CHUNK_SIZE = 32 * 1024 * 1024;
+const HASH_CONCURRENCY = 4;
+const UPLOAD_CONCURRENCY = 6;
+const RETRY_ATTEMPTS = 4;
+const RETRY_BASE_DELAY_MS = 500;
+
 async function runWithConcurrency<T>(
     items: T[],
     limit: number,
-    worker: (item:T)=>Promise<void>
+    worker: (item: T) => Promise<void>
 ) {
+    if (items.length === 0) {
+        return;
+    }
+
     let index = 0;
 
     async function runner() {
@@ -36,61 +52,94 @@ async function runWithConcurrency<T>(
     );
 }
 
-async function blake3FileMerkle(
-    file: File,
-    chunkSize: number
-): Promise<string> {
-
-    const hashes: string[] = [];
-
-    let offset = 0;
-
-
-    while (offset < file.size) {
-
-        const end = Math.min(
-            offset + chunkSize,
-            file.size
-        );
-
-
-        const chunk = file.slice(
-            offset,
-            end
-        );
-
-
-        hashes.push(
-            await blake3Blob(chunk)
-        );
-
-
-        offset = end;
-    }
-
-
-    return merkleRoot(hashes);
+function delay(ms: number) {
+    return new Promise((resolve) => {
+        window.setTimeout(resolve, ms);
+    });
 }
-async function blake3Blob(blob: Blob): Promise<string> {
-    const hasher = blake3.create();
 
-    const reader = blob.stream().getReader();
+function shouldRetryResponse(response: Response) {
+    return (
+        response.status >= 500 ||
+        response.status === 408 ||
+        response.status === 425 ||
+        response.status === 429
+    );
+}
 
-    try {
-        while (true) {
-            const { value, done } = await reader.read();
+async function fetchWithRetry(
+    input: RequestInfo | URL,
+    init: RequestInit,
+    action: string,
+): Promise<Response> {
+    let lastError: Error | undefined;
 
-            if (done) {
-                break;
+    for (let attempt = 0; attempt < RETRY_ATTEMPTS; attempt += 1) {
+        try {
+            const response = await fetch(input, init);
+
+            if (response.ok || !shouldRetryResponse(response)) {
+                return response;
             }
 
-            hasher.update(value);
+            lastError = new Error(
+                `${action} failed with status ${response.status}`
+            );
+        } catch (error) {
+            lastError = error instanceof Error ? error : new Error(String(error));
         }
 
-        return bytesToHex(hasher.digest());
-    } finally {
-        reader.releaseLock();
+        if (attempt < RETRY_ATTEMPTS - 1) {
+            const backoff = RETRY_BASE_DELAY_MS * (2 ** attempt);
+            const jitter = Math.floor(Math.random() * 250);
+            await delay(backoff + jitter);
+        }
     }
+
+    throw lastError ?? new Error(`${action} failed`);
+}
+
+async function hashBlob(blob: Blob): Promise<string> {
+    const bytes = new Uint8Array(await blob.arrayBuffer());
+
+    return bytesToHex(blake3(bytes));
+}
+
+async function buildChunkHashes(
+    file: File,
+    chunkSize: number
+): Promise<{ fileHash: string; chunks: PreparedChunk[] }> {
+    const chunks: PreparedChunk[] = [];
+
+    for (let offset = 0; offset < file.size; offset += chunkSize) {
+        const end = Math.min(offset + chunkSize, file.size);
+
+        chunks.push({
+            blob: file.slice(offset, end),
+            offset,
+        });
+    }
+
+    await runWithConcurrency(
+        chunks,
+        Math.min(HASH_CONCURRENCY, chunks.length),
+        async (chunk) => {
+            chunk.hash = await hashBlob(chunk.blob);
+        },
+    );
+
+    const chunkHashes = chunks.map((chunk) => {
+        if (!chunk.hash) {
+            throw new Error("Missing chunk hash");
+        }
+
+        return chunk.hash;
+    });
+
+    return {
+        fileHash: merkleRoot(chunkHashes),
+        chunks,
+    };
 }
 function merkleRoot(hashes: string[]): string {
     if (hashes.length === 0) {
@@ -140,24 +189,25 @@ function merkleRoot(hashes: string[]): string {
 async function uploadChunk(
     uuid: string,
     uploadToken: string,
-    chunk: Blob,
-    offset: number,
-    chunkSize: number,
+    chunk: PreparedChunk,
 ) {
-    const hash = await blake3Blob(chunk);
+    if (!chunk.hash) {
+        throw new Error("Missing chunk hash");
+    }
 
-    const response = await fetch(
+    const response = await fetchWithRetry(
         `/api/uploadfile/${uuid}/${uploadToken}`,
         {
             method: "POST",
             headers: {
-                "X-Chunk-Offset": offset.toString(),
-                "X-Chunk-Size": chunkSize.toString(),
-                "X-Chunk-Hash": hash,
+                "X-Chunk-Offset": chunk.offset.toString(),
+                "X-Chunk-Size": chunk.blob.size.toString(),
+                "X-Chunk-Hash": chunk.hash,
                 "Content-Type": "application/octet-stream",
             },
-            body: chunk,
+            body: chunk.blob,
         },
+        `chunk ${chunk.offset}`,
     );
 
     if (!response.ok) {
@@ -254,14 +304,22 @@ export function CustomerUpload() {
                         [item.file.name]: "starting",
                     }));
 
-                    const chunkSizes = 32 * 1024 * 1024;
+                    const chunkSizes = FILE_CHUNK_SIZE;
 
-                    const fileHash = await blake3FileMerkle(
+                    setUploadStatus((s) => ({
+                        ...s,
+                        [item.file.name]: "hashing",
+                    }));
+
+                    const {
+                        fileHash,
+                        chunks,
+                    } = await buildChunkHashes(
                         item.file,
                         chunkSizes
                     );
 
-                    const startResponse = await fetch(
+                    const startResponse = await fetchWithRetry(
                         `/api/uploadfile/${uuid}/start`,
                         {
                             method: "POST",
@@ -272,6 +330,7 @@ export function CustomerUpload() {
                                 "X-User-Location": "US",
                             },
                         },
+                        `start upload for ${item.file.name}`,
                     );
 
                     if (!startResponse.ok) {
@@ -280,10 +339,8 @@ export function CustomerUpload() {
 
                     const {
                         uploadToken,
-                        chunkSize,
                     }: {
                         uploadToken: string;
-                        chunkSize: number;
                     } = await startResponse.json();
 
 
@@ -292,45 +349,26 @@ export function CustomerUpload() {
                         [item.file.name]: "uploading",
                     }));
 
-                    const chunks = [];
-
-                    let offset = 0;
-
-                    while (offset < item.file.size) {
-                        const end = Math.min(
-                            offset + chunkSize,
-                            item.file.size
-                        );
-
-                        chunks.push({
-                            blob: item.file.slice(offset, end),
-                            offset
-                        });
-
-                        offset = end;
-                    }
-
                     await runWithConcurrency(
                         chunks,
-                        6,
-                        async ({blob, offset}) => {
+                        Math.min(UPLOAD_CONCURRENCY, chunks.length),
+                        async (chunk) => {
 
                             await uploadChunk(
                                 uuid,
                                 uploadToken,
-                                blob,
-                                offset,
-                                blob.size
+                                chunk,
                             );
 
                         }
                     );
 
-                    const completeResponse = await fetch(
+                    const completeResponse = await fetchWithRetry(
                         `/api/uploadfile/${uuid}/${uploadToken}/complete`,
                         {
                             method: "POST",
                         },
+                        `complete upload for ${item.file.name}`,
                     );
 
                     if (!completeResponse.ok) {
@@ -413,6 +451,8 @@ export function CustomerUpload() {
                                         <span>{item.file.name}</span>
 
                                         <small>
+                                            {uploadStatus[item.file.name] === "hashing" &&
+                                                "Hashing..."}
                                             {uploadStatus[item.file.name] === "uploading" &&
                                                 "Uploading..."}
                                             {uploadStatus[item.file.name] === "done" &&
