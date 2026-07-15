@@ -27,6 +27,7 @@ from cryptography.hazmat.backends import default_backend
 from fastapi import APIRouter, Depends, File, Header, HTTPException, UploadFile
 from fastapi.responses import JSONResponse
 from fastapi import Query
+from modules.uploadSchemas import  StartUploadHeaders,StartUploadResponse, UploadChunkHeaders, UploadChunkResponse, UploadStatusResponse, CompleteUploadResponse, UploadedFileInfo, MarkForDeletionResponse, ExtendExpirationResponse
 from datetime import timezone, timedelta
 from modules import Session
 from fastapi import Request
@@ -136,7 +137,7 @@ if not ITAR_CONNECTION_STRING:
 #     except ResourceExistsError:
 #         pass
 
-@router.post("/uploadfile/{link_uuid}/start")
+@router.post("/uploadfile/{link_uuid}/start", response_model=StartUploadResponse)
 async def start_upload(
     link_uuid: str,
     db: Annotated[sqlalchemy.orm.Session, Depends(get_db)],
@@ -274,7 +275,7 @@ async def start_upload(
         "chunkSize": chunk_size,
     }
 
-@router.post("/uploadfile/{link_uuid}/{upload_token}")
+@router.post("/uploadfile/{link_uuid}/{upload_token}", response_model=UploadChunkResponse)
 async def upload_file_chunk(
     link_uuid: str,
     upload_token: str,
@@ -332,12 +333,12 @@ async def upload_file_chunk(
         if existing_chunk.hash.lower() != chunk_hash.strip().lower():
             raise HTTPException(status_code=409, detail="Chunk offset already uploaded with different content")
 
-        return {
-            "received": existing_chunk.size,
-            "offset": existing_chunk.offset,
-            "hash": existing_chunk.hash,
-            "ranges": upload_session.received_ranges,
-        }
+        return UploadChunkResponse(
+            received=existing_chunk.size,
+            offset=existing_chunk.offset,
+            hash=existing_chunk.hash,
+            ranges=upload_session.received_ranges,
+        )
 
     if chunk_offset + upload_session.chunk_size > upload_session.expected_size:
         if chunk_offset + received_size != upload_session.expected_size:
@@ -449,14 +450,14 @@ async def upload_file_chunk(
         db.rollback()
         traceback.print_exc()
         raise HTTPException(status_code=500, detail="Failed to update upload session")
-    return {
-        "received": received_size,
-        "offset": chunk_offset,
-        "hash": server_hash,
-        "ranges": upload_session.received_ranges,
-    }
+    return UploadChunkResponse(
+        received=received_size,
+        offset=chunk_offset,
+        hash=server_hash,
+        ranges=upload_session.received_ranges,
+    )
 
-@router.get("/uploadfile/{link_uuid}/{upload_token}/status")
+@router.get("/uploadfile/{link_uuid}/{upload_token}/status", response_model=UploadStatusResponse)
 def upload_status(
     link_uuid: str,
     upload_token: str,
@@ -503,16 +504,16 @@ def upload_status(
 
     received_size = sum(end - start for start, end in merged_ranges)
 
-    return {
-        "receivedRanges": merged_ranges,
-        "receivedSize": received_size,
-        "expectedSize": upload_session.expected_size,
-        "chunkSize": upload_session.chunk_size,
-        "completed": upload_session.completed,
-        "chunksReceived": len(chunks),
-    }
+    return UploadStatusResponse(
+        receivedRanges=merged_ranges,
+        receivedSize=received_size,
+        expectedSize=upload_session.expected_size,
+        chunkSize=upload_session.chunk_size,
+        completed=upload_session.completed,
+        chunksReceived=len(chunks),
+    )
 
-@router.post("/uploadfile/{link_uuid}/{upload_token}/complete")
+@router.post("/uploadfile/{link_uuid}/{upload_token}/complete", response_model=CompleteUploadResponse)
 async def complete_upload(link_uuid: str, upload_token: str, db: Annotated[sqlalchemy.orm.Session, Depends(get_db)]):
     if not IsUUID(link_uuid):
         raise HTTPException(status_code=400, detail="Invalid uuid")
@@ -614,17 +615,17 @@ async def complete_upload(link_uuid: str, upload_token: str, db: Annotated[sqlal
         traceback.print_exc()
         raise HTTPException(status_code=500, detail="Failed to complete upload")
     
-    return {
-        "filename": upload_session.original_filename,
-        "size": upload_session.expected_size,
-        "file_hash": server_hash,
-        "completed": True,
-    }
+    return CompleteUploadResponse(
+        filename=upload_session.original_filename,
+        size=upload_session.expected_size,
+        file_hash=server_hash,
+        completed=True,
+    )
 
 def get_uploads_for_link(link_uuid: str, db: Annotated[sqlalchemy.orm.Session, Depends(get_db)]): # Get all uploads for a given link uuid from the db
     return db.query(UploadRecord).filter(UploadRecord.link_uuid == link_uuid).all()
 
-@router.post("/uploads/{upload_id}/mark_for_deletion")
+@router.post("/uploads/{upload_id}/mark_for_deletion", response_model=MarkForDeletionResponse)
 def mark_for_deletion(upload_id: str, current_user: Annotated[User, Depends(requireRoles("Admin", strict=True))], db: Annotated[sqlalchemy.orm.Session, Depends(get_db)]):
     if not IsUUID(upload_id):
         badUUID = HTTPException(400,detail={"message": "Invalid uuid"})
@@ -634,9 +635,9 @@ def mark_for_deletion(upload_id: str, current_user: Annotated[User, Depends(requ
         raise HTTPException(status_code=404, detail="Upload not found")
     upload_record.for_deletion = True
     db.commit()
-    return {"message": f"Upload {upload_id} marked for deletion"}
+    return MarkForDeletionResponse(message=f"Upload {upload_id} marked for deletion")
 
-@router.get("/links/{linkUUID}/files") # Get all files for a given link uuid from the db. Only returns files the user has access to
+@router.get("/links/{linkUUID}/files", response_model=list[UploadedFileInfo]) # Get all files for a given link uuid from the db. Only returns files the user has access to
 def listFiles(linkUUID: str, current_user: Annotated[User, Depends(requireRoles("User", "Admin"))], db: Annotated[sqlalchemy.orm.Session, Depends(get_db)]):
     if not IsUUID(linkUUID):
         badUUID = HTTPException(400,detail={"message": "Invalid uuid"})
@@ -656,17 +657,17 @@ def listFiles(linkUUID: str, current_user: Annotated[User, Depends(requireRoles(
         )
 
     return [ # Return file information to allow for them to later query for the download link without exposing more sensitive information than needed
-        {
-            "upload_id": upload.upload_id,
-            "filename": upload.original_filename,
-            "size": upload.combined_file_size,
-            "blob_name": upload.blob_name,
-            "content_type": upload.content_type,
-            "date_uploaded": upload.date_uploaded.isoformat() if upload.date_uploaded else None,
-        }
+        UploadedFileInfo(
+            upload_id=upload.upload_id,
+            filename=upload.original_filename,
+            size=upload.combined_file_size,
+            blob_name=upload.blob_name,
+            content_type=upload.content_type,
+            date_uploaded=upload.date_uploaded if upload.date_uploaded else None,
+        )
         for upload in authorized_uploads]
 
-@router.post("/uploads/{upload_id}/extend_expiration")
+@router.post("/uploads/{upload_id}/extend_expiration", response_model=ExtendExpirationResponse)
 def extendFileExpiration(upload_id: str, additional_days: Annotated[int, Query(gt=0, le=365)], current_user: Annotated[User, Depends(requireRoles("Admin", strict=True))], db: Annotated[sqlalchemy.orm.Session, Depends(get_db)]):  # Only admin can extend expiration
     if type(additional_days) is not int:
         raise HTTPException(status_code=400, detail="Additional days must be an integer")
@@ -686,5 +687,9 @@ def extendFileExpiration(upload_id: str, additional_days: Annotated[int, Query(g
 
     upload_record.max_days_in_storage += additional_days
     db.commit()
-    return {"message": f"File expiration extended by {additional_days} days", "newExpiration": upload_record.max_days_in_storage, "newExpirationDate": (upload_record.date_uploaded + datetime.timedelta(days=upload_record.max_days_in_storage)).isoformat() if upload_record.date_uploaded else None}
+    return ExtendExpirationResponse(
+        message=f"File expiration extended by {additional_days} days",
+        newExpiration=upload_record.max_days_in_storage,
+        newExpirationDate=(upload_record.date_uploaded + datetime.timedelta(days=upload_record.max_days_in_storage)).isoformat() if upload_record.date_uploaded else None
+    )
 
