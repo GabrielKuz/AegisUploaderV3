@@ -1,7 +1,7 @@
 # TODO: add ssl certs and https/http2/hsts once closer to prod
 
 worker_processes auto;  # use number of cores
-# user nginx; # run as non root
+user nginx; # run as non root
 pid /tmp/nginx.pid; # move pid files to tmp so they can be used by a non root user
 
 events {
