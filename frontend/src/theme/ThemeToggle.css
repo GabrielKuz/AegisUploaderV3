@@ -1,46 +1,43 @@
-.theme-toggle,
-.support-link,
-.sign-out {
+.theme-toggle {
     min-height: 40px;
     padding: 0 14px;
+
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 8px;
-    border: 1px solid grey;
+
+    color: var(--white);
     background: transparent;
-    color: white;
+    border: 1px solid var(--gray);
+
     font: inherit;
     font-size: 14px;
     font-weight: 600;
     text-decoration: none;
+
     cursor: pointer;
     box-shadow: var(--theme-control-shadow);
+
     transition:
-        color 160ms ease,
-        background-color 160ms ease,
-        border-color 160ms ease,
-        transform 160ms ease;
+        color var(--transition-fast),
+        background-color var(--transition-fast),
+        border-color var(--transition-fast),
+        transform var(--transition-fast);
 }
 
-.theme-toggle:hover,
-.support-link:hover,
-.sign-out:hover {
-    border-color: var(--theme-mode);
+.theme-toggle:hover {
     color: var(--theme-mode);
+    border-color: var(--theme-mode);
     transform: translateY(-1px);
 }
 
-.theme-toggle:active,
-.support-link:active,
-.sign-out:active {
+.theme-toggle:active {
     transform: translateY(0);
 }
 
-.theme-toggle:focus-visible,
-.support-link:focus-visible,
-.sign-out:focus-visible {
-    outline: 3px solid var(--portal-focus-ring);
+.theme-toggle:focus-visible {
+    outline: 3px solid var(--theme-focus-ring);
     outline-offset: 3px;
 }
 
@@ -57,9 +54,11 @@
 
     .theme-toggle-label {
         position: absolute;
+
         width: 1px;
         height: 1px;
         overflow: hidden;
+
         clip-path: inset(50%);
         white-space: nowrap;
     }
@@ -67,15 +66,8 @@
 
 @media (prefers-reduced-motion: reduce) {
 
-    .theme-toggle,
-    .support-link {
-        transition: none;
-    }
-
     .theme-toggle:hover,
-    .theme-toggle:active,
-    .support-link:hover,
-    .support-link:active {
+    .theme-toggle:active {
         transform: none;
     }
 }

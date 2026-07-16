@@ -1,3 +1,4 @@
+
 import {
     createContext,
     useContext,
@@ -5,27 +6,38 @@ import {
     type ReactNode,
 } from "react";
 
-type UploadState = {
+type CustomerUploadContextValue = {
     uploadedCount: number;
     uploadedBytes: number;
     uuid: string;
     setUploadStats: (
         count: number,
-        bytes: number
+        bytes: number,
     ) => void;
 };
 
-const CustomerUploadContext = createContext<UploadState | null>(null);
+type CustomerUploadProviderProps = {
+    uuid: string;
+    children: ReactNode;
+};
+
+const CustomerUploadContext =
+    createContext<CustomerUploadContextValue | null>(null);
 
 export function CustomerUploadProvider({
     uuid,
     children,
-}: {
-    uuid: string;
-    children: ReactNode;
-}) {
+}: CustomerUploadProviderProps) {
     const [uploadedCount, setUploadedCount] = useState(0);
     const [uploadedBytes, setUploadedBytes] = useState(0);
+
+    function setUploadStats(
+        count: number,
+        bytes: number,
+    ): void {
+        setUploadedCount(count);
+        setUploadedBytes(bytes);
+    }
 
     return (
         <CustomerUploadContext.Provider
@@ -33,10 +45,7 @@ export function CustomerUploadProvider({
                 uploadedCount,
                 uploadedBytes,
                 uuid,
-                setUploadStats(count, bytes) {
-                    setUploadedCount(count);
-                    setUploadedBytes(bytes);
-                },
+                setUploadStats,
             }}
         >
             {children}
@@ -44,12 +53,12 @@ export function CustomerUploadProvider({
     );
 }
 
-export function useCustomerUpload() {
+export function useCustomerUpload(): CustomerUploadContextValue {
     const context = useContext(CustomerUploadContext);
 
     if (!context) {
         throw new Error(
-            "useCustomerUpload must be used inside CustomerUploadProvider"
+            "useCustomerUpload must be used inside CustomerUploadProvider.",
         );
     }
 

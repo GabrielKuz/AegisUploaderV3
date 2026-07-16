@@ -9,14 +9,14 @@
 }
 
 .customer-upload-grid {
-    width: 100%;
-    min-height: calc(100vh - 120px);
+  width: 100%;
+  min-height: calc(100vh - 120px);
 
-    display: grid;
-    grid-template-columns: 260px minmax(0, 1fr);
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
 
-    gap: 0;
-    align-items: stretch;
+  gap: 0;
+  align-items: stretch;
 }
 
 
@@ -49,7 +49,7 @@
 }
 
 .upload-link-id {
-  color: var(--current-theme);
+  color: var(--theme-accent);
   font-family: var(--font-mono, monospace);
   font-weight: 700;
 }
@@ -68,7 +68,7 @@
   text-align: center;
   color: var(--theme-text);
   background:
-    linear-gradient(135deg, var(--portal-accent-soft), transparent 36%),
+    linear-gradient(135deg, var(--theme-accent-soft), transparent 36%),
     var(--theme-surface);
   border: 2px dashed var(--theme-border-strong);
   border-radius: var(--radius-lg);
@@ -93,7 +93,7 @@
   min-height: 44px;
   padding: 0 20px;
   color: #ffffff;
-  background: var(--portal-primary-button-variation);
+  background: var(--theme-button-bg-variation);
   border: 0;
   border-radius: var(--radius-md);
   font: inherit;
@@ -173,7 +173,7 @@
 }
 
 .selected-file-actions a {
-  color: var(--current-theme);
+  color: var(--theme-accent);
   font-size: 13px;
   font-weight: 700;
   text-decoration: underline;
@@ -183,9 +183,9 @@
 .delete-button {
   min-height: 34px;
   padding: 0 12px;
-  color: var(--color-aegis-red);
+  color: var(--aegis-red);
   background: transparent;
-  border: 1px solid var(--color-aegis-red);
+  border: 1px solid var(--aegis-red);
   border-radius: var(--radius-md);
   font: inherit;
   font-size: 13px;
@@ -199,7 +199,7 @@
 
 .delete-button:hover {
   color: #ffffff;
-  background: var(--color-aegis-red);
+  background: var(--aegis-red);
 }
 
 .delete-button:disabled {

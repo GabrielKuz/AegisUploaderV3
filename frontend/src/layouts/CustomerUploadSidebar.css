@@ -6,13 +6,12 @@
 .customer-upload-sidebar-title {
     margin-bottom: 20px;
 
-    color: var(--current-theme);
-    font-family: var(--font-mono, monospace);
+    color: var(--theme-accent);
+    font-family: var(--font-mono);
     font-size: 11px;
     font-weight: 700;
-
+    letter-spacing: 0.08em;
     text-transform: uppercase;
-    letter-spacing: .08em;
 }
 
 .customer-upload-sidebar-item {
@@ -21,24 +20,24 @@
     display: grid;
     gap: 6px;
 
-    color: rgba(255,255,255,.72);
-
+    color: rgba(255, 255, 255, 0.72);
     border-left: 3px solid transparent;
 }
 
 .customer-upload-sidebar-item span {
     font-size: 11px;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
-    letter-spacing: .08em;
 }
 
 .customer-upload-sidebar-item strong {
-    color: #ffffff;
+    color: var(--white);
     font-size: 20px;
 }
 
 .customer-upload-sidebar-item code {
-    color: var(--current-theme);
-    font-family: var(--font-mono, monospace);
     overflow-wrap: anywhere;
+
+    color: var(--theme-accent);
+    font-family: var(--font-mono);
 }

@@ -3,22 +3,24 @@
    Shared shell for customer, support, and admin pages.
    ========================================================================== */
 
-.layout {
+.app-layout {
   width: 100%;
   height: 100vh;
   height: 100dvh;
+
   display: grid;
   grid-template-columns: 240px minmax(0, 1fr);
   grid-template-rows: 76px minmax(0, 1fr);
+
   overflow: hidden;
   background: var(--theme-page);
 }
 
-.layout-no-sidebar {
+.app-layout--no-sidebar {
   grid-template-columns: minmax(0, 1fr);
 }
 
-.layout-no-sidebar .main {
+.app-layout--no-sidebar .app-main {
   grid-column: 1;
 }
 
@@ -26,116 +28,128 @@
    HEADER
    ========================================================================== */
 
-.header {
+.app-header {
   grid-column: 1 / -1;
   grid-row: 1;
   min-width: 0;
+
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 24px;
+
   padding: 0 30px;
-  color: #ffffff;
-  background: #000000;
-  border-top: 4px solid var(--current-theme);
+
+  color: var(--white);
+  background: var(--black);
+  border-top: 4px solid var(--theme-accent);
   border-bottom: 1px solid var(--theme-border-strong);
 }
 
-.brand {
+.app-brand {
   min-width: 0;
+
   display: flex;
   align-items: center;
   gap: 24px;
 }
 
-.logo {
+.app-logo {
   width: clamp(144px, 18vw, 181px);
   height: auto;
   flex: 0 1 auto;
 }
 
-.divide {
+.app-divider {
   width: 1px;
   height: 42px;
   margin-left: 3px;
   flex: 0 0 auto;
+
   background: rgba(255, 255, 255, 0.24);
 }
 
-.title {
+.app-title {
   min-width: 0;
+
   display: grid;
   gap: 4px;
 }
 
-.product-name {
-  color: #ffffff;
+.app-product-name {
+  color: var(--white);
   font-size: 14px;
   font-weight: 600;
   line-height: 1.25;
 }
 
-.section-name {
-  color: var(--current-theme);
-  font-family: var(--font-mono, monospace);
+.app-section-name {
+  color: var(--theme-accent);
+  font-family: var(--font-mono);
   font-size: 11px;
   line-height: 1.3;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
-.header-actions {
+.app-header-actions {
   display: flex;
   align-items: center;
   gap: 16px;
   flex: 0 0 auto;
 }
 
-.user-details {
+.app-user-details {
   display: grid;
   gap: 3px;
+
   text-align: right;
 }
 
-.user-name {
-  color: #ffffff;
+.app-user-name {
+  color: var(--white);
   font-size: 14px;
   font-weight: 600;
 }
 
-.email {
+.app-user-email {
   color: rgba(255, 255, 255, 0.62);
   font-size: 13px;
 }
 
-.user-button {
+.app-sign-out {
   min-height: 40px;
   padding: 0 14px;
-  display: flex;
+
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid grey;
+
+  color: var(--white);
   background: transparent;
-  color: #ffffff;
+  border: 1px solid var(--gray);
+
   font: inherit;
   font-size: 14px;
   font-weight: 600;
+
   cursor: pointer;
   box-shadow: var(--theme-control-shadow);
+
   transition:
-    color 160ms ease,
-    background-color 160ms ease,
-    border-color 160ms ease,
-    transform 160ms ease;
+    color var(--transition-fast),
+    background-color var(--transition-fast),
+    border-color var(--transition-fast),
+    transform var(--transition-fast);
 }
 
-.user-button:hover {
-  border-color: var(--theme-mode);
+.app-sign-out:hover {
   color: var(--theme-mode);
+  border-color: var(--theme-mode);
   transform: translateY(-1px);
 }
 
-.user-button:active {
+.app-sign-out:active {
   transform: translateY(0);
 }
 
@@ -143,174 +157,185 @@
    SIDEBAR
    ========================================================================== */
 
-.sidebar {
+.app-sidebar {
   grid-column: 1;
   grid-row: 2;
   min-width: 0;
+
   padding: 28px 16px;
   overflow: auto;
+
   background: #1a1a1a;
   border-right: 1px solid var(--theme-border-strong);
 }
 
-.sidebar nav {
+.app-sidebar nav {
   display: grid;
   gap: 8px;
 }
 
-.nav-link {
+.app-nav-link {
   min-height: 46px;
+  padding: 0 16px;
+
   display: flex;
   align-items: center;
-  padding: 0 16px;
+
   color: rgba(255, 255, 255, 0.72);
   border-left: 3px solid transparent;
   text-decoration: none;
+
   transition:
-    color 160ms ease,
-    background-color 160ms ease,
-    border-color 160ms ease;
+    color var(--transition-fast),
+    background-color var(--transition-fast),
+    border-color var(--transition-fast);
 }
 
-.nav-link:hover {
-  color: #ffffff;
+.app-nav-link:hover {
+  color: var(--white);
   background: rgba(255, 255, 255, 0.06);
 }
 
-.nav-link-active {
-  color: #ffffff;
+.app-nav-link--active {
+  color: var(--white);
   background: rgba(255, 255, 255, 0.1);
-  border-left-color: var(--current-theme);
+  border-left-color: var(--theme-accent);
 }
 
 /* ==========================================================================
-   MAIN
+   MAIN CONTENT
    ========================================================================== */
 
-.main {
+.app-main {
   position: relative;
+
   grid-column: 2;
   grid-row: 2;
+
   min-width: 0;
   min-height: 0;
   padding: clamp(28px, 4vw, 48px);
-  overflow-y: auto;
+
   overflow-x: hidden;
-  background: var(--theme-page);
+  overflow-y: auto;
+
   color: var(--theme-text);
+  background: var(--theme-page);
 }
 
 /* ==========================================================================
-   TABLET / MOBILE
+   TABLET AND MOBILE
    ========================================================================== */
 
 @media (max-width: 760px) {
-  .layout {
+  .app-layout {
     grid-template-columns: 1fr;
     grid-template-rows: auto auto minmax(0, 1fr);
+
     overflow: visible;
   }
 
-  .layout-no-sidebar {
+  .app-layout--no-sidebar {
     grid-template-rows: auto minmax(0, 1fr);
   }
 
-  .layout-no-sidebar .main {
+  .app-layout--no-sidebar .app-main {
     grid-column: 1;
   }
 
-  .header {
+  .app-header {
     grid-column: 1;
     grid-row: 1;
+
     min-height: 76px;
     padding: 18px 20px;
+
     align-items: flex-start;
   }
 
-  .brand {
+  .app-brand {
     gap: 16px;
   }
 
-  .logo {
+  .app-logo {
     width: 180px;
   }
 
-  .user-details {
+  .app-user-details {
     display: none;
   }
 
-  .sidebar {
+  .app-sidebar {
     grid-column: 1;
     grid-row: 2;
+
     padding: 12px 16px;
     overflow-x: auto;
+
     border-right: 0;
     border-bottom: 1px solid var(--theme-border-strong);
   }
 
-  .sidebar nav {
+  .app-sidebar nav {
     display: flex;
     gap: 8px;
   }
 
-  .nav-link {
+  .app-nav-link {
     min-width: max-content;
     min-height: 42px;
     padding: 0 14px;
+
     border-left: 0;
     border-bottom: 3px solid transparent;
   }
 
-  .nav-link-active {
+  .app-nav-link--active {
     border-left-color: transparent;
-    border-bottom-color: var(--current-theme);
+    border-bottom-color: var(--theme-accent);
   }
 
-  .main {
+  .app-main {
     grid-column: 1;
     grid-row: 3;
+
     padding: 28px 20px;
-    overflow-y: auto;
+
     overflow-x: hidden;
+    overflow-y: auto;
   }
 
-  .layout-no-sidebar .main {
+  .app-layout--no-sidebar .app-main {
     grid-row: 2;
   }
 }
 
 @media (max-width: 520px) {
-  .header {
+  .app-header {
     gap: 14px;
   }
 
-  .logo {
+  .app-logo {
     width: 150px;
   }
 
-  .product-name {
+  .app-product-name {
     font-size: 13px;
   }
 
-  .section-name {
+  .app-section-name {
     font-size: 10px;
   }
 
-  .main {
+  .app-main {
     padding: 24px 16px;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
 
-  .user-button,
-  .nav-link {
-    transition: none;
-  }
-
-  .user-button:hover,
-  .user-button:active {
+  .app-sign-out:hover,
+  .app-sign-out:active {
     transform: none;
   }
 }
-

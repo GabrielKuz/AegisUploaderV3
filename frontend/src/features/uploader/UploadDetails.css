@@ -15,7 +15,7 @@
 
 .upload-details-eyebrow {
   margin: 0 0 12px;
-  color: var(--portal-accent);
+  color: var(--theme-accent);
   font-family: var(--font-mono, monospace);
   font-size: 12px;
   font-weight: 600;

@@ -1,6 +1,7 @@
+
 import { Navigate, useParams } from "react-router-dom";
 
-import { PortalLayout } from "./PortalLayout";
+import { AppLayout } from "./AppLayout";
 import { CustomerUploadProvider } from "./CustomerLayoutContext";
 import { CustomerUploadSidebar } from "./CustomerUploadSidebar";
 
@@ -13,9 +14,10 @@ export function CustomerLayout() {
 
     return (
         <CustomerUploadProvider uuid={uuid}>
-            <PortalLayout
+            <AppLayout
                 productName="Customer Upload"
                 sectionName="Provide Files"
+                navLabel="Upload summary"
                 sidebarContent={<CustomerUploadSidebar />}
                 showUserMenu={false}
                 showSignOut={false}

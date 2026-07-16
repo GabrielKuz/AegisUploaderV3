@@ -8,7 +8,6 @@ import { ThemeProvider } from "./theme/ThemeContext";
 
 import "./styles/fonts.css";
 import "./styles/global.css";
-import "./styles/PortalTheme.css";
 
 async function bootstrap() {
   await initializeMsalInstance();

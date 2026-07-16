@@ -1,4 +1,4 @@
-import React from "react";
+import type { ReactNode } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useMsal } from "@azure/msal-react";
 
@@ -9,28 +9,34 @@ import { ThemeToggle } from "../theme/ThemeToggle";
 
 import "./AppLayout.css";
 
-type PortalNavItem = {
+type AppNavItem = {
     to: string;
     label: string;
     end?: boolean;
 };
 
-type PortalLayoutProps = {
+type AppLayoutProps = {
     productName: string;
     sectionName: string;
     navLabel?: string;
-    navItems?: PortalNavItem[];
-    sidebarContent?: React.ReactNode;
+    navItems?: AppNavItem[];
+    sidebarContent?: ReactNode;
     defaultUserName?: string;
     showUserMenu?: boolean;
     showSignOut?: boolean;
 };
 
-function getNavLinkClassName({ isActive }: { isActive: boolean }) {
-    return isActive ? "nav-link nav-link-active" : "nav-link";
+function getNavLinkClassName({
+    isActive,
+}: {
+    isActive: boolean;
+}): string {
+    return isActive
+        ? "app-nav-link app-nav-link--active"
+        : "app-nav-link";
 }
 
-export function PortalLayout({
+export function AppLayout({
     productName,
     sectionName,
     navLabel = "Portal navigation",
@@ -39,13 +45,18 @@ export function PortalLayout({
     defaultUserName = "Support User",
     showUserMenu = true,
     showSignOut = true,
-}: PortalLayoutProps) {
+}: AppLayoutProps) {
     const navigate = useNavigate();
     const { accounts, instance } = useMsal();
 
     const devUser = getDevUser();
-    const entraAccount = getActiveAccount(instance) ?? accounts[0];
-    const showSidebar = navItems.length > 0 || Boolean(sidebarContent);
+    const entraAccount =
+        getActiveAccount(instance) ??
+        accounts[0];
+
+    const showSidebar =
+        navItems.length > 0 ||
+        Boolean(sidebarContent);
 
     const displayName =
         entraAccount?.name ??
@@ -56,54 +67,67 @@ export function PortalLayout({
         entraAccount?.username ??
         devUser?.email;
 
-    const handleSignOut = async () => {
+    const layoutClassName = showSidebar
+        ? "app-layout"
+        : "app-layout app-layout--no-sidebar";
+
+    async function handleSignOut(): Promise<void> {
         signOutDevUser();
 
-        if (isEntraConfigured) {
-            const account = getActiveAccount(instance) ?? accounts[0];
-
-            if (account && !instance.getActiveAccount()) {
-                instance.setActiveAccount(account);
-            }
-
-            await instance.logoutRedirect({
-                account: account ?? undefined,
-                postLogoutRedirectUri: window.location.origin,
-            });
-
+        if (!isEntraConfigured) {
+            navigate("/", { replace: true });
             return;
         }
 
-        navigate("/", { replace: true });
-    };
+        const account =
+            getActiveAccount(instance) ??
+            accounts[0];
+
+        if (account && !instance.getActiveAccount()) {
+            instance.setActiveAccount(account);
+        }
+
+        await instance.logoutRedirect({
+            account: account ?? undefined,
+            postLogoutRedirectUri: window.location.origin,
+        });
+    }
 
     return (
-        <div className={showSidebar ? "layout" : "layout layout-no-sidebar"}>
-            <header className="header">
-                <div className="brand">
+        <div className={layoutClassName}>
+            <header className="app-header">
+                <div className="app-brand">
                     <img
+                        className="app-logo"
                         src="/images/Aegis-Logo.svg"
                         alt="Aegis Software"
-                        className="logo"
                     />
 
-                    <div className="divide" aria-hidden="true" />
+                    <div
+                        className="app-divider"
+                        aria-hidden="true"
+                    />
 
-                    <div className="title">
-                        <span className="product-name">{productName}</span>
-                        <span className="section-name">{sectionName}</span>
+                    <div className="app-title">
+                        <span className="app-product-name">
+                            {productName}
+                        </span>
+
+                        <span className="app-section-name">
+                            {sectionName}
+                        </span>
                     </div>
                 </div>
 
-                <div className="header-actions">
+                <div className="app-header-actions">
                     {showUserMenu && (
-                        <div className="user-details">
-                            <strong className="user-name">
+                        <div className="app-user-details">
+                            <strong className="app-user-name">
                                 {displayName}
                             </strong>
 
                             {displayEmail && (
-                                <span className="email">
+                                <span className="app-user-email">
                                     {displayEmail}
                                 </span>
                             )}
@@ -114,7 +138,7 @@ export function PortalLayout({
 
                     {showSignOut && (
                         <button
-                            className="user-button"
+                            className="app-sign-out"
                             type="button"
                             onClick={handleSignOut}
                         >
@@ -124,8 +148,8 @@ export function PortalLayout({
                 </div>
             </header>
 
-            {(showSidebar || sidebarContent) && (
-                <aside className="sidebar">
+            {showSidebar && (
+                <aside className="app-sidebar">
                     {sidebarContent ? (
                         sidebarContent
                     ) : (
@@ -142,11 +166,10 @@ export function PortalLayout({
                             ))}
                         </nav>
                     )}
-                    
                 </aside>
             )}
 
-            <main className="main">
+            <main className="app-main">
                 <Outlet />
             </main>
         </div>

@@ -1,30 +1,326 @@
 /* ==========================================================================
+   DESIGN TOKENS AND LIGHT THEME
+   ========================================================================== */
+
+:root {
+   color-scheme: light;
+
+   /* -----------------------------------------------------------------------
+     BRAND
+     ----------------------------------------------------------------------- */
+
+   --aegis-red: #ef3b32;
+   --aegis-red-deep: #a92b26;
+   --aegis-red-soft: #f9e8e7;
+
+   --aegis-navy: #083446;
+   --aegis-teal: #0b3f4e;
+   --aegis-blue: #1d5a83;
+   --aegis-blue-bright: #78c5e8;
+   --aegis-blue-soft: #81a5bb;
+
+   /* -----------------------------------------------------------------------
+     NEUTRAL COLORS
+     ----------------------------------------------------------------------- */
+
+   --black: #000;
+   --white: #fff;
+   --charcoal: #302b2c;
+   --gray: #808080;
+   --gray-medium: #999;
+   --gray-light: #f2f2f2;
+
+   /* -----------------------------------------------------------------------
+     TYPOGRAPHY
+     ----------------------------------------------------------------------- */
+
+   --font-heading: "Open Sans", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+   --font-body: "Open Sans", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+   --font-mono: "Geist Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+   --font-microsoft: "Open Sans", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+
+   /* -----------------------------------------------------------------------
+     SHAPE
+     ----------------------------------------------------------------------- */
+
+   --radius-sm: 4px;
+   --radius-md: 8px;
+   --radius-lg: 16px;
+   --radius-xl: 22px;
+   --radius-pill: 999px;
+
+   /* -----------------------------------------------------------------------
+     EFFECTS
+     ----------------------------------------------------------------------- */
+
+   --shadow-soft: 0 24px 80px rgba(0, 0, 0, 0.16);
+   --shadow-glass: 0 24px 80px rgba(0, 0, 0, 0.3);
+
+   /* -----------------------------------------------------------------------
+     MOTION
+     ----------------------------------------------------------------------- */
+
+   --transition-fast: 180ms ease;
+   --transition-base: 220ms ease;
+
+   /* -----------------------------------------------------------------------
+     PAGE SURFACES
+     ----------------------------------------------------------------------- */
+
+   --theme-page: #f5f3f2;
+   --theme-surface: #faf9f8;
+   --theme-surface-secondary: #f0edec;
+   --theme-surface-hover: #ebe7e6;
+
+   /* -----------------------------------------------------------------------
+     TEXT
+     ----------------------------------------------------------------------- */
+
+   --theme-text: #272324;
+   --theme-text-secondary: #625d5e;
+   --theme-muted: #898284;
+
+   /* -----------------------------------------------------------------------
+     ACCENT
+     ----------------------------------------------------------------------- */
+
+   --theme-accent: var(--aegis-red-deep);
+   --theme-accent-hover: var(--aegis-red);
+   --theme-accent-active: #85231f;
+   --theme-accent-soft: rgba(239, 59, 50, 0.08);
+   --theme-accent-border: rgba(169, 43, 38, 0.34);
+   --theme-focus-ring: rgba(239, 59, 50, 0.14);
+   --theme-mode: var(--aegis-red);
+
+   /* -----------------------------------------------------------------------
+     BORDERS AND DIVIDERS
+     ----------------------------------------------------------------------- */
+
+   --theme-border: #ddd8d7;
+   --theme-border-strong: rgba(255, 255, 255, 0.22);
+   --theme-divider: #e2dddc;
+
+   /* -----------------------------------------------------------------------
+     CARDS
+     ----------------------------------------------------------------------- */
+
+   --theme-card: var(--white);
+   --theme-card-border: #ddd8d7;
+   --theme-card-shadow: 0 1px 2px rgba(39, 35, 36, 0.04), 0 12px 32px rgba(39, 35, 36, 0.07);
+   --theme-card-shadow-hover: 0 2px 4px rgba(39, 35, 36, 0.05), 0 16px 36px rgba(39, 35, 36, 0.09);
+
+   /* -----------------------------------------------------------------------
+     FORMS AND TABLES
+     ----------------------------------------------------------------------- */
+
+   --theme-control-bg: var(--white);
+   --theme-control-border: #d5cfce;
+   --theme-control-border-hover: #aaa2a1;
+   --theme-control-shadow: 0 4px 12px rgba(39, 35, 36, 0.06);
+   --theme-row-hover: var(--theme-surface);
+   --theme-row-selected: var(--theme-accent-soft);
+
+   /* -----------------------------------------------------------------------
+     DECORATIVE ELEMENTS
+     ----------------------------------------------------------------------- */
+
+   --theme-dot-color: rgba(48, 43, 44, 0.12);
+   --theme-pattern: rgba(48, 43, 44, 0.035);
+   --theme-pattern-secondary: rgba(48, 43, 44, 0.025);
+   --theme-panel-gradient: rgba(239, 59, 50, 0.025);
+
+   /* -----------------------------------------------------------------------
+     ERROR STATUS
+     ----------------------------------------------------------------------- */
+
+   --status-error-text: #9f2823;
+   --status-error-bg: #fff2f1;
+   --status-error-border: var(--aegis-red);
+
+   /* -----------------------------------------------------------------------
+     OPEN STATUS
+     ----------------------------------------------------------------------- */
+
+   --status-open-text: #9f2823;
+   --status-open-bg: #fff2f1;
+   --status-open-border: rgba(239, 59, 50, 0.45);
+
+   /* -----------------------------------------------------------------------
+     IN-PROGRESS STATUS
+     ----------------------------------------------------------------------- */
+
+   --status-progress-text: #82403c;
+   --status-progress-bg: #f5e9e8;
+   --status-progress-border: #d8aaa7;
+
+   /* -----------------------------------------------------------------------
+     RESOLVED STATUS
+     ----------------------------------------------------------------------- */
+
+   --status-resolved-text: #565051;
+   --status-resolved-bg: #efedec;
+   --status-resolved-border: #c8c2c1;
+
+   /* -----------------------------------------------------------------------
+     PRIMARY BUTTON
+     ----------------------------------------------------------------------- */
+
+   --theme-button-bg: var(--white);
+   --theme-button-bg-hover: rgba(169, 43, 38, 0.1);
+   --theme-button-bg-active: rgba(169, 43, 38, 0.16);
+   --theme-button-text: var(--aegis-red-deep);
+   --theme-button-border: rgba(169, 43, 38, 0.18);
+   --theme-button-border-hover: rgba(169, 43, 38, 0.34);
+   --theme-button-shadow: 0 4px 12px rgba(63, 35, 30, 0.07);
+   --theme-button-bg-variation: var(--aegis-red-deep);
+}
+
+/* ==========================================================================
+   DARK THEME
+   ========================================================================== */
+
+:root[data-theme="dark"] {
+   color-scheme: dark;
+
+   /* -----------------------------------------------------------------------
+     PAGE SURFACES
+     ----------------------------------------------------------------------- */
+
+   --theme-page: #080d10;
+   --theme-surface: rgba(17, 25, 30, 0.88);
+   --theme-surface-secondary: rgba(19, 29, 35, 0.82);
+   --theme-surface-hover: rgba(255, 255, 255, 0.07);
+
+   /* -----------------------------------------------------------------------
+     TEXT
+     ----------------------------------------------------------------------- */
+
+   --theme-text: #f4f6f7;
+   --theme-text-secondary: #c0c9ce;
+   --theme-muted: #929da4;
+
+   /* -----------------------------------------------------------------------
+     ACCENT
+     ----------------------------------------------------------------------- */
+
+   --theme-accent: var(--aegis-blue-bright);
+   --theme-accent-hover: #9bd7f0;
+   --theme-accent-active: #5eb5dc;
+   --theme-accent-soft: rgba(120, 197, 232, 0.14);
+   --theme-accent-border: rgba(120, 197, 232, 0.38);
+   --theme-focus-ring: rgba(120, 197, 232, 0.24);
+   --theme-mode: var(--theme-accent);
+
+   /* -----------------------------------------------------------------------
+     BORDERS AND DIVIDERS
+     ----------------------------------------------------------------------- */
+
+   --theme-border: rgba(255, 255, 255, 0.12);
+   --theme-border-strong: rgba(255, 255, 255, 0.22);
+   --theme-divider: rgba(255, 255, 255, 0.1);
+
+   /* -----------------------------------------------------------------------
+     CARDS
+     ----------------------------------------------------------------------- */
+
+   --theme-card: rgba(15, 27, 33, 0.92);
+   --theme-card-border: rgba(112, 139, 148, 0.35);
+   --theme-card-shadow: 0 10px 30px rgba(0, 0, 0, 0.26), 0 2px 8px rgba(0, 0, 0, 0.18);
+   --theme-card-shadow-hover: 0 20px 44px rgba(0, 0, 0, 0.36), 0 5px 14px rgba(0, 0, 0, 0.22);
+
+   /* -----------------------------------------------------------------------
+     FORMS AND TABLES
+     ----------------------------------------------------------------------- */
+
+   --theme-control-bg: rgba(255, 255, 255, 0.05);
+   --theme-control-border: rgba(255, 255, 255, 0.18);
+   --theme-control-border-hover: rgba(255, 255, 255, 0.3);
+   --theme-control-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+   --theme-row-hover: rgba(120, 197, 232, 0.08);
+   --theme-row-selected: rgba(120, 197, 232, 0.12);
+
+   /* -----------------------------------------------------------------------
+     DECORATIVE ELEMENTS
+     ----------------------------------------------------------------------- */
+
+   --theme-dot-color: rgba(120, 197, 232, 0.36);
+   --theme-pattern: rgba(255, 255, 255, 0.035);
+   --theme-pattern-secondary: rgba(255, 255, 255, 0.025);
+   --theme-panel-gradient: rgba(35, 137, 176, 0.08);
+
+   /* -----------------------------------------------------------------------
+     ERROR STATUS
+     ----------------------------------------------------------------------- */
+
+   --status-error-text: #ffaaa5;
+   --status-error-bg: rgba(239, 59, 50, 0.12);
+   --status-error-border: #ff6f68;
+
+   /* -----------------------------------------------------------------------
+     OPEN STATUS
+     ----------------------------------------------------------------------- */
+
+   --status-open-text: #ffaaa5;
+   --status-open-bg: rgba(239, 59, 50, 0.12);
+   --status-open-border: #ff6f68;
+
+   /* -----------------------------------------------------------------------
+     IN-PROGRESS STATUS
+     ----------------------------------------------------------------------- */
+
+   --status-progress-text: #9bd7f0;
+   --status-progress-bg: rgba(120, 197, 232, 0.12);
+   --status-progress-border: rgba(120, 197, 232, 0.6);
+
+   /* -----------------------------------------------------------------------
+     RESOLVED STATUS
+     ----------------------------------------------------------------------- */
+
+   --status-resolved-text: #d2d8dc;
+   --status-resolved-bg: rgba(255, 255, 255, 0.07);
+   --status-resolved-border: rgba(255, 255, 255, 0.24);
+
+   /* -----------------------------------------------------------------------
+     PRIMARY BUTTON
+     ----------------------------------------------------------------------- */
+
+   --theme-button-bg: transparent;
+   --theme-button-bg-hover: var(--aegis-blue);
+   --theme-button-bg-active: #0f2f44;
+   --theme-button-text: var(--white);
+   --theme-button-border: rgba(120, 197, 232, 0.3);
+   --theme-button-border-hover: rgba(120, 197, 232, 0.58);
+   --theme-button-shadow: 0 10px 28px rgba(0, 0, 0, 0.32);
+   --theme-button-bg-variation: var(--aegis-blue);
+}
+
+/* ==========================================================================
    GLOBAL RESET
    ========================================================================== */
 
 *,
 *::before,
 *::after {
-  box-sizing: border-box;
+   box-sizing: border-box;
 }
 
 html,
 body,
 #root {
-  width: 100%;
-  min-height: 100%;
-  margin: 0;
+   width: 100%;
+   min-height: 100%;
+   margin: 0;
 }
 
-body {
-  margin: 0;
-  font-family: var(--font-body);
-  background: var(--theme-page);
-  color: var(--theme-text);
+/* ==========================================================================
+   DOCUMENT
+   ========================================================================== */
 
-  transition:
-    color var(--transition-fast),
-    background-color var(--transition-fast);
+body {
+   font-family: var(--font-body);
+   color: var(--theme-text);
+   background: var(--theme-page);
+   transition: color var(--transition-fast), background-color var(--transition-fast);
 }
 
 /* ==========================================================================
@@ -36,208 +332,27 @@ a,
 input,
 select,
 textarea {
-  font: inherit;
+   font: inherit;
 }
 
 button {
-  border: 0;
-  cursor: pointer;
+   border: 0;
+   cursor: pointer;
 }
 
 button:disabled {
-  cursor: not-allowed;
+   cursor: not-allowed;
 }
 
 a {
-  color: inherit;
-  text-decoration: none;
+   color: inherit;
+   text-decoration: none;
 }
 
 img,
 svg {
-  display: block;
-  max-width: 100%;
-}
-
-/* ==========================================================================
-   DESIGN TOKENS
-   ========================================================================== */
-
-:root {
-  color-scheme: light;
-
-  /* Brand palette */
-  --color-aegis-red: #ef3b32;
-  --color-aegis-red-deep: #a92b26;
-  --color-aegis-red-soft: #f9e8e7;
-
-  --color-aegis-navy: #083446;
-  --color-aegis-teal: #0b3f4e;
-  --color-aegis-blue: #1d5a83;
-  --color-aegis-blue-bright: #78c5e8;
-  --color-aegis-blue-soft: #81a5bb;
-
-  /* Neutral palette */
-  --color-black: #000000;
-  --color-white: #ffffff;
-  --color-charcoal: #302b2c;
-  --color-gray: #808080;
-  --color-gray-medium: #999999;
-  --color-gray-light: #f2f2f2;
-
-  /* Type */
-  --font-heading:
-    "Epilogue",
-    system-ui,
-    -apple-system,
-    BlinkMacSystemFont,
-    "Segoe UI",
-    sans-serif;
-
-  --font-body:
-    "Epilogue",
-    system-ui,
-    -apple-system,
-    BlinkMacSystemFont,
-    "Segoe UI",
-    sans-serif;
-
-  --font-mono:
-    "Geist Mono",
-    "SFMono-Regular",
-    Consolas,
-    "Liberation Mono",
-    monospace;
-
-  --font-microsoft:
-    "Open Sans",
-    system-ui,
-    -apple-system,
-    BlinkMacSystemFont,
-    "Segoe UI",
-    sans-serif;
-
-  /* Shape */
-  --radius-sm: 4px;
-  --radius-md: 8px;
-  --radius-lg: 16px;
-  --radius-xl: 22px;
-  --radius-pill: 999px;
-
-  /* Effects */
-  --shadow-soft:
-    0 24px 80px rgba(0, 0, 0, 0.16);
-
-  --shadow-glass:
-    0 24px 80px rgba(0, 0, 0, 0.3);
-
-  /* Motion */
-  --transition-fast: 180ms ease;
-  --transition-base: 220ms ease;
-
-  /* Light-mode accent */
-  --theme-accent: var(--color-aegis-red-deep);
-  --theme-accent-hover: var(--color-aegis-red);
-  --theme-accent-soft: rgba(239, 59, 50, 0.055);
-  --theme-subtext: var(--color-aegis-red-deep);
-  --theme-mode: var(--color-aegis-red);
-}
-
-/* ==========================================================================
-   GLOBAL THEME TOKENS
-   ========================================================================== */
-
-:root {
-  /* Page surfaces */
-  --theme-page: #f5f3f2;
-  --theme-card: #ffffff;
-  --theme-surface: #faf9f8;
-  --theme-surface-secondary: #f0edec;
-  --theme-surface-hover: #ebe7e6;
-
-  /* Text */
-  --theme-text: #272324;
-  --theme-text-secondary: #625d5e;
-  --theme-muted: #898284;
-
-  /* Borders and dividers */
-  --theme-border: #ddd8d7;
-  --theme-border-strong: rgba(255, 255, 255, 0.22);
-  --theme-card-border: #ddd8d7;
-  --theme-divider: #e2dddc;
-
-  /* Decorative backgrounds */
-  --theme-pattern: rgba(48, 43, 44, 0.035);
-  --theme-pattern-secondary: rgba(48, 43, 44, 0.025);
-  --theme-panel-gradient: rgba(239, 59, 50, 0.025);
-
-  /* Generic button colors */
-  --theme-button: #302b2c;
-  --theme-button-hover: #403a3b;
-  --theme-button-active: #211e1f;
-  --theme-button-text: #ffffff;
-
-  /* Shadows */
-  --theme-card-shadow:
-    0 1px 2px rgba(39, 35, 36, 0.04),
-    0 12px 32px rgba(39, 35, 36, 0.07);
-
-  --theme-control-shadow:
-    0 4px 12px rgba(39, 35, 36, 0.06);
-}
-
-/* ==========================================================================
-   DARK MODE
-   ========================================================================== */
-
-:root[data-theme="dark"] {
-  color-scheme: dark;
-
-  /* Accent */
-  --theme-accent: var(--color-aegis-blue-bright);
-  --theme-accent-hover: #9bd7f0;
-  --theme-accent-soft: rgba(120, 197, 232, 0.14);
-
-  /* Theme-colored supporting text */
-  --theme-subtext: var(--color-aegis-blue-bright);
-
-  --theme-mode: var(--theme-accent);
-
-  /* Page surfaces */
-  --theme-page: #080d10;
-  --theme-card: rgba(15, 27, 33, 0.92);
-  --theme-surface: rgba(17, 25, 30, 0.88);
-  --theme-surface-secondary: rgba(19, 29, 35, 0.82);
-  --theme-surface-hover: rgba(255, 255, 255, 0.07);
-
-  /* Text */
-  --theme-text: #f4f6f7;
-  --theme-text-secondary: #c0c9ce;
-  --theme-muted: #929da4;
-
-  /* Borders and dividers */
-  --theme-border: rgba(255, 255, 255, 0.12);
-  --theme-border-strong: rgba(255, 255, 255, 0.22);
-  --theme-card-border: rgba(112, 139, 148, 0.35);
-  --theme-divider: rgba(255, 255, 255, 0.12);
-
-  /* Decorative backgrounds */
-  --theme-pattern: rgba(255, 255, 255, 0.035);
-  --theme-pattern-secondary: rgba(255, 255, 255, 0.025);
-  --theme-panel-gradient: rgba(35, 137, 176, 0.08);
-
-  /* Generic button colors */
-  --theme-button: #f4f6f7;
-  --theme-button-hover: #ffffff;
-  --theme-button-active: #dce2e5;
-  --theme-button-text: #080d10;
-
-  /* Shadows */
-  --theme-card-shadow:
-    0 28px 70px rgba(0, 0, 0, 0.42);
-
-  --theme-control-shadow:
-    0 8px 24px rgba(0, 0, 0, 0.3);
+   display: block;
+   max-width: 100%;
 }
 
 /* ==========================================================================
@@ -247,14 +362,11 @@ svg {
 .support-page-description,
 .links-page-description,
 .create-link-description,
-.upload-note,
-.auth-card p {
-  color: var(--theme-subtext);
-  font-style: italic;
-  font-weight: 400;
-
-  transition:
-    color var(--transition-fast);
+.upload-note {
+   color: var(--theme-accent);
+   font-style: italic;
+   font-weight: 400;
+   transition: color var(--transition-fast);
 }
 
 /* ==========================================================================
@@ -262,12 +374,8 @@ svg {
    ========================================================================== */
 
 :focus-visible {
-  outline: 2px solid var(--theme-accent);
-  outline-offset: 3px;
-}
-
-:root[data-theme="dark"] :focus-visible {
-  outline-color: var(--theme-accent);
+   outline: 2px solid var(--theme-accent);
+   outline-offset: 3px;
 }
 
 /* ==========================================================================
@@ -276,12 +384,12 @@ svg {
 
 @media (prefers-reduced-motion: reduce) {
 
-  *,
-  *::before,
-  *::after {
-    scroll-behavior: auto !important;
-    transition-duration: 0.01ms !important;
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-  }
+   *,
+   *::before,
+   *::after {
+      scroll-behavior: auto !important;
+      transition-duration: 0.01ms !important;
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+   }
 }

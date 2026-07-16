@@ -25,7 +25,7 @@
 .create-link-eyebrow {
   margin: 0 0 10px;
 
-  color: var(--current-theme);
+  color: var(--theme-accent);
 
   font-family: var(--font-mono, monospace);
   font-size: 12px;
@@ -51,9 +51,7 @@
   display: block;
   max-width: 700px;
   margin: 12px 0 0;
-
-  color: var(--theme-subtext);
-
+  color: var(--theme-accent);
   font-size: 16px;
   line-height: 1.6;
 }
@@ -75,16 +73,16 @@
 
 .link-form,
 .create-link-info {
-  border: 1px solid var(--portal-card-border);
+  border: 1px solid var(--theme-card-border);
   border-radius: var(--radius-lg);
 
   background:
     linear-gradient(135deg,
-      var(--portal-accent-soft),
+      var(--theme-accent-soft),
       transparent 42%),
     var(--theme-surface);
 
-  box-shadow: var(--portal-card-shadow);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .link-form {
@@ -114,10 +112,10 @@
 .link-form textarea {
   width: 100%;
 
-  border: 1px solid var(--portal-control-border);
+  border: 1px solid var(--theme-control-border);
   border-radius: var(--radius-md);
 
-  background: var(--portal-control-background);
+  background: var(--theme-control-bg);
   color: var(--theme-text);
 
   font: inherit;
@@ -151,15 +149,15 @@
 .link-form input:hover,
 .link-form select:hover,
 .link-form textarea:hover {
-  border-color: var(--portal-control-border-hover);
+  border-color: var(--theme-control-border-hover);
 }
 
 .link-form input:focus-visible,
 .link-form select:focus-visible,
 .link-form textarea:focus-visible {
-  border-color: var(--portal-accent);
+  border-color: var(--theme-accent);
 
-  outline: 3px solid var(--portal-focus-ring);
+  outline: 3px solid var(--theme-focus-ring);
   outline-offset: 1px;
 
   box-shadow: none;
@@ -201,10 +199,10 @@
 .link-form-error {
   padding: 14px 16px;
 
-  color: var(--portal-error-text);
-  background: var(--portal-error-background);
+  color: var(--status-error-text);
+  background: var(--status-error-bg);
 
-  border-left: 4px solid var(--portal-error-border);
+  border-left: 4px solid var(--status-error-border);
   border-radius: var(--radius-md);
 
   font-size: 14px;
@@ -264,14 +262,14 @@
 
 .link-cancel-button {
   color: var(--theme-text);
-  background: var(--portal-primary-button-background);
-  border: 2px solid var(--portal-primary-button-border);
+  background: var(--theme-button-bg);
+  border: 2px solid var(--theme-button-border);
 }
 
 .link-cancel-button:hover:not(:disabled) {
-  color: var(--portal-primary-button-text);
-  background: var(--portal-primary-button-background-hover);
-  border-color: var(--portal-primary-button-border-hover);
+  color: var(--theme-button-text);
+  background: var(--theme-button-bg-hover);
+  border-color: var(--theme-button-border-hover);
 }
 
 /* --------------------------------------------------------------------------
@@ -280,19 +278,19 @@
 
 .link-submit-button {
   color: var(--theme-text);
-  background: var(--portal-primary-button-background);
-  border: 2px solid var(--portal-primary-button-border);
-  box-shadow: var(--portal-primary-button-shadow);
+  background: var(--theme-button-bg);
+  border: 2px solid var(--theme-button-border);
+  box-shadow: var(--theme-button-shadow);
 }
 
 .link-submit-button:hover:not(:disabled) {
-  color: var(--portal-primary-button-text);
-  background: var(--portal-primary-button-background-hover);
-  border-color: var(--portal-primary-button-border-hover);
+  color: var(--theme-button-text);
+  background: var(--theme-button-bg-hover);
+  border-color: var(--theme-button-border-hover);
 }
 
 .link-submit-button:active:not(:disabled) {
-  background: var(--portal-primary-button-background-active);
+  background: var(--theme-button-bg-active);
 }
 
 /* ==========================================================================
