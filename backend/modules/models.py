@@ -1,25 +1,19 @@
-from datetime import datetime, timezone, timedelta
-import enum
-from sqlalchemy import DateTime
-from sqlalchemy import UUID, BigInteger, Column, String, Integer, DateTime, Boolean, Text, JSON, UniqueConstraint
-import sqlalchemy
-from sqlalchemy.orm import declarative_base
-from sqlalchemy import UUID, BigInteger, Column, String, Integer, DateTime, Boolean, Text, JSON, Table, ForeignKey, select, update
-from sqlalchemy.orm import declarative_base, Mapped, mapped_column, relationship
-
 import AppConstants
+import enum
+import secrets
+import sqlalchemy
+import uuid
 
-
+from datetime import datetime, timezone, timedelta
+from sqlalchemy import UUID, BigInteger, Column, String, Integer, DateTime, Boolean, Text, JSON, Table, UniqueConstraint, ForeignKey, select, update
+from sqlalchemy.ext.mutable import MutableList
+from sqlalchemy.orm import declarative_base, Mapped, mapped_column, relationship
 
 Base = declarative_base()
 
-
-import uuid
-
-import uuid
-import secrets
-from sqlalchemy.ext.mutable import MutableList
-from sqlalchemy import UUID, BigInteger, Boolean, Column, DateTime, Integer, JSON, String, Text
+#=======================================================================================================
+# Upload models and classes
+#=======================================================================================================
 
 class StorageRegion(enum.Enum):
     US = "us"
@@ -88,6 +82,9 @@ class UploadRecord(Base): # "LinkDB".uploads table
     upload_complete = Column(Boolean, default=False)
     for_deletion = Column(Boolean, default=False, nullable=False)  # flag to mark the record for deletion
 
+#=======================================================================================================
+# Link record model
+#=======================================================================================================
 
 class LinkRecord(Base): # "LinkDB".links table
     __tablename__ = "links"
