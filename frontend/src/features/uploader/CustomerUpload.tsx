@@ -8,6 +8,11 @@ import { useParams } from "react-router-dom";
 import { sha256 } from "@noble/hashes/sha2.js";
 import { bytesToHex } from "@noble/hashes/utils.js";
 import "./CustomerUpload.css";
+import {
+    saveUploadSession,
+    deleteUploadSession,
+    getUploadSessions,
+} from "./indexedDb";
 import { useCustomerUpload } from "../../layouts/CustomerLayoutContext";
 
 
@@ -15,6 +20,15 @@ type SelectedFile = {
     id: string;
     file: File;
     preview: string;
+};
+
+type UploadStatus = {
+    receivedRanges: [number, number][];
+    receivedSize: number;
+    expectedSize: number;
+    chunkSize: number;
+    completed: boolean;
+    chunksReceived: number;
 };
 
 async function runWithConcurrency<T>(
@@ -87,6 +101,21 @@ async function sha256Blob(blob: Blob): Promise<string> {
     }
 }
 
+async function getUploadStatus(
+    uuid: string,
+    uploadToken: string,
+): Promise<UploadStatus> {
+    const response = await fetch(
+        `/api/uploadfile/${uuid}/${uploadToken}/status`
+    );
+
+    if (!response.ok) {
+        throw new Error("Failed to get upload status");
+    }
+
+    return response.json();
+}
+
 async function uploadChunk(
     uuid: string,
     uploadToken: string,
@@ -114,7 +143,76 @@ async function uploadChunk(
         throw new Error("Chunk upload failed");
     }
 }
+async function resumeInterruptedUploads() {
+    const uploads = await getUploadSessions();
 
+    for (const upload of uploads) {
+        const {
+            uuid,
+            uploadToken,
+            chunkSize,
+            file,
+        } = upload;
+
+        let status = await getUploadStatus(uuid, uploadToken);
+
+        while (!status.completed) {
+            const missingOffsets: number[] = [];
+
+            for (
+                let offset = 0;
+                offset < file.size;
+                offset += chunkSize
+            ) {
+                const end = Math.min(
+                    offset + chunkSize,
+                    file.size,
+                );
+
+                const exists = status.receivedRanges.some(
+                    ([start, finish]: [number, number]) =>
+                        start <= offset &&
+                        finish >= end
+                );
+
+                if (!exists) {
+                    missingOffsets.push(offset);
+                }
+            }
+
+            for (const offset of missingOffsets) {
+                const end = Math.min(
+                    offset + chunkSize,
+                    file.size,
+                );
+
+                const chunk = file.slice(offset, end);
+
+                await uploadChunk(
+                    uuid,
+                    uploadToken,
+                    chunk,
+                    offset,
+                    chunk.size,
+                );
+            }
+
+            status = await getUploadStatus(
+                uuid,
+                uploadToken,
+            );
+        }
+
+        const completeResponse = await fetch(
+            `/api/uploadfile/${uuid}/${uploadToken}/complete`,
+            { method: "POST" },
+        );
+
+        if (completeResponse.ok) {
+            await deleteUploadSession(uploadToken);
+        }
+    }
+}
 export function CustomerUpload() {
     const { uuid } = useParams();
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -160,6 +258,10 @@ export function CustomerUpload() {
     if (!uuid) {
         return <p>Invalid upload link.</p>;
     }
+
+    useEffect(() => {
+        resumeInterruptedUploads();
+    }, []);
 
     const handleBrowseClick = () => {
         fileInputRef.current?.click();
@@ -276,7 +378,15 @@ export function CustomerUpload() {
                         chunkSize: number;
                     } = await startResponse.json();
 
-
+                    await saveUploadSession({
+                        uuid,
+                        uploadToken,
+                        fileName: item.file.name,
+                        fileHash,
+                        fileSize: item.file.size,
+                        chunkSize,
+                        file: item.file,
+                    })
                     
 
                     let offset = 0;
@@ -342,8 +452,49 @@ export function CustomerUpload() {
                             },
                         }));
                     }
+                    let status = await getUploadStatus(uuid, uploadToken);
 
+                    while (!status.completed) {
+                        const missingOffsets: number[] = [];
 
+                        for (
+                            let offset = 0;
+                            offset < item.file.size;
+                            offset += chunkSize
+                        ) {
+                            const end = Math.min(
+                                offset + chunkSize,
+                                item.file.size,
+                            );
+
+                            const exists = status.receivedRanges.some(
+                                ([start, finish]) =>
+                                    start <= offset &&
+                                    finish >= end
+                            );
+
+                            if (!exists) {
+                                missingOffsets.push(offset);
+                            }
+                        }
+                        for (const offset of missingOffsets) {
+                            const end = Math.min(
+                                offset + chunkSize,
+                                item.file.size,
+                            );
+
+                            const chunk = item.file.slice(offset, end);
+
+                            await uploadChunk(
+                                uuid,
+                                uploadToken,
+                                chunk,
+                                offset,
+                                chunk.size,
+                            );
+                        }
+                        status = await getUploadStatus(uuid, uploadToken);
+                    }
                     const completeResponse = await fetch(
                         `/api/uploadfile/${uuid}/${uploadToken}/complete`,
                         {
@@ -354,6 +505,8 @@ export function CustomerUpload() {
                     if (!completeResponse.ok) {
                         throw new Error("Failed to complete upload");
                     }
+                    
+                    await deleteUploadSession(uploadToken);
 
                     setUploadStatus((s) => ({
                         ...s,
@@ -389,10 +542,7 @@ export function CustomerUpload() {
                     Upload your files
                 </h1>
 
-                <p className="upload-link-id">
-                    Upload link ID: {uuid}
-                </p>
-
+                
                 <p className="upload-note">
                     This link is temporary and will stop working after the
                     assigned expiration time. Please upload your files before
