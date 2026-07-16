@@ -1,16 +1,21 @@
-import logging
-from datetime import datetime, timedelta, timezone
-from sqlalchemy import select
 import AppConstants
+import logging
 
+from datetime import datetime, timedelta, timezone
 from modules import Session
 from modules.models import LinkRecord, UploadRecord, UploadSession, update_other_from_self, update_similar_between_LinkDB_and_UploadDB
 from modules.HubSpotIntegration import is_caseExpirable
 from modules.StorageProvider import StorageProvider 
 from modules import usFileStorageProvider, euFileStorageProvider, itarFileStorageProvider
+from sqlalchemy import select
+
 logger = logging.getLogger(__name__)
 
 LINK_EXPIRY_DAYS = 2
+
+#========================================================================================
+# Expiration Functions
+#========================================================================================
 
 def _expireUploads():
     now = datetime.now(timezone.utc)
@@ -46,7 +51,8 @@ def _expireLinks():
 
     with Session() as session:
         links = session.scalars(
-            select(LinkRecord).where(LinkRecord.expired.is_(False))
+            select(LinkRecord)
+            .where(LinkRecord.expired.is_(False))
         ).all()
 
         for link in links:
@@ -55,6 +61,10 @@ def _expireLinks():
 
         session.commit()
         update_similar_between_LinkDB_and_UploadDB(session)
+
+#========================================================================================
+# Deletion Functions
+#========================================================================================
 
 def _deleteExpiredUploadSessions(): # Delete sessions where upload is completeted and the upload id is marked for deletion
     with Session() as session:
