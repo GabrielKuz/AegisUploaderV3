@@ -1,11 +1,10 @@
-from modules.auth import User
 from fastapi import HTTPException, status
 from fastapi.responses import FileResponse
-from pathlib import Path
 from modules import Session
-from modules.models import UploadRecord
+from modules.auth import User
 from modules.HubSpotIntegration import is_caseExpirable
 from modules.models import UploadRecord, LinkRecord
+from pathlib import Path
 
 session = Session()
 

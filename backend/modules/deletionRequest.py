@@ -1,9 +1,11 @@
 import fastapi
 import uuid
-from pydantic import Field, BaseModel
-from typing import Annotated
+
 from fastapi import APIRouter, Depends, HTTPException
 from modules.auth import getCurrentActiveUser, getCurrentUser, User, userAuthenticated
+from pydantic import Field, BaseModel
+from typing import Annotated
+
 router = APIRouter()
 
 @router.post("/requestfordeletion/{link_uuid}") #Requests from client side to delete data. Only sends email 

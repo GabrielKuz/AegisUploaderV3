@@ -82,7 +82,8 @@ def _deleteExpiredUploadSessions(): # Delete sessions where upload is completete
 def _deleteExpiredUploads(storage: StorageProvider):
     with Session() as session:
         uploads = session.scalars(
-            select(UploadRecord).where(UploadRecord.for_deletion.is_(True))
+            select(UploadRecord)
+            .where(UploadRecord.for_deletion.is_(True))
         ).all()
 
         for upload in uploads:
@@ -104,7 +105,8 @@ def _deleteExpiredUploads(storage: StorageProvider):
 def _deleteExpiredLinks():
     with Session() as session: # delete expired likns only once their assoiciated uploads have for_deletion set to True and they are marked as expired
         links = session.scalars(
-            select(LinkRecord).where(LinkRecord.expired.is_(True))
+            select(LinkRecord)
+            .where(LinkRecord.expired.is_(True))
         ).all()
 
         for link in links:
