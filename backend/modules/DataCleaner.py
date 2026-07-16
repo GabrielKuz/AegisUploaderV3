@@ -7,7 +7,7 @@ import AppConstants
 import Utils
 
 from modules import Session
-from modules.models import LinkRecord, UploadRecord, UploadSession, update_other_from_self, update_similar_between_LinkDB_and_UploadDB
+from modules.models import LinkRecord, UploadRecord, UploadChunk, UploadSession, update_other_from_self, update_similar_between_LinkDB_and_UploadDB
 from modules.HubSpotIntegration import is_caseExpirable
 from modules.StorageProvider import StorageProvider 
 from modules import usFileStorageProvider, euFileStorageProvider, itarFileStorageProvider
@@ -148,6 +148,25 @@ def _deleteEmptyCaseDirs(storage: StorageProvider): # Find case directories in s
                     logger.info(f"Deleted empty case directory: {case_dir}")
                 except Exception as e:
                     logger.error(f"Failed to delete empty case directory {case_dir}: {e}")
+
+def _deleteOldUploadChunks():
+    with Session() as session:
+        chunks = session.scalars(
+            select(UploadChunk)
+            .where(UploadChunk.upload_id.in_(select(UploadRecord.upload_id).where(UploadRecord.for_deletion.is_(True))))
+        ).all()
+
+        for chunk in chunks:
+            try:
+                session.delete(chunk)
+
+            except FileNotFoundError:
+                session.delete(chunk)
+
+            except Exception as e:
+                logger.error(f"Failed deleting file for upload chunk {chunk.chunk_id} ({chunk.blob_name}): {e}")
+
+        session.commit()
 
 def expireAndDeleteOldData():
     try:
