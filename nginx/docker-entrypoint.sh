@@ -8,7 +8,7 @@ if [ "$BUILD_TYPE" = "dev" ]; then
         < /etc/nginx/nginx.conf.template \
         > /etc/nginx/nginx.conf
     echo "Using dev backend URL: $DEV_BACKEND_URL"
-else
+else if [ "$BUILD_TYPE" = "production" ]; then
     envsubst '$PROD_BACKEND_URL' \
         < /etc/nginx/nginx.conf.template \
         > /etc/nginx/nginx.conf
