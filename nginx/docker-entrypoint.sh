@@ -13,6 +13,7 @@ else if [ "$BUILD_TYPE" = "production" ]; then
         < /etc/nginx/nginx.conf.template \
         > /etc/nginx/nginx.conf
     echo "Using prod backend URL: $PROD_BACKEND_URL"
-fi
 
 exec "$@"
+
+fi

@@ -50,6 +50,9 @@ def hash_bytes(data: bytes) -> str:
     return blake3(data).hexdigest()
 
 def validate_upload_link(link_entry: LinkRecord):
+    if link_entry is None:
+        raise HTTPException(status_code=404, detail="Link not found")
+    
     now = datetime.datetime.now(timezone.utc)
     expiration = link_entry.expiration_date
 
@@ -172,6 +175,13 @@ async def start_upload(
         raise HTTPException(status_code=404, detail="Link not found")
 
     if link_entry.expired:
+        raise HTTPException(status_code=410, detail="This link has expired and is no longer available for uploads") # Dont create new tokens, but old tokens should finish
+    
+    if link_entry.for_deletion:
+        raise HTTPException(status_code=410, detail="This link has been marked for deletion and is no longer available for uploads")
+    
+    if link_entry.expiration_date is None or link_entry.expiration_date <= datetime.datetime.now(tz=datetime.timezone.utc):
+        link_entry.expired = True # mark the link as expired if the expiration date has passed in case the cleanup job hasnt run yet 
         raise HTTPException(status_code=410, detail="This link has expired and is no longer available for uploads")
 
     itar_status = bool(link_entry.itar) if link_entry else False
@@ -279,7 +289,7 @@ async def start_upload(
         "chunkSize": chunk_size,
     }
 
-@router.post("/uploadfile/{link_uuid}/{upload_token}", response_model=UploadChunkResponse)
+@router.post("/uploadfile/{link_uuid}/{upload_token}", response_model=UploadChunkResponse) # Even if link is expired, allow the upload to continue if it was started before expiration
 async def upload_file_chunk(
     link_uuid: str,
     upload_token: str,
@@ -324,8 +334,13 @@ async def upload_file_chunk(
 
     if link_entry is None:
         raise HTTPException(404, "Link not found")
-
-    validate_upload_link(link_entry) # returns 410 if expired
+    try:
+        validate_upload_link(link_entry) # returns 410 if expired
+    except HTTPException as e:
+        if e.status_code == 410:
+            pass # allow uploads to continue if they were started before the link expired, but catch invalid link errors and other exceptions
+        else:
+            raise
 
     existing_chunk = db.query(UploadChunk).filter(
             UploadChunk.upload_id == upload_session.upload_id,
