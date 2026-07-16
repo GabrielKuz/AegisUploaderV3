@@ -154,6 +154,9 @@ services:
         VITE_AZURE_CLIENT_ID: ${CLIENT_ID}
         VITE_AZURE_API_SCOPE: ${AZURE_API_SCOPE}
 
+    environment:
+      BACKEND_URL: ${BACKEND_URL}
+      
     ports:
       - "443:8443" # avoid nginx running as root  
       # Switch to 443:8443 eventually
@@ -168,7 +171,7 @@ services:
     volumes: 
       -  C:\certs:/etc/nginx/certs:ro
     healthcheck:
-      test: ["CMD", "curl", "-fk", "https://localhost:8443"]
+      test: ["CMD", "wget", "--no-verbose", "--spider", "http://localhost:8080"] # ["CMD", "wget", "--no-verbose", "--spider", "--no-check-certificate", "https://localhost:8443"]
       interval: 5s
       timeout: 5s
       retries: 10

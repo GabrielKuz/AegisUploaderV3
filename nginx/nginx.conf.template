@@ -1,0 +1,218 @@
+# TODO: add ssl certs and https/http2/hsts once closer to prod
+
+worker_processes auto;  # use number of cores
+user nginx; # run as non root
+pid /tmp/nginx.pid; # move pid files to tmp so they can be used by a non root user
+
+events {
+  worker_connections 1024; #not expecting many concurrent connections
+}
+
+http {
+  include /etc/nginx/mime.types;
+  default_type application/octet-stream; #sane mime fallback type
+
+  client_max_body_size 10m; # biggest on old app was ~2.5 TB but only to upload endpoint, so much smaller default for everything else
+
+  charset utf-8; # encoding
+
+  client_body_timeout 15m; #allow long uploads
+  send_timeout 6h;
+
+  sendfile on; #performance
+  tcp_nopush on; # send full packets to reduce network overhead
+  tcp_nodelay on; # reduce latency by disabling nagle's algorithm
+
+  server_tokens off; #hide nginx version
+
+  keepalive_timeout 30; # keep alive some connections after disconnect to reduce overhead of opening a new one
+  keepalive_requests 100; # allow multiple requests per connection
+
+  limit_req_zone $binary_remote_addr zone=api_limit:10m rate=10r/s;
+
+  limit_req_status 429;
+  limit_req_log_level warn;
+
+  # gzip compress, maybe switch to brotli in the future
+  gzip on;
+  gzip_vary on;
+  gzip_comp_level 5;
+  gzip_min_length 1000;
+  gzip_types
+    text/plain
+    text/css
+    application/json
+    application/javascript
+    application/xml
+    application/manifest+json
+    text/xml
+    image/svg+xml
+    font/ttf
+    application/wasm
+    application/rss+xml
+    font/woff
+    font/woff2;
+  
+  map $http_user_agent $bad_ua { # reduce log noise, no real security benefit
+    default 0;
+    "~*masscan" 1;
+    "~*nikto" 1;
+    "~*sqlmap" 1;
+  }
+
+  etag on; # cache validation allows for 304 not modified as a response
+
+  server {
+
+    #listen 8080;
+    ssl_certificate     /etc/nginx/certs/localhost-fullchain.pem;
+    ssl_certificate_key /etc/nginx/certs/localhost-key.pem;
+
+    listen 8443 ssl;
+    http2 on;
+
+    ssl_session_cache shared:SSL:10m;
+    ssl_session_timeout 1d;
+
+    ssl_protocols TLSv1.2 TLSv1.3;
+
+    ssl_prefer_server_ciphers off;
+
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always; # Add once stable
+
+    root /usr/share/nginx/html;
+    index index.html;
+    if ($http_user_agent = "") {
+      return 403;
+    }
+    if ($bad_ua) {
+        return 403;
+    }
+
+    add_header X-Frame-Options "DENY" always; #prevent clickjacking change if we need to embed in an iframe
+    add_header X-Content-Type-Options "nosniff" always; # prevent mime sniffing
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always; # prevent sending full url in header to other sites
+    add_header X-Permitted-Cross-Domain-Policies "none" always; # prevent flash and adobe stuff from loading cross domain data
+    add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always; # disable access to stuff we dont need
+    add_header Content-Security-Policy "default-src 'self';base-uri 'self';object-src 'none';frame-ancestors 'none';frame-src 'none';form-action 'self';script-src 'self';style-src 'self';img-src 'self' data: blob:;font-src 'self';connect-src 'self' https://login.microsoftonline.com;manifest-src 'self';worker-src 'self' blob:;" always; # Check with frontend about inline scripts and styles
+    add_header Cross-Origin-Opener-Policy "same-origin" always;
+    add_header Cross-Origin-Resource-Policy "same-origin" always;
+    add_header X-Robots-Tag "noindex, nofollow, noarchive" always;
+
+    add_header_inherit merge;
+
+    # prevent stale content being served from cache after update
+    location = /index.html {
+      expires -1;
+      add_header Cache-Control "no-cache, no-store, must-revalidate" always;
+    }
+
+    location /upload {
+      limit_req zone=api_limit burst=20 nodelay;
+      try_files $uri $uri/ /index.html;
+      #TODO: serve 404 if not found instead of index (only after merged into main)
+    }
+
+    location /api/uploadfile/ { # /api/uploadfile/{uuid} is the only one used for large files
+      client_max_body_size 3000g;
+      proxy_pass http://backend:8000/uploadfile/;
+      proxy_pass_request_headers on;
+
+      proxy_http_version 1.1;
+
+      proxy_set_header Host $host;
+      proxy_set_header X-Real-IP $remote_addr;
+      proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+      proxy_set_header X-Forwarded-Proto $scheme;
+      proxy_set_header X-Forwarded-Host $host;
+      proxy_set_header X-Forwarded-Port $server_port;
+
+      proxy_request_buffering off;
+      proxy_buffering on;
+
+      proxy_connect_timeout 3m;
+      proxy_send_timeout 48h;
+      proxy_read_timeout 48h;
+    }
+
+    # api docs. disable in prod from main.py and change this to serve 404
+    location /api/openapi.json {
+      return 404;
+      
+      proxy_pass http://backend:8000/openapi.json;
+    }
+
+    location /api/docs {
+      return 404;
+
+      proxy_pass http://backend:8000/docs;
+
+      proxy_http_version 1.1;
+
+      proxy_set_header Host $host;
+      proxy_set_header X-Forwarded-Proto $scheme;
+      proxy_set_header X-Forwarded-Host $host;
+      proxy_set_header X-Forwarded-Port $server_port;
+      proxy_set_header X-Real-IP $remote_addr;
+      proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+
+      add_header_inherit off;
+
+      add_header Content-Security-Policy "default-src 'self';base-uri 'self';object-src 'none';frame-ancestors 'none';frame-src 'none';form-action 'self';script-src 'self' https://cdn.jsdelivr.net 'unsafe-inline';style-src 'self' https://cdn.jsdelivr.net 'unsafe-inline';img-src 'self' https://fastapi.tiangolo.com data: blob:;font-src 'self' https://cdn.jsdelivr.net;connect-src 'self' https://login.microsoftonline.com;manifest-src 'self';worker-src 'self' blob:;" always;
+    }
+
+    # api proxy
+    location /api/ {
+
+      limit_except GET HEAD POST OPTIONS {
+        deny all;
+      }
+
+      limit_req zone=api_limit burst=20 nodelay;
+
+      proxy_pass http://backend:8000;
+
+      proxy_http_version 1.1;
+
+      proxy_set_header Host $host;
+      proxy_set_header X-Real-IP $remote_addr;
+      proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+      proxy_set_header X-Forwarded-Proto $scheme;
+      proxy_set_header X-Forwarded-Host $host;
+      proxy_set_header X-Forwarded-Port $server_port;
+
+      proxy_request_buffering on;
+      proxy_buffering on;
+
+      # websockets if we add them
+      # proxy_set_header Upgrade $http_upgrade;
+      # proxy_set_header Connection "upgrade";
+
+      proxy_connect_timeout 3m; #allow long uploads
+      proxy_send_timeout 12h; #allow long uploads
+      proxy_read_timeout 12h; #allow long uploads
+    }
+
+    # cache hashed static react stuff
+    location ~* \.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot)$ {
+      expires 6M; #effectively permanent caching for hashed static stuff
+      add_header Cache-Control "public, immutable" always;
+      access_log off;
+    }
+
+    location = /robots.txt {
+      default_type text/plain;
+      return 200 "User-agent: *\nDisallow: /\n";
+    }
+
+    location = /favicon.svg {
+      access_log off;
+      log_not_found off;
+    }
+
+    # React spa routing and fallback to index.html for non-api routes
+    location / {
+      try_files $uri $uri/ /index.html;
+    }
+  }
+}
