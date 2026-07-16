@@ -23,21 +23,32 @@ from contextlib import asynccontextmanager
 import logging
 
 logging.basicConfig(level=logging.INFO) # setup logging server. TODO: change to file and add more logging
-
+testing = False
 scheduler = AsyncIOScheduler(timezone=ZoneInfo("America/New_York"))
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    scheduler.add_job(
-        expireAndDeleteOldData,
-        trigger="cron",
-        hour=0,
-        minute=0,
-        id="daily_cleanup",
-        replace_existing=True,
-        max_instances=1,
-        coalesce=True,
-    )
+    if testing:
+        scheduler.add_job(
+            expireAndDeleteOldData,
+            trigger="interval",
+            seconds=10,
+            id="test_cleanup",
+            replace_existing=True,
+            max_instances=1,
+            coalesce=True,
+        )
+    else:
+        scheduler.add_job(
+            expireAndDeleteOldData,
+            trigger="cron",
+            hour=0,
+            minute=0,
+            id="daily_cleanup",
+            replace_existing=True,
+            max_instances=1,
+            coalesce=True,
+        )
     scheduler.start()
     yield
     scheduler.shutdown(wait=False)
@@ -62,7 +73,6 @@ def get_link_endpoint(uuid: str, current_user: Annotated[User, Depends(requireRo
         raise badUUID
         return None
     return get_link(uuid)
-
 
 @app.get("/")
 def read_root():

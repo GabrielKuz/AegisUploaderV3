@@ -11,6 +11,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 import pytest
 
+import AppConstants
 from modules import Session
 from modules.models import UploadSession, UploadRecord, UploadChunk
 
@@ -103,7 +104,7 @@ def upload_test_setup(monkeypatch, tmp_path):
         itar=False,
         users_with_access=["testuser"],
         timestamp=datetime.datetime.now(datetime.timezone.utc),
-        expiration_date=datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=48),
+        expiration_date=datetime.datetime.now(datetime.timezone.utc) + AppConstants.LINK_EXPIRATION_TIME,
         expired=False,
     )
 
@@ -852,7 +853,7 @@ def test_upload_itar_region(upload_test_setup, monkeypatch):
         itar=True,
         users_with_access=["testuser"],
         timestamp=datetime.datetime.now(),
-        expiration_date=datetime.datetime.now() + datetime.timedelta(hours=48),
+        expiration_date=datetime.datetime.now() + AppConstants.LINK_EXPIRATION_TIME,
         expired=False,
     )
 

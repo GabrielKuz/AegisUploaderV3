@@ -1,9 +1,10 @@
 import logging
 from datetime import datetime, timedelta, timezone
 from sqlalchemy import select
+import AppConstants
 
 from modules import Session
-from modules.models import LinkRecord, UploadRecord, update_other_from_self, update_similar_between_LinkDB_and_UploadDB
+from modules.models import LinkRecord, UploadRecord, UploadSession, update_other_from_self, update_similar_between_LinkDB_and_UploadDB
 from modules.HubSpotIntegration import is_caseExpirable
 from modules.StorageProvider import StorageProvider 
 from modules import usFileStorageProvider, euFileStorageProvider, itarFileStorageProvider
@@ -23,11 +24,11 @@ def _expireUploads():
 
         case_cache: dict[str, bool] = {}
 
+
         for upload in uploads:
             if not upload.timestamp:
                 continue
-
-            if upload.timestamp + timedelta(days=upload.max_days_in_storage) <= now:
+            if (upload.timestamp + AppConstants.UPLOAD_DEFAULT_RETENTION_TIME) <= now:
                 upload.for_deletion = True
                 continue
 
@@ -41,7 +42,7 @@ def _expireUploads():
         session.commit()
 
 def _expireLinks():
-    cutoff = datetime.now(timezone.utc) - timedelta(days=LINK_EXPIRY_DAYS)
+    cutoff = datetime.now(timezone.utc) - AppConstants.LINK_EXPIRATION_TIME
 
     with Session() as session:
         links = session.scalars(
@@ -54,6 +55,19 @@ def _expireLinks():
 
         session.commit()
         update_similar_between_LinkDB_and_UploadDB(session)
+
+def _deleteExpiredUploadSessions(): # Delete sessions where upload is completeted and the upload id is marked for deletion
+    with Session() as session:
+        sessions = session.scalars(
+            select(UploadSession)
+            .where(UploadSession.completed.is_(True))
+            .where(UploadSession.upload_id.in_(select(UploadRecord.upload_id).where(UploadRecord.for_deletion.is_(True))))
+        ).all()
+
+        for session_record in sessions:
+            session.delete(session_record)
+
+        session.commit()
 
 def _deleteExpiredUploads(storage: StorageProvider):
     with Session() as session:
@@ -103,6 +117,7 @@ def expireAndDeleteOldData():
 
         _expireUploads()
         _expireLinks()
+        _deleteExpiredUploadSessions()
         for storage in [usFileStorageProvider, euFileStorageProvider, itarFileStorageProvider]:
             _deleteExpiredUploads(storage)
         _deleteExpiredLinks()

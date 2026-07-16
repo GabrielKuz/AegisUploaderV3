@@ -37,8 +37,8 @@ def upgrade() -> None:
         sa.Column('received_size', sa.BigInteger(), nullable=False),
         sa.Column('chunk_size', sa.BigInteger(), nullable=False),
         sa.Column('completed', sa.Boolean(), nullable=False),
-        sa.Column('created', sa.DateTime(), nullable=False),
-        sa.Column('last_activity', sa.DateTime(), nullable=False),
+        sa.Column('created', sa.DateTime(timezone=True), nullable=False),
+        sa.Column('last_activity', sa.DateTime(timezone=True), nullable=False),
         sa.Column('itar_status', sa.Boolean(), nullable=False),
         sa.Column(
             'storage_region',

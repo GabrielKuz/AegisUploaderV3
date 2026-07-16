@@ -8,6 +8,7 @@ from modules.HubSpotIntegration import get_caseITARstatus, caseIDExists
 from modules.auth import User
 from modules.models import LinkRecord, UploadRecord, update_other_from_self, update_similar_between_LinkDB_and_UploadDB
 import os
+import AppConstants
 from warnings import warn, deprecated
 from modules import Session, engine
 from Utils import IsCaseID
@@ -68,7 +69,7 @@ def store_link(link_request: LinkRequest, uuid_str: str, current_user: User):
             itar=get_caseITARstatus(link_request.case_id),
             creator=current_user.username,
             timestamp=datetime.now(timezone.utc),
-            expiration_date=datetime.now(timezone.utc) + timedelta(hours=48), # Always expires 48 hours from creation
+            expiration_date=datetime.now(timezone.utc) + AppConstants.LINK_EXPIRATION_TIME, # Always expires after the default expiration time
             users_with_access=[current_user.username], # TODO: Change to inclide the admin list
             expired=False,
         )
@@ -142,7 +143,7 @@ def _serialize_link_record(record: LinkRecord):
     """
     expiration_date = None
     if record.timestamp is not None:
-        expiration_date = (record.timestamp + timedelta(days=2))
+        expiration_date = (record.timestamp + AppConstants.LINK_EXPIRATION_TIME)
 
     return {
         "uuid": record.uuid,

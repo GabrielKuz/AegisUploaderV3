@@ -1,6 +1,7 @@
 import asyncio
 from urllib import response
 from fastapi.testclient import TestClient
+import AppConstants
 from main import app
 from modules.LinkGenerator import LinkRequest, generate_links, get_all_links
 from datetime import datetime, timedelta
@@ -199,7 +200,7 @@ def test_updating_link_update_other_from_self(monkeypatch):
             itar=True,
             creator=current_user.username,
             timestamp=datetime.now(),
-            expiration_date=datetime.now() + timedelta(days=2),
+            expiration_date=datetime.now() + AppConstants.LINK_EXPIRATION_TIME,
             users_with_access=[current_user.username],
             expired=False,
         )
@@ -248,7 +249,7 @@ def test_updating_link_update_similar_between_LinkDB_and_UploadDB(monkeypatch):
             itar=True,
             creator=current_user.username,
             timestamp=datetime.now(),
-            expiration_date=datetime.now() + timedelta(days=2),
+            expiration_date=datetime.now() + AppConstants.LINK_EXPIRATION_TIME,
             users_with_access=[current_user.username],
             expired=False,
         )

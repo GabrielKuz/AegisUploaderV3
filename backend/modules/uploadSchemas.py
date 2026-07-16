@@ -22,9 +22,9 @@ class StartUploadResponse(BaseModel):
 # POST /uploadfile/{link_uuid}/{upload_token}
 class UploadChunkHeaders(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
-    chunk_offset: int = Field(alias="X-Chunk-Offset", ge=0,required=True)
-    chunk_size: int = Field(alias="X-Chunk-Size", gt=0, le=32 * 1024 * 1024, required=True)
-    chunk_hash: str = Field(alias="X-Chunk-Hash", required=True)
+    chunk_offset: int = Field(alias="X-Chunk-Offset", ge=0)
+    chunk_size: int = Field(alias="X-Chunk-Size", gt=0, le=32 * 1024 * 1024)
+    chunk_hash: str = Field(alias="X-Chunk-Hash")
 
 class UploadChunkResponse(BaseModel):
     received: int
@@ -59,6 +59,8 @@ class UploadedFileInfo(BaseModel):
     size: int
     blob_name: str
     content_type: str | None
+    expiration_date: datetime | None
+    upload_complete: bool
     date_uploaded: datetime | None
 
 

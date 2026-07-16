@@ -7,7 +7,6 @@ import {
 
 import { LoginPage } from "./features/auth/LoginPage";
 import { RequireEntraUser } from "./features/auth/RequireEntraUser";
-import { RequireDevUser } from "./features/auth/RequireDevUser";
 import { SupportLayout } from "./layouts/SupportLayout";
 import { CustomerLayout } from "./layouts/CustomerLayout";
 import { AdminLayout } from "./layouts/AdminLayout";
@@ -56,9 +55,9 @@ export default function App() {
         <Route
           path="/admin"
           element={
-            <RequireDevUser>
+            <RequireEntraUser>
               <AdminLayout />
-            </RequireDevUser>
+            </RequireEntraUser>
           }
         >
           <Route index element={<AdminHomePage />} />

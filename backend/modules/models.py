@@ -7,6 +7,8 @@ from sqlalchemy.orm import declarative_base
 from sqlalchemy import UUID, BigInteger, Column, String, Integer, DateTime, Boolean, Text, JSON, Table, ForeignKey, select, update
 from sqlalchemy.orm import declarative_base, Mapped, mapped_column, relationship
 
+import AppConstants
+
 
 
 Base = declarative_base()
@@ -98,7 +100,7 @@ class LinkRecord(Base): # "LinkDB".links table
     child: Mapped[list["UploadRecord"]] = relationship(back_populates="parent")
     link = Column(String)
     creator = Column(String) # From entra token
-    expiration_date = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc) + timedelta(hours=48))# 48 hours from creation
+    expiration_date = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc) + AppConstants.LINK_EXPIRATION_TIME)# 48 hours from creation
     expired = Column(Boolean)
 
 

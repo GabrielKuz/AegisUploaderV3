@@ -481,41 +481,52 @@ def upload_status(
 
     if upload_session is None:
         raise HTTPException(status_code=404, detail="Upload session not found")
+    if upload_session.completed:
+        return UploadStatusResponse(
+            receivedRanges=[[0, upload_session.expected_size]],
+            receivedSize=upload_session.expected_size,
+            expectedSize=upload_session.expected_size,
+            chunkSize=upload_session.chunk_size,
+            completed=True,
+            chunksReceived=upload_session.received_size // upload_session.chunk_size + (1 if upload_session.received_size % upload_session.chunk_size > 0 else 0),
+        )
+    
+    else: #Chunks are deleted on completion
 
-    chunks = (
-        db.query(UploadChunk).filter(
-            UploadChunk.upload_id == upload_session.upload_id,
-            UploadChunk.uploaded == True
-        ).all()
-    )
+        chunks = (
+            db.query(UploadChunk).filter(
+                UploadChunk.upload_id == upload_session.upload_id,
+                UploadChunk.uploaded == True
+            ).all()
+        )
 
-    ranges = sorted(
-        [[chunk.offset, chunk.offset + chunk.size] for chunk in chunks],
-        key=lambda r: r[0]
-    )
+        ranges = sorted(
+            [[chunk.offset, chunk.offset + chunk.size] for chunk in chunks],
+            key=lambda r: r[0]
+        )
 
-    merged_ranges = []
-    for start, end in ranges:
-        if not merged_ranges:
-            merged_ranges.append([start, end])
-            continue
+        merged_ranges = []
+        for start, end in ranges:
+            if not merged_ranges:
+                merged_ranges.append([start, end])
+                continue
 
-        last_start, last_end = merged_ranges[-1]
-        if start <= last_end:  
-            merged_ranges[-1][1] = max(last_end, end)
-        else:
-            merged_ranges.append([start, end])
+            last_start, last_end = merged_ranges[-1]
+            if start <= last_end:  
+                merged_ranges[-1][1] = max(last_end, end)
+            else:
+                merged_ranges.append([start, end])
 
-    received_size = sum(end - start for start, end in merged_ranges)
+        received_size = sum(end - start for start, end in merged_ranges)
 
-    return UploadStatusResponse(
-        receivedRanges=merged_ranges,
-        receivedSize=received_size,
-        expectedSize=upload_session.expected_size,
-        chunkSize=upload_session.chunk_size,
-        completed=upload_session.completed,
-        chunksReceived=len(chunks),
-    )
+        return UploadStatusResponse(
+            receivedRanges=merged_ranges,
+            receivedSize=received_size,
+            expectedSize=upload_session.expected_size,
+            chunkSize=upload_session.chunk_size,
+            completed=upload_session.completed,
+            chunksReceived=len(chunks),
+        )
 
 @router.post("/uploadfile/{link_uuid}/{upload_token}/complete", response_model=CompleteUploadResponse)
 async def complete_upload(link_uuid: str, upload_token: str, db: Annotated[sqlalchemy.orm.Session, Depends(get_db)]):
@@ -534,10 +545,7 @@ async def complete_upload(link_uuid: str, upload_token: str, db: Annotated[sqlal
         raise HTTPException(status_code=400, detail="Upload already completed")
 
     if upload_session.received_size != upload_session.expected_size:
-        raise HTTPException(
-            status_code=400,
-            detail="Upload is incomplete"
-        )
+        raise HTTPException(status_code=400, detail="Upload is incomplete" )
 
     ranges = upload_session.received_ranges or []
 
@@ -553,8 +561,6 @@ async def complete_upload(link_uuid: str, upload_token: str, db: Annotated[sqlal
 
     chunks = db.query(UploadChunk).filter(UploadChunk.upload_id == upload_session.upload_id).order_by(UploadChunk.chunk_index).all()
     
-
-
     if len(chunks) == 0:
         raise HTTPException(status_code=400, detail="No chunk hashes found" )
 
@@ -607,6 +613,9 @@ async def complete_upload(link_uuid: str, upload_token: str, db: Annotated[sqlal
 
         upload_session.completed = True
         upload_session.last_activity = now
+        upload_session.received_ranges = [[0, upload_session.expected_size]]
+        # delete the upload chunks after the upload is complete to save space in the database
+        db.query(UploadChunk).filter(UploadChunk.upload_id == upload_session.upload_id).delete()
 
         db.commit()
 
@@ -646,11 +655,10 @@ def listFiles(linkUUID: str, current_user: Annotated[User, Depends(requireRoles(
     if not IsUUID(linkUUID):
         badUUID = HTTPException(400,detail={"message": "Invalid uuid"})
         raise badUUID
-        return None
     uploads = get_uploads_for_link(linkUUID, db) # Get all uploads for the given link uuid
     authorized_uploads = [ # Filter the uploads to only include what the user can access
         upload for upload in uploads
-        if current_user.username in (upload.users_with_access or [])
+        if current_user.username in (upload.users_with_access or [] and upload.for_deletion == False)
     ]
 
     if uploads and not authorized_uploads: # If any one of the uploads is not authorized return forbidden
@@ -668,6 +676,8 @@ def listFiles(linkUUID: str, current_user: Annotated[User, Depends(requireRoles(
             blob_name=upload.blob_name,
             content_type=upload.content_type,
             date_uploaded=upload.date_uploaded if upload.date_uploaded else None,
+            expiration_date=(upload.date_uploaded + datetime.timedelta(days=upload.max_days_in_storage)).isoformat() if upload.date_uploaded and upload.max_days_in_storage else None,
+            upload_complete=upload.upload_complete,
         )
         for upload in authorized_uploads]
 
