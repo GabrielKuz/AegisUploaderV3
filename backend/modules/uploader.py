@@ -687,7 +687,6 @@ def listFiles(linkUUID: str, current_user: Annotated[User, Depends(requireRoles(
             filename=upload.original_filename,
             size=upload.combined_file_size,
             blob_name=upload.blob_name,
-            content_type=upload.content_type,
             date_uploaded=upload.date_uploaded if upload.date_uploaded else None,
             expiration_date=(upload.date_uploaded + datetime.timedelta(days=upload.max_days_in_storage)).isoformat() if upload.date_uploaded and upload.max_days_in_storage else None,
             upload_complete=upload.upload_complete,

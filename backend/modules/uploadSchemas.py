@@ -58,7 +58,6 @@ class UploadedFileInfo(BaseModel):
     filename: str
     size: int
     blob_name: str
-    content_type: str | None
     expiration_date: datetime | None
     upload_complete: bool
     date_uploaded: datetime | None
