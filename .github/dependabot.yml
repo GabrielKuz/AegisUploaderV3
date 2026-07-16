@@ -1,5 +1,4 @@
-version: 2
-
+version: 2 
 
 updates:
   - package-ecosystem: "uv"
@@ -29,6 +28,7 @@ updates:
       timezone: "America/New_York"
     commit-message:
       prefix: "deps"
+      
     cooldown:
       default-days: 7
     ignore:
