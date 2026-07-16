@@ -19,3 +19,5 @@ To run a single file seperate from the rest of the backend start the detached co
 Backend and frontend are behind nginx, so frontend can directly call apis with `fetch("/api/health")` and ignore the preceeding url. Nginx strips the leading /api so the call routes to the FastAPI /health endpoint.
 
 To migrate db after changing models run `Scripts/migrateDB.ps1 "migrationName"` with the container up then `docker compose down -v` 
+
+If git doesn't pull alembic run `git checkout origin/main backend\migrations\versions` from top level dir
