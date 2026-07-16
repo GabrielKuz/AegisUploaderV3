@@ -24,7 +24,8 @@ RUN npm run build
 # runtime
 FROM nginx:1.31-alpine
 
-COPY nginx/nginx.azure.conf.template /etc/nginx/nginx.conf.template
+COPY nginx/nginx.azure.conf.template ./
+COPY nginx/nginx.conf.template ./
 
 COPY --from=builder \
     --chown=nginx:nginx \

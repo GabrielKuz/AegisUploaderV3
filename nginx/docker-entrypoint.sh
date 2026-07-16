@@ -1,10 +1,18 @@
 #!/bin/sh
 set -e
 
-echo "BACKEND_URL IS: [$BACKEND_URL]"
+echo "BUILD TYPE IS: [$BUILD_TYPE]"
 
-envsubst '$BACKEND_URL' \
-    < /etc/nginx/nginx.conf.template \
-    > /etc/nginx/nginx.conf
+if [ "$BUILD_TYPE" = "dev" ]; then
+    envsubst '$DEV_BACKEND_URL' \
+        < /etc/nginx/nginx.conf.template \
+        > /etc/nginx/nginx.conf
+    echo "Using dev backend URL: $DEV_BACKEND_URL"
+else
+    envsubst '$PROD_BACKEND_URL' \
+        < /etc/nginx/nginx.conf.template \
+        > /etc/nginx/nginx.conf
+    echo "Using prod backend URL: $PROD_BACKEND_URL"
+fi
 
 exec "$@"
