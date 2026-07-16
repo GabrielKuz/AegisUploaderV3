@@ -42,6 +42,7 @@ async def lifespan(app: FastAPI):
         )
     else:
         scheduler.add_job( # every 6 hours on the hour
+            expireAndDeleteOldData,
             trigger="cron",
             hour="0,6,12,18",
             minute="0",
