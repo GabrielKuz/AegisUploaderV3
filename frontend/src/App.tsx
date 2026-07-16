@@ -22,7 +22,6 @@ import { AdminCreateSupportLinkPage } from "./features/admin/AdminCreateSupportL
 import { AdminUploadPage } from "./features/admin/AdminUploadPage";
 
 import { CustomerUpload } from "./features/uploader/CustomerUpload";
-import { UploadDetails } from "./features/uploader/UploadDetails";
 import { SupportUploadPage } from "./features/support/SupportUploadPage";
 
 export default function App() {
@@ -36,7 +35,6 @@ export default function App() {
           element={<CustomerLayout />}
         >
           <Route index element={<CustomerUpload />} />
-          <Route path="details" element={<UploadDetails />} />
         </Route>
 
         <Route

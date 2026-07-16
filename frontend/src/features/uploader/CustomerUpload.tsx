@@ -13,7 +13,7 @@ import {
     deleteUploadSession,
     getUploadSessions,
 } from "./indexedDb";
-import { useCustomerUpload } from "../../layouts/CustomerLayoutContext";
+import { useCustomerUpload } from "./CustomerLayoutContext";
 
 
 type SelectedFile = {
@@ -219,7 +219,7 @@ export function CustomerUpload() {
     const { setUploadStats } = useCustomerUpload();
     const [selectedFiles, setSelectedFiles] = useState<SelectedFile[]>([]);
     const [uploading, setUploading] = useState(false);
-    
+
     const [dragActive, setDragActive] = useState(false);
     type UploadState = {
         status: "waiting" | "uploading" | "retrying" | "done" | "error";
@@ -387,7 +387,7 @@ export function CustomerUpload() {
                         chunkSize,
                         file: item.file,
                     })
-                    
+
 
                     let offset = 0;
 
@@ -505,7 +505,7 @@ export function CustomerUpload() {
                     if (!completeResponse.ok) {
                         throw new Error("Failed to complete upload");
                     }
-                    
+
                     await deleteUploadSession(uploadToken);
 
                     setUploadStatus((s) => ({
@@ -537,12 +537,12 @@ export function CustomerUpload() {
             aria-labelledby="customer-upload-heading"
         >
             <div className="upload-panel">
-                
+
                 <h1 id="customer-upload-heading">
                     Upload your files
                 </h1>
 
-                
+
                 <p className="upload-note">
                     This link is temporary and will stop working after the
                     assigned expiration time. Please upload your files before
@@ -622,7 +622,7 @@ export function CustomerUpload() {
                                         <button
                                             className="delete-button"
                                             type="button"
-                                            disabled = {uploading}
+                                            disabled={uploading}
                                             onClick={() => removeFile(index)}
                                         >
                                             Delete

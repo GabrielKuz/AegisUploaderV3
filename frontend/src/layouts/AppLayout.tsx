@@ -3,10 +3,10 @@ import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useMsal } from "@azure/msal-react";
 
 import { isEntraConfigured } from "../features/auth/authConfig";
-import { getActiveAccount } from "../features/auth/entraAuth";
 import { getDevUser, signOutDevUser } from "../features/auth/devAuth";
-import { ThemeToggle } from "../theme/ThemeToggle";
+import { getActiveAccount } from "../features/auth/entraAuth";
 
+import { ThemeToggle } from "../theme/ThemeToggle";
 import "./AppLayout.css";
 
 type AppNavItem = {
@@ -19,7 +19,7 @@ type AppLayoutProps = {
     productName: string;
     sectionName: string;
     navLabel?: string;
-    navItems?: AppNavItem[];
+    navItems?: readonly AppNavItem[];
     sidebarContent?: ReactNode;
     defaultUserName?: string;
     showUserMenu?: boolean;
@@ -36,6 +36,9 @@ function getNavLinkClassName({
         : "app-nav-link";
 }
 
+/**
+ * Shared application shell for the support, admin, and customer portals.
+ */
 export function AppLayout({
     productName,
     sectionName,
@@ -50,7 +53,7 @@ export function AppLayout({
     const { accounts, instance } = useMsal();
 
     const devUser = getDevUser();
-    const entraAccount =
+    const account =
         getActiveAccount(instance) ??
         accounts[0];
 
@@ -59,12 +62,12 @@ export function AppLayout({
         Boolean(sidebarContent);
 
     const displayName =
-        entraAccount?.name ??
+        account?.name ??
         devUser?.name ??
         defaultUserName;
 
     const displayEmail =
-        entraAccount?.username ??
+        account?.username ??
         devUser?.email;
 
     const layoutClassName = showSidebar
@@ -78,10 +81,6 @@ export function AppLayout({
             navigate("/", { replace: true });
             return;
         }
-
-        const account =
-            getActiveAccount(instance) ??
-            accounts[0];
 
         if (account && !instance.getActiveAccount()) {
             instance.setActiveAccount(account);
@@ -149,10 +148,11 @@ export function AppLayout({
             </header>
 
             {showSidebar && (
-                <aside className="app-sidebar">
-                    {sidebarContent ? (
-                        sidebarContent
-                    ) : (
+                <aside
+                    className="app-sidebar"
+                    aria-label={sidebarContent ? navLabel : undefined}
+                >
+                    {sidebarContent ?? (
                         <nav aria-label={navLabel}>
                             {navItems.map((item) => (
                                 <NavLink
