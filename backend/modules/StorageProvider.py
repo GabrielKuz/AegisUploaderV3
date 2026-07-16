@@ -39,6 +39,10 @@ class StorageProvider(ABC):
         pass
 
     @abstractmethod
+    def delete_directory(self, directory_path: str) -> None:
+        pass
+
+    @abstractmethod
     def exists(self, file_path: str) -> bool:
         pass
 
@@ -81,6 +85,20 @@ class LocalStorageProvider(StorageProvider):
             return open(self._resolve_path(file_path), "rb")
         except FileNotFoundError:
             raise FileNotFoundError(f"File '{file_path}' does not exist.") from None
+    
+    def delete_directory(self, directory_path: str) -> None:
+        directory = self._resolve_path(directory_path)
+
+        if not directory.exists() or not directory.is_dir():
+            raise FileNotFoundError(f"Directory '{directory_path}' does not exist.") from None
+
+        for item in directory.rglob("*"):
+            if item.is_file():
+                item.unlink()
+            elif item.is_dir():
+                item.rmdir()
+
+        directory.rmdir()
 
     def download_file(self, source_path: str) -> bytes:
         source = self._resolve_path(source_path)
@@ -305,6 +323,20 @@ class AzureFileStorageProvider(StorageProvider):
             return BytesIO(client.download_file().readall())
         except ResourceNotFoundError:
             raise FileNotFoundError(f"File '{file_path}' does not exist.") from None
+    
+    def delete_directory(self, directory_path: str) -> None:
+        directory = str(Path(self.base_path) / directory_path).replace("\\", "/")
+
+        directory_client = ShareDirectoryClient.from_connection_string(
+            conn_str=self.connection_string,
+            share_name=self.share_name,
+            directory_path=directory,
+        )
+
+        try:
+            directory_client.delete_directory()
+        except ResourceNotFoundError:
+            raise FileNotFoundError(f"Directory '{directory_path}' does not exist.") from None
 
     def ls(self, directory_path: str) -> list[str]:
         directory = str(Path(self.base_path) / directory_path).replace("\\", "/")
