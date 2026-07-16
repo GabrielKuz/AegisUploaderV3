@@ -25,25 +25,24 @@ import logging
 logging.basicConfig(level=logging.INFO) # setup logging server. TODO: change to file and add more logging
 testing = False
 scheduler = AsyncIOScheduler(timezone=ZoneInfo("America/New_York"))
-
+interval = False
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    if testing:
+    if interval:
         scheduler.add_job(
             expireAndDeleteOldData,
             trigger="interval",
-            seconds=10,
+            seconds=30,
             id="test_cleanup",
             replace_existing=True,
             max_instances=1,
             coalesce=True,
         )
     else:
-        scheduler.add_job(
-            expireAndDeleteOldData,
+        scheduler.add_job( # every 6 hours on the hour
             trigger="cron",
-            hour=0,
-            minute=0,
+            hour="0,6,12,18",
+            minute="0",
             id="daily_cleanup",
             replace_existing=True,
             max_instances=1,
