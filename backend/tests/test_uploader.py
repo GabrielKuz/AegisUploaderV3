@@ -852,8 +852,8 @@ def test_upload_itar_region(upload_test_setup, monkeypatch):
         case_id="AIS-1234",
         itar=True,
         users_with_access=["testuser"],
-        timestamp=datetime.datetime.now(),
-        expiration_date=datetime.datetime.now() + AppConstants.LINK_EXPIRATION_TIME,
+        timestamp=datetime.datetime.now(datetime.timezone.utc),
+        expiration_date=datetime.datetime.now(datetime.timezone.utc) + AppConstants.LINK_EXPIRATION_TIME,
         expired=False,
     )
 

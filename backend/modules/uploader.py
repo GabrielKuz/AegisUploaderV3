@@ -178,7 +178,7 @@ async def start_upload(
         raise HTTPException(status_code=410, detail="This link has expired and is no longer available for uploads") # Dont create new tokens, but old tokens should finish
     
     
-    if link_entry.expiration_date is None or link_entry.expiration_date <= datetime.datetime.now(tz=datetime.timezone.utc):
+    if link_entry.expiration_date is None or link_entry.expiration_date <= datetime.datetime.now(datetime.timezone.utc):
         link_entry.expired = True # mark the link as expired if the expiration date has passed in case the cleanup job hasnt run yet 
         raise HTTPException(status_code=410, detail="This link has expired and is no longer available for uploads")
 
