@@ -1,28 +1,23 @@
+import logging
+import os
+
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, Depends, HTTPException
-from modules.LinkGenerator import LinkRequest, generate_links, get_all_links
-from modules.LinkGenerator import LinkRequest, generate_links, get_all_links, get_all_files_for_link
-from modules.auth import getCurrentActiveUser, getCurrentUser, User, userAuthenticated
-from modules.LinkGenerator import LinkRequest, generate_links, get_all_links, get_link
-from modules.auth import getCurrentActiveUser, getCurrentUser, User
-from modules.LinkGenerator import LinkRequest, generate_links, get_all_links
+from modules import Session, engine
 from modules.auth import getCurrentActiveUser, getCurrentUser, User, userAuthenticated, requireRole, requireRoles
-from modules.uploader import router as uploader_router, listFiles
+from modules.DataCleaner import expireAndDeleteOldData
 from modules.deletionRequest import router as deletionRequest_router
 from modules.downloadData import downloadData
-from Utils import IsUUID
-from modules import Session, engine
-from typing import Annotated
-from warnings import deprecated
-import os
-from contextlib import asynccontextmanager
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from zoneinfo import ZoneInfo
-from modules.DataCleaner import expireAndDeleteOldData
-from sqlalchemy import text
-from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+from modules.LinkGenerator import LinkRequest, generate_links, get_all_links, get_all_files_for_link, get_link
 from modules.telemetry import setup_telemetry, TelemetryMiddleware
-from contextlib import asynccontextmanager
-import logging
+from modules.uploader import router as uploader_router, listFiles
+from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+from sqlalchemy import text
+from typing import Annotated
+from Utils import IsUUID
+from warnings import deprecated
+from zoneinfo import ZoneInfo
 
 logging.basicConfig(level=logging.INFO) # setup logging server. TODO: change to file and add more logging
 testing = False
