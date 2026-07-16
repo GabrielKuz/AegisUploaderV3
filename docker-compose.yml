@@ -189,6 +189,7 @@ services:
 
     environment:
       BACKEND_URL: ${BACKEND_URL}
+      BUILD_TYPE: ${BUILD_TYPE}
       
     ports:
       - "443:8443" # avoid nginx running as root  

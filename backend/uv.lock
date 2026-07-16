@@ -201,7 +201,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "alembic", specifier = ">=1.18.5" },
-    { name = "apscheduler", specifier = ">=3.11.2" },
+    { name = "apscheduler", specifier = ">=3.11.3" },
     { name = "azure-keyvault-secrets", specifier = ">=4.11.0" },
     { name = "azure-mgmt-resource", specifier = ">=26.0.0" },
     { name = "azure-mgmt-storage", specifier = ">=25.0.0" },
