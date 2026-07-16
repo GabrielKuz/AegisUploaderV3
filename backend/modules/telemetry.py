@@ -1,5 +1,6 @@
 import time
 from fastapi import FastAPI, Request
+from httpcore2 import request
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from opentelemetry import trace
@@ -46,8 +47,15 @@ class TelemetryMiddleware(BaseHTTPMiddleware):
             except Exception as exc:
                 span.record_exception(exc)
                 raise
-
+            
             process_time = time.time() - start_time
+            endpoint = request.scope.get("endpoint")
+            endpoint_name = getattr(endpoint, "__name__", "unknown")
+            span.set_attribute("http.endpoint", endpoint_name)
+
+            route = request.scope.get("route")
+            if route:
+                span.set_attribute("http.route", route.path)
             response.headers["X-Process-Time"] = str(process_time)
             span.set_attribute("http.status_code", response.status_code)
             return response

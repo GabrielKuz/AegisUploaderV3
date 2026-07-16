@@ -47,7 +47,6 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="Aegis Backend", root_path="/api", lifespan=lifespan)
 app.include_router(uploader_router)
 app.include_router(deletionRequest_router)
-FastAPIInstrumentor.instrument_app(app)
 setup_telemetry(app)  # init opentelemetry
 app.add_middleware(TelemetryMiddleware)
 @app.post("/links/create/")
