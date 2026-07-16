@@ -36,9 +36,18 @@ def setup_telemetry(app):
 class TelemetryMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         tracer = trace.get_tracer(__name__)
-        with tracer.start_as_current_span("request"):
+        with tracer.start_as_current_span(f"{request.method} {request.url.path}") as span:
+            span.set_attribute("http.method", request.method)
+            span.set_attribute("http.target", request.url.path)
+
             start_time = time.time()
-            response = await call_next(request)
+            try:
+                response = await call_next(request)
+            except Exception as exc:
+                span.record_exception(exc)
+                raise
+
             process_time = time.time() - start_time
             response.headers["X-Process-Time"] = str(process_time)
+            span.set_attribute("http.status_code", response.status_code)
             return response
