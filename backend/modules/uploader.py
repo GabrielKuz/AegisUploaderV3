@@ -666,14 +666,16 @@ def listFiles(linkUUID: str, current_user: Annotated[User, Depends(requireRoles(
         badUUID = HTTPException(400,detail={"message": "Invalid uuid"})
         raise badUUID
     
-    authorized_uploads = (
+    uploads = (
         db.query(UploadRecord)
         .filter(
             UploadRecord.link_uuid == linkUUID,
             UploadRecord.for_deletion.is_(False),
-            UploadRecord.users_with_access.contains([current_user.username])
         ).all()
     )
+    authorized_uploads = [
+        upload for upload in uploads if current_user.username in (upload.users_with_access or [])
+    ]
 
     if uploads and not authorized_uploads: # If any one of the uploads is not authorized return forbidden
         raise HTTPException(
@@ -692,7 +694,8 @@ def listFiles(linkUUID: str, current_user: Annotated[User, Depends(requireRoles(
             expiration_date=(upload.date_uploaded + datetime.timedelta(days=upload.max_days_in_storage)).isoformat() if upload.date_uploaded and upload.max_days_in_storage else None,
             upload_complete=upload.upload_complete,
         )
-        for upload in authorized_uploads]
+        for upload in authorized_uploads
+    ]
 
 @router.post("/uploads/{upload_id}/extend_expiration", response_model=ExtendExpirationResponse)
 def extendFileExpiration(upload_id: str, additional_days: Annotated[int, Query(gt=0, le=365)], current_user: Annotated[User, Depends(requireRoles("Admin", strict=True))], db: Annotated[sqlalchemy.orm.Session, Depends(get_db)]):  # Only admin can extend expiration
