@@ -892,7 +892,7 @@ def test_upload_itar_region(upload_test_setup, monkeypatch):
         db.close()
 
 
-def test_concurrent_filename_collision(upload_test_setup):
+def test_concurrent_filename_collision(upload_test_setup): # run twice to be safe
     app, storage, tmp_path, uploader = upload_test_setup
 
     payload = b"hello"
