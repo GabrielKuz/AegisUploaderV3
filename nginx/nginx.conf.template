@@ -78,7 +78,7 @@ http {
 
     ssl_prefer_server_ciphers off;
 
-    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always; # Add once stable
+    # add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always; # Add once stable
 
     root /usr/share/nginx/html;
     index index.html;
