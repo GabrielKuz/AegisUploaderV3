@@ -97,53 +97,6 @@ def test_get_all_links_returns_links_for_user(monkeypatch):
     assert isinstance(data, list)
     assert any(link["case_id"] == "AIS-7890" for link in data)  # Check if the created link is in the list
 
-# def test_link_expiration(): # fixed on another branch
-#     # Create a link
-#     link_request = LinkRequest(
-#         case_id="case-789",
-#         itar=False
-#     )
-
-#     result = generate_links(link_request, current_user)
-#     uuid = result["uuid"]
-
-#     expiration = expire_old_links(expiry_days=0)  # Expire links immediately for testing
-
-#     # Fetch the link from the database and check if the expiration is updated
-#     response = client.get(f"/links/{uuid}")
-#     assert response.status_code == 200
-#     data = response.json()
-    
-#     # Assuming the LinkRecord has an 'expiration' field that is updated
-#     assert "expired" in data
-#     assert data["expired"] == expiration  # The link should be marked as expired
-
-# def test_extend_link_expiration():
-#     # Create a link
-#     link_request = LinkRequest(
-#         case_id="AIS-101",
-#         itar=False
-#     )
-
-#     result = generate_links(link_request, current_user)
-#     uuid = result["uuid"]
-
-#     # Extend the expiration of the link
-#     extension_days = 5
-#     extend_link_expiration(uuid, current_user, extension_days)
-
-#     # Fetch the link from the database and check if the expiration is extended
-#     response = client.get(f"/links/{uuid}")
-#     assert response.status_code == 200
-#     data = response.json()
-    
-#     # Assuming the LinkRecord has an 'expiration' field that is updated
-#     assert "expired" in data
-#     assert "expiration_date" in data
-#     expiration_date = datetime.fromisoformat(data["expiration_date"])
-#     assert expiration_date >= datetime.now() + timedelta(days=extension_days)  # The expiration date should be in the future
-#     assert data["expired"] is False  # The link should not be expired after extension
-
 def test_get_files_for_link(monkeypatch):
     monkeypatch.setattr("modules.LinkGenerator.caseIDExists", lambda case_id: True)
     monkeypatch.setattr("modules.LinkGenerator.get_caseITARstatus", lambda case_id: False)

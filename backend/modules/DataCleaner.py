@@ -1,17 +1,14 @@
 import AppConstants
 import logging
-
-from datetime import datetime, timedelta, timezone
-from sqlalchemy import select
-import AppConstants
 import Utils
 
-from modules import Session
-from modules.models import LinkRecord, UploadRecord, UploadChunk, UploadSession, update_other_from_self, update_similar_between_LinkDB_and_UploadDB
+from datetime import datetime, timedelta, timezone
+from modules import Session, usFileStorageProvider, euFileStorageProvider, itarFileStorageProvider
 from modules.HubSpotIntegration import is_caseExpirable
+from modules.models import LinkRecord, UploadRecord, UploadChunk, UploadSession, update_other_from_self, update_similar_between_LinkDB_and_UploadDB
 from modules.StorageProvider import StorageProvider 
-from modules import usFileStorageProvider, euFileStorageProvider, itarFileStorageProvider
 from sqlalchemy import select
+from Utils import IsCaseID
 
 logger = logging.getLogger(__name__)
 
@@ -108,29 +105,34 @@ def _deleteExpiredUploads(storage: StorageProvider):
 
 def _deleteExpiredLinks():
     with Session() as session: # delete expired likns only once their assoiciated uploads have for_deletion set to True and they are marked as expired
-        links = session.scalars(
+        expired_links = session.scalars(
             select(LinkRecord)
             .where(LinkRecord.expired.is_(True))
         ).all()
 
-        for link in links:
-            uploads = session.scalars(
-                select(UploadRecord)
-                .where(UploadRecord.link_uuid == link.uuid)
-                .where(UploadRecord.for_deletion.is_(False))
+        active_links = set(session.scalars(
+            select(UploadRecord.link_uuid)
+            .where(UploadRecord.for_deletion.is_(False))
             ).all()
+        )
 
-            if not uploads:
+        for link in expired_links:
+            if link.uuid not in active_links:
                 session.delete(link)
 
         session.commit()
 
 def _deleteOrphanedUploads(storage: StorageProvider): # Find uploads not in db where the file exists in storage and delete them if the case id their under has no record in the db
     with Session() as session:
-        uploads = storage.ls("./")
-        for upload in uploads:
+        db_uploads = set(
+            session.execute(
+                select(UploadRecord.case_id, UploadRecord.blob_name)
+            ).all()
+        )
+
+        for upload in storage.ls("./"):
             case_id, blob_name = upload.split("/", 1)
-            if not session.scalars(select(UploadRecord).where(UploadRecord.case_id == case_id).where(UploadRecord.blob_name == blob_name)).first():
+            if (case_id, blob_name) not in db_uploads:
                 try:
                     storage.delete_file(upload)
                     logger.info(f"Deleted orphaned upload: {upload}")
@@ -139,14 +141,21 @@ def _deleteOrphanedUploads(storage: StorageProvider): # Find uploads not in db w
 
 def _deleteEmptyCaseDirs(storage: StorageProvider): # Find case directories in storage that have no uploads in the db and delete them
     with Session() as session:
-        case_dirs = storage.ls("./") # includes full file paths, not  dir names (eg ["AIS-6614/1GB.bin", "AIS-6929/End of Day Meeting (2).docx"])
-        case_dirs = set(dir.split("/", 1)[0] for dir in case_dirs)
-        case_dirs = [dir for dir in case_dirs if not session.scalars(select(UploadRecord).where(UploadRecord.case_id == dir)).first()] # filter out case dirs that have uploads in the db
-        case_dirs = [dir for dir in case_dirs if Utils.isCaseID(dir)] # filter out case dirs that are not valid case ids
-        for case_dir in case_dirs: 
-            if not session.scalars(select(UploadRecord).where(UploadRecord.case_id == case_dir)).first():
+        existing_case_ids = set(
+            session.scalars(
+                select(UploadRecord.case_id).distinct()
+            ).all()
+        )
+
+        case_dirs = {path.split("/", 1)[0] for path in storage.ls("./")}
+        
+        for case_dir in case_dirs:
+            if not Utils.IsCaseID(case_dir):
+                continue
+
+            if case_dir not in existing_case_ids:
                 try:
-                    storage.delete_directory(case_dir)
+                    storage.delete_case_directory(case_dir)
                     logger.info(f"Deleted empty case directory: {case_dir}")
                 except Exception as e:
                     logger.error(f"Failed to delete empty case directory {case_dir}: {e}")

@@ -1,17 +1,18 @@
-from fastapi import HTTPException, status
-from pydantic import BaseModel, Field
+import AppConstants
+import os
 import uuid
+
 from datetime import datetime, timedelta, timezone
+from fastapi import HTTPException, status
+from modules import Session, engine
+from modules.auth import User
+from modules.HubSpotIntegration import get_caseITARstatus, caseIDExists
+from modules.models import LinkRecord, UploadRecord, update_other_from_self, update_similar_between_LinkDB_and_UploadDB
+from pydantic import BaseModel, Field
 from sqlalchemy import create_engine, select, update
 from typing import Dict
-from modules.HubSpotIntegration import get_caseITARstatus, caseIDExists
-from modules.auth import User
-from modules.models import LinkRecord, UploadRecord, update_other_from_self, update_similar_between_LinkDB_and_UploadDB
-import os
-import AppConstants
-from warnings import warn, deprecated
-from modules import Session, engine
 from Utils import IsCaseID
+from warnings import warn, deprecated
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 if DATABASE_URL is None:
@@ -74,10 +75,6 @@ def store_link(link_request: LinkRequest, uuid_str: str, current_user: User):
             expired=False,
         )
 
-        # print("TABLE:", LinkRecord.__table__) 
-        # print("SCHEMA:", LinkRecord.__table__.schema)
-        # print("FULLNAME:", LinkRecord.__table__.fullname)
-
         session.add(record) # add new reccord to session
         session.commit() # commit session to db so it persists
         update_similar_between_LinkDB_and_UploadDB(session)
@@ -85,57 +82,6 @@ def store_link(link_request: LinkRequest, uuid_str: str, current_user: User):
 @deprecated("This doesn't work in all cases. alternative will be merged into main branch soon.")
 def expire_old_links(expiry_days: int = 2) -> bool:
      record_expiry: bool = False
-
-#         for record in records:
-#             if not record.timestamp:
-#                 continue
-
-#             try:
-#                 ts_dt = record.timestamp
-#             except Exception:
-#                 continue
-
-#             if ts_dt <= cutoff:
-#                 record.expired = True
-#             else:
-#                 record.expired = False
-
-#         session.commit()
-
-# def extend_link_expiration(uuid_str: str, current_user: User, extension: int):
-#     """
-#     Extends expiration date by specified number of days for a specific link
-#     """
-#     if not current_user or current_user.disabled:
-#         raise HTTPException(
-#             status_code=status.HTTP_401_UNAUTHORIZED,
-#             detail="User not authenticated"
-#         )
-
-#     with Session() as session:
-#         stmt = select(LinkRecord).where(LinkRecord.uuid == uuid_str)
-#         record = session.scalar(stmt)
-
-#         if not record:
-#             raise HTTPException(
-#                 status_code=status.HTTP_404_NOT_FOUND,
-#                 detail="Link not found"
-#             )
-
-#         if record.creator != current_user.username:
-#             raise HTTPException(
-#                 status_code=status.HTTP_403_FORBIDDEN,
-#                 detail="You do not have permission to extend this link"
-#             )
-        
-#         if extension <= 0 or not isinstance(extension, int):
-#             raise HTTPException(
-#                 status_code=status.HTTP_400_BAD_REQUEST,
-#                 detail="Extension must be a positive integer"
-#             )
-
-#         expire_old_links(expiry_days=extension)
-#         session.commit()
 
 def _serialize_link_record(record: LinkRecord):
     """
@@ -156,46 +102,6 @@ def _serialize_link_record(record: LinkRecord):
         "expired": record.expired,
         "expiration_date": expiration_date,
     }
-
-
-@deprecated("This endpoint shouldnt exist and will be removed in a future pr. Use /uploads/{upload_uuid}/extend")
-def extend_link_expiration(uuid_str: str, current_user: User, extension: int):
-    if not current_user or current_user.disabled:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="User not authenticated"
-        )
-    # if not uuid_str:
-    #     raise HTTPException(
-    #         status_code=status.HTTP_404_NOT_FOUND,
-    #         detail="Link UUID not found"
-    #     )
-
-    # with Session() as session:
-    #     stmt = select(LinkRecord).where(LinkRecord.uuid == uuid_str)
-    #     record = session.scalar(stmt)
-    #     if record is None:
-    #         raise HTTPException(
-    #             status_code=status.HTTP_404_NOT_FOUND,
-    #             detail="Link not found"
-    #         )
-    #     return _serialize_link_record(record)
-
-    #     if record.creator != current_user.username:
-    #         raise HTTPException(
-    #             status_code=status.HTTP_403_FORBIDDEN,
-    #             detail="You do not have permission to extend this link"
-    #         )
-        
-    #     if extension <= 0 or not isinstance(extension, int):
-    #         raise HTTPException(
-    #             status_code=status.HTTP_400_BAD_REQUEST,
-    #             detail="Extension must be a positive integer"
-    #         )
-
-    #     record.expiration_date += timedelta(days=extension)
-    #     record.expired = False
-    #     session.commit()
 
 def get_link(uuid_str: str): # get a link record from the db by uuid
     """
