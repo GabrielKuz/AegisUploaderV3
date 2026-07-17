@@ -648,9 +648,6 @@ async def complete_upload(link_uuid: str, upload_token: str, db: Annotated[sqlal
         completed=True,
     )
 
-def get_uploads_for_link(link_uuid: str, db: Annotated[sqlalchemy.orm.Session, Depends(get_db)]): # Get all uploads for a given link uuid from the db
-    return db.query(UploadRecord).filter(UploadRecord.link_uuid == link_uuid).all()
-
 @router.post("/uploads/{upload_id}/mark_for_deletion", response_model=MarkForDeletionResponse)
 def mark_for_deletion(upload_id: str, current_user: Annotated[User, Depends(requireRoles("Admin", strict=True))], db: Annotated[sqlalchemy.orm.Session, Depends(get_db)]):
     if not IsUUID(upload_id):
@@ -668,11 +665,17 @@ def listFiles(linkUUID: str, current_user: Annotated[User, Depends(requireRoles(
     if not IsUUID(linkUUID):
         badUUID = HTTPException(400,detail={"message": "Invalid uuid"})
         raise badUUID
-    uploads = get_uploads_for_link(linkUUID, db) # Get all uploads for the given link uuid
-    authorized_uploads = [ # Filter the uploads to only include what the user can access
-        upload for upload in uploads
-        if current_user.username in (upload.users_with_access or [] and upload.for_deletion == False)
-    ]
+    
+    uploads = (
+        db.query(UploadRecord)
+        .filter(
+            UploadRecord.link_uuid == linkUUID,
+            UploadRecord.for_deletion.is_(False),
+            UploadRecord.users_with_access.contains([current_user.username])
+        ).all()
+    )
+
+    return uploads
 
     if uploads and not authorized_uploads: # If any one of the uploads is not authorized return forbidden
         raise HTTPException(
