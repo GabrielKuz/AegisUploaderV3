@@ -1,72 +1,171 @@
 import {
+    useCallback,
+    useEffect,
+    useMemo,
     useRef,
     useState,
-    useEffect,
     type ChangeEvent,
+    type DragEvent,
 } from "react";
-import { useParams } from "react-router-dom";
 import { sha256 } from "@noble/hashes/sha2.js";
 import { bytesToHex } from "@noble/hashes/utils.js";
-import "./CustomerUpload.css";
+
+import { useCustomerUpload } from "./CustomerUploadContext";
 import {
-    saveUploadSession,
     deleteUploadSession,
     getUploadSessions,
+    saveUploadSession,
+    type UploadSession,
 } from "./indexedDb";
-import { useCustomerUpload } from "./CustomerLayoutContext";
 
+import "./CustomerUpload.css";
+
+const MAX_CHUNK_RETRIES = 3;
+const RETRY_DELAY_MS = 1_000;
+const UPLOAD_CONCURRENCY = 3;
 
 type SelectedFile = {
     id: string;
     file: File;
     preview: string;
+    uploadSession?: UploadSession;
+};
+
+type UploadPhase =
+    | "uploading"
+    | "retrying"
+    | "done"
+    | "error";
+
+type UploadState = {
+    status: UploadPhase;
+    progress: number;
+    retry?: number;
 };
 
 type UploadStatus = {
+    completed: boolean;
     receivedRanges: [number, number][];
     receivedSize: number;
-    expectedSize: number;
-    chunkSize: number;
-    completed: boolean;
-    chunksReceived: number;
 };
 
+type StartUploadResponse = {
+    uploadToken: string;
+    chunkSize: number;
+};
+
+/**
+ * Runs an asynchronous worker over all items while limiting
+ * how many workers may run concurrently.
+ */
 async function runWithConcurrency<T>(
-    items: T[],
+    items: readonly T[],
     limit: number,
-    worker: (item: T) => Promise<void>
-) {
-    const queue = [...items];
-    const active: Promise<void>[] = [];
+    worker: (item: T) => Promise<void>,
+): Promise<void> {
+    if (items.length === 0) {
+        return;
+    }
 
-    const runNext = async () => {
-        if (queue.length === 0) return;
+    const concurrency = Math.max(
+        1,
+        Math.min(limit, items.length),
+    );
 
-        const item = queue.shift()!;
-        const p = worker(item).finally(() => {
-            active.splice(active.indexOf(p), 1);
-        });
+    let nextIndex = 0;
 
-        active.push(p);
+    async function runWorker(): Promise<void> {
+        while (nextIndex < items.length) {
+            const currentIndex = nextIndex;
+            nextIndex += 1;
 
-        if (active.length < limit) {
-            await runNext();
+            await worker(items[currentIndex]);
         }
+    }
+
+    await Promise.all(
+        Array.from(
+            { length: concurrency },
+            () => runWorker(),
+        ),
+    );
+}
+
+/**
+ * Pauses execution for the requested duration.
+ */
+function delay(milliseconds: number): Promise<void> {
+    return new Promise((resolve) => {
+        window.setTimeout(resolve, milliseconds);
+    });
+}
+
+/**
+ * Creates a stable identifier for duplicate-file detection.
+ */
+function getFileKey(file: File): string {
+    return [
+        file.name,
+        file.size,
+        file.lastModified,
+    ].join(":");
+}
+
+/**
+ * Creates the local UI representation of a selected file.
+ */
+function createSelectedFile(
+    file: File,
+    uploadSession?: UploadSession,
+): SelectedFile {
+    return {
+        id: uploadSession
+            ? `session-${uploadSession.uploadToken}`
+            : crypto.randomUUID(),
+        file,
+        preview: URL.createObjectURL(file),
+        uploadSession,
     };
-
-    const starters = Array.from({ length: limit }, runNext);
-
-    await Promise.all(starters);
-    await Promise.all(active);
 }
 
-async function sha256File(file: File): Promise<string> {
+/**
+ * Calculates the upload percentage while safely handling
+ * empty files.
+ */
+function calculateProgress(
+    uploadedBytes: number,
+    totalBytes: number,
+): number {
+    if (totalBytes <= 0) {
+        return 100;
+    }
+
+    return Math.min(
+        100,
+        Math.max(
+            0,
+            Math.round(
+                (uploadedBytes / totalBytes) * 100,
+            ),
+        ),
+    );
+}
+
+/**
+ * Hashes a readable file or blob stream using SHA-256.
+ */
+async function sha256Stream(
+    stream: ReadableStream<Uint8Array>,
+): Promise<string> {
     const hasher = sha256.create();
-    const reader = file.stream().getReader();
+    const reader = stream.getReader();
 
     try {
         while (true) {
-            const { value, done } = await reader.read();
+            const {
+                done,
+                value,
+            } = await reader.read();
 
             if (done) {
                 break;
@@ -75,461 +174,1055 @@ async function sha256File(file: File): Promise<string> {
             hasher.update(value);
         }
 
-        return bytesToHex(hasher.digest());
-    } finally {
-        reader.releaseLock();
-    }
-}
-async function sha256Blob(blob: Blob): Promise<string> {
-    const hasher = sha256.create();
-    const reader = blob.stream().getReader();
-
-    try {
-        while (true) {
-            const { value, done } = await reader.read();
-
-            if (done) {
-                break;
-            }
-
-            hasher.update(value);
-        }
-
-        return bytesToHex(hasher.digest());
+        return bytesToHex(
+            hasher.digest(),
+        );
     } finally {
         reader.releaseLock();
     }
 }
 
+function sha256File(file: File): Promise<string> {
+    return sha256Stream(
+        file.stream(),
+    );
+}
+
+function sha256Blob(blob: Blob): Promise<string> {
+    return sha256Stream(
+        blob.stream(),
+    );
+}
+
+/**
+ * Returns the current server-side status for an upload session.
+ */
 async function getUploadStatus(
     uuid: string,
     uploadToken: string,
 ): Promise<UploadStatus> {
     const response = await fetch(
-        `/api/uploadfile/${uuid}/${uploadToken}/status`
+        `/api/uploadfile/${uuid}/${uploadToken}/status`,
     );
 
     if (!response.ok) {
-        throw new Error("Failed to get upload status");
+        throw new Error(
+            `Failed to get upload status. Status: ${response.status}`,
+        );
     }
 
-    return response.json();
+    return (
+        await response.json()
+    ) as UploadStatus;
 }
 
+/**
+ * Uploads and verifies one file chunk.
+ */
 async function uploadChunk(
     uuid: string,
     uploadToken: string,
     chunk: Blob,
     offset: number,
-    chunkSize: number,
-) {
-    const hash = await sha256Blob(chunk);
+): Promise<void> {
+    const chunkHash =
+        await sha256Blob(chunk);
 
     const response = await fetch(
         `/api/uploadfile/${uuid}/${uploadToken}`,
         {
             method: "POST",
             headers: {
-                "X-Chunk-Offset": offset.toString(),
-                "X-Chunk-Size": chunkSize.toString(),
-                "X-Chunk-Hash": hash,
-                "Content-Type": "application/octet-stream",
+                "Content-Type":
+                    "application/octet-stream",
+                "X-Chunk-Hash":
+                    chunkHash,
+                "X-Chunk-Offset":
+                    offset.toString(),
+                "X-Chunk-Size":
+                    chunk.size.toString(),
             },
             body: chunk,
         },
     );
 
     if (!response.ok) {
-        throw new Error("Chunk upload failed");
+        throw new Error(
+            `Chunk upload failed. Status: ${response.status}`,
+        );
     }
 }
-async function resumeInterruptedUploads() {
-    const uploads = await getUploadSessions();
 
-    for (const upload of uploads) {
-        const {
-            uuid,
-            uploadToken,
-            chunkSize,
-            file,
-        } = upload;
+/**
+ * Uploads one chunk with a limited number of retries.
+ */
+async function uploadChunkWithRetry(
+    session: UploadSession,
+    offset: number,
+    onRetry: (attempt: number) => void,
+): Promise<void> {
+    const end = Math.min(
+        offset + session.chunkSize,
+        session.file.size,
+    );
 
-        let status = await getUploadStatus(uuid, uploadToken);
+    const chunk =
+        session.file.slice(offset, end);
 
-        while (!status.completed) {
-            const missingOffsets: number[] = [];
+    for (
+        let attempt = 1;
+        attempt <= MAX_CHUNK_RETRIES;
+        attempt += 1
+    ) {
+        try {
+            await uploadChunk(
+                session.uuid,
+                session.uploadToken,
+                chunk,
+                offset,
+            );
 
-            for (
-                let offset = 0;
-                offset < file.size;
-                offset += chunkSize
+            return;
+        } catch (error) {
+            if (
+                attempt >= MAX_CHUNK_RETRIES
             ) {
-                const end = Math.min(
-                    offset + chunkSize,
-                    file.size,
-                );
-
-                const exists = status.receivedRanges.some(
-                    ([start, finish]: [number, number]) =>
-                        start <= offset &&
-                        finish >= end
-                );
-
-                if (!exists) {
-                    missingOffsets.push(offset);
-                }
+                throw error;
             }
 
-            for (const offset of missingOffsets) {
-                const end = Math.min(
-                    offset + chunkSize,
-                    file.size,
-                );
+            onRetry(attempt);
 
-                const chunk = file.slice(offset, end);
-
-                await uploadChunk(
-                    uuid,
-                    uploadToken,
-                    chunk,
-                    offset,
-                    chunk.size,
-                );
-            }
-
-            status = await getUploadStatus(
-                uuid,
-                uploadToken,
+            await delay(
+                RETRY_DELAY_MS,
             );
         }
-
-        const completeResponse = await fetch(
-            `/api/uploadfile/${uuid}/${uploadToken}/complete`,
-            { method: "POST" },
-        );
-
-        if (completeResponse.ok) {
-            await deleteUploadSession(uploadToken);
-        }
     }
 }
-export function CustomerUpload() {
-    const { uuid } = useParams();
-    const fileInputRef = useRef<HTMLInputElement>(null);
-    const { setUploadStats } = useCustomerUpload();
-    const [selectedFiles, setSelectedFiles] = useState<SelectedFile[]>([]);
-    const [uploading, setUploading] = useState(false);
 
-    const [dragActive, setDragActive] = useState(false);
-    type UploadState = {
-        status: "waiting" | "uploading" | "retrying" | "done" | "error";
-        progress: number;
-        retry?: number;
+/**
+ * Returns chunk offsets not yet represented by the received
+ * ranges reported by the server.
+ */
+function getMissingOffsets(
+    fileSize: number,
+    chunkSize: number,
+    receivedRanges: readonly [
+        number,
+        number,
+    ][],
+): number[] {
+    const missingOffsets: number[] = [];
+
+    for (
+        let offset = 0;
+        offset < fileSize;
+        offset += chunkSize
+    ) {
+        const end = Math.min(
+            offset + chunkSize,
+            fileSize,
+        );
+
+        const wasReceived =
+            receivedRanges.some(
+                ([start, finish]) =>
+                    start <= offset &&
+                    finish >= end,
+            );
+
+        if (!wasReceived) {
+            missingOffsets.push(offset);
+        }
+    }
+
+    return missingOffsets;
+}
+
+/**
+ * Uploads every chunk for a newly created session.
+ */
+async function uploadAllChunks(
+    session: UploadSession,
+    onProgress: (
+        progress: number,
+    ) => void,
+    onRetry: (
+        attempt: number,
+    ) => void,
+): Promise<void> {
+    if (session.file.size === 0) {
+        onProgress(100);
+        return;
+    }
+
+    for (
+        let offset = 0;
+        offset < session.file.size;
+        offset += session.chunkSize
+    ) {
+        await uploadChunkWithRetry(
+            session,
+            offset,
+            onRetry,
+        );
+
+        const uploadedBytes = Math.min(
+            offset + session.chunkSize,
+            session.file.size,
+        );
+
+        onProgress(
+            calculateProgress(
+                uploadedBytes,
+                session.file.size,
+            ),
+        );
+    }
+}
+
+/**
+ * Checks for server-side missing chunks and uploads them again.
+ */
+async function repairMissingChunks(
+    session: UploadSession,
+    onProgress: (
+        progress: number,
+    ) => void,
+    onRetry: (
+        attempt: number,
+    ) => void,
+): Promise<void> {
+    const maximumVerificationRounds = 5;
+
+    for (
+        let verificationRound = 0;
+        verificationRound <
+        maximumVerificationRounds;
+        verificationRound += 1
+    ) {
+        const status =
+            await getUploadStatus(
+                session.uuid,
+                session.uploadToken,
+            );
+
+        onProgress(
+            calculateProgress(
+                status.receivedSize,
+                session.file.size,
+            ),
+        );
+
+        if (status.completed) {
+            return;
+        }
+
+        const missingOffsets =
+            getMissingOffsets(
+                session.file.size,
+                session.chunkSize,
+                status.receivedRanges,
+            );
+
+        if (
+            missingOffsets.length === 0
+        ) {
+            return;
+        }
+
+        for (
+            const offset of missingOffsets
+        ) {
+            await uploadChunkWithRetry(
+                session,
+                offset,
+                onRetry,
+            );
+
+            const uploadedBytes =
+                Math.min(
+                    offset +
+                    session.chunkSize,
+                    session.file.size,
+                );
+
+            onProgress(
+                calculateProgress(
+                    uploadedBytes,
+                    session.file.size,
+                ),
+            );
+        }
+    }
+
+    const finalStatus =
+        await getUploadStatus(
+            session.uuid,
+            session.uploadToken,
+        );
+
+    const remainingOffsets =
+        getMissingOffsets(
+            session.file.size,
+            session.chunkSize,
+            finalStatus.receivedRanges,
+        );
+
+    if (
+        !finalStatus.completed &&
+        remainingOffsets.length > 0
+    ) {
+        throw new Error(
+            "The server is still missing one or more file chunks.",
+        );
+    }
+}
+
+/**
+ * Marks an upload session complete and removes its saved
+ * IndexedDB recovery record.
+ */
+async function completeUploadSession(
+    session: UploadSession,
+): Promise<void> {
+    const response = await fetch(
+        `/api/uploadfile/${session.uuid}/${session.uploadToken}/complete`,
+        {
+            method: "POST",
+        },
+    );
+
+    if (!response.ok) {
+        throw new Error(
+            `Failed to complete upload. Status: ${response.status}`,
+        );
+    }
+
+    try {
+        await deleteUploadSession(
+            session.uploadToken,
+        );
+    } catch (error) {
+        console.error(
+            "The upload completed, but its recovery record could not be removed:",
+            error,
+        );
+    }
+}
+
+/**
+ * Creates and persists a new server-side upload session.
+ */
+async function createUploadSession(
+    uuid: string,
+    file: File,
+): Promise<UploadSession> {
+    const fileHash =
+        await sha256File(file);
+
+    const response = await fetch(
+        `/api/uploadfile/${uuid}/start`,
+        {
+            method: "POST",
+            headers: {
+                "X-File-Hash":
+                    fileHash,
+                "X-File-Name":
+                    file.name,
+                "X-File-Size":
+                    file.size.toString(),
+                "X-User-Location":
+                    "US",
+            },
+        },
+    );
+
+    if (!response.ok) {
+        throw new Error(
+            `Failed to start upload. Status: ${response.status}`,
+        );
+    }
+
+    const data =
+        (await response.json()) as Partial<
+            StartUploadResponse
+        >;
+
+    if (
+        typeof data.uploadToken !==
+        "string" ||
+        !data.uploadToken ||
+        typeof data.chunkSize !==
+        "number" ||
+        !Number.isFinite(
+            data.chunkSize,
+        ) ||
+        data.chunkSize <= 0
+    ) {
+        throw new Error(
+            "The upload server returned an invalid session.",
+        );
+    }
+
+    const session: UploadSession = {
+        uuid,
+        uploadToken:
+            data.uploadToken,
+        fileName:
+            file.name,
+        fileHash,
+        fileSize:
+            file.size,
+        chunkSize:
+            data.chunkSize,
+        file,
     };
 
+    await saveUploadSession(session);
+
+    return session;
+}
+
+/**
+ * Returns readable text for a file's current upload state.
+ */
+function getUploadStateText(
+    state: UploadState,
+): string {
+    switch (state.status) {
+        case "uploading":
+            return `Uploading (${state.progress}%)`;
+
+        case "retrying":
+            return state.retry
+                ? `Retrying chunk (${state.retry}/${MAX_CHUNK_RETRIES})`
+                : "Resuming interrupted upload";
+
+        case "done":
+            return "Uploaded";
+
+        case "error":
+            return "Failed. Select Upload files to retry.";
+
+        default:
+            return "";
+    }
+}
+
+export function CustomerUpload() {
+    const {
+        setUploadStats,
+        uuid,
+    } = useCustomerUpload();
+
+    const fileInputRef =
+        useRef<HTMLInputElement>(null);
+
+    const selectedFilesRef =
+        useRef<SelectedFile[]>([]);
+
+    const resumedUuidRef =
+        useRef<string | null>(null);
+
+    const [selectedFiles, setSelectedFiles] =
+        useState<SelectedFile[]>([]);
+
     const [uploadStatus, setUploadStatus] =
-        useState<Record<string, UploadState>>({});
-    const uploadedFiles = selectedFiles.filter(
-        (item) => uploadStatus[item.id]?.status === "done"
+        useState<
+            Record<string, UploadState>
+        >({});
+
+    const [dragActive, setDragActive] =
+        useState(false);
+
+    const [uploading, setUploading] =
+        useState(false);
+
+    const [resuming, setResuming] =
+        useState(false);
+
+    const uploadedFiles = useMemo(
+        () =>
+            selectedFiles.filter(
+                ({ id }) =>
+                    uploadStatus[id]
+                        ?.status === "done",
+            ),
+        [
+            selectedFiles,
+            uploadStatus,
+        ],
     );
 
-    const uploadedBytes = uploadedFiles.reduce(
-        (total, item) => total + item.file.size,
-        0
+    const uploadedBytes = useMemo(
+        () =>
+            uploadedFiles.reduce(
+                (
+                    totalBytes,
+                    { file },
+                ) =>
+                    totalBytes +
+                    file.size,
+                0,
+            ),
+        [uploadedFiles],
     );
+
+    const hasPendingFiles = useMemo(
+        () =>
+            selectedFiles.some(
+                ({ id }) =>
+                    uploadStatus[id]
+                        ?.status !== "done",
+            ),
+        [
+            selectedFiles,
+            uploadStatus,
+        ],
+    );
+
+    const isBusy =
+        uploading || resuming;
+
     useEffect(() => {
         setUploadStats(
             uploadedFiles.length,
-            uploadedBytes
+            uploadedBytes,
         );
     }, [
-        uploadedFiles.length,
-        uploadedBytes,
         setUploadStats,
+        uploadedBytes,
+        uploadedFiles.length,
     ]);
 
     useEffect(() => {
-        return () => {
-            selectedFiles.forEach((item) => {
-                URL.revokeObjectURL(item.preview);
-            });
-        };
-    }, []);
-    if (!uuid) {
-        return <p>Invalid upload link.</p>;
-    }
+        selectedFilesRef.current =
+            selectedFiles;
+    }, [selectedFiles]);
 
     useEffect(() => {
-        resumeInterruptedUploads();
+        return () => {
+            selectedFilesRef.current.forEach(
+                ({ preview }) => {
+                    URL.revokeObjectURL(
+                        preview,
+                    );
+                },
+            );
+        };
     }, []);
 
-    const handleBrowseClick = () => {
+    const attachUploadSession =
+        useCallback(
+            (
+                fileId: string,
+                session: UploadSession,
+            ): void => {
+                setSelectedFiles(
+                    (currentFiles) =>
+                        currentFiles.map(
+                            (selectedFile) =>
+                                selectedFile.id ===
+                                    fileId
+                                    ? {
+                                        ...selectedFile,
+                                        uploadSession:
+                                            session,
+                                    }
+                                    : selectedFile,
+                        ),
+                );
+            },
+            [],
+        );
+
+    const processFile = useCallback(
+        async (
+            selectedFile: SelectedFile,
+            resumeExistingSession = false,
+        ): Promise<void> => {
+            setUploadStatus(
+                (currentStatus) => ({
+                    ...currentStatus,
+                    [selectedFile.id]: {
+                        status:
+                            resumeExistingSession
+                                ? "retrying"
+                                : "uploading",
+                        progress:
+                            currentStatus[
+                                selectedFile.id
+                            ]?.progress ??
+                            0,
+                    },
+                }),
+            );
+
+            try {
+                let session =
+                    selectedFile.uploadSession;
+
+                const isNewSession =
+                    !session;
+
+                if (!session) {
+                    session =
+                        await createUploadSession(
+                            uuid,
+                            selectedFile.file,
+                        );
+
+                    attachUploadSession(
+                        selectedFile.id,
+                        session,
+                    );
+                }
+
+                if (
+                    session.uuid !== uuid
+                ) {
+                    throw new Error(
+                        "The saved upload session belongs to a different upload link.",
+                    );
+                }
+
+                const updateProgress = (
+                    progress: number,
+                ): void => {
+                    setUploadStatus(
+                        (currentStatus) => ({
+                            ...currentStatus,
+                            [selectedFile.id]: {
+                                status:
+                                    "uploading",
+                                progress,
+                            },
+                        }),
+                    );
+                };
+
+                const updateRetry = (
+                    attempt: number,
+                ): void => {
+                    setUploadStatus(
+                        (currentStatus) => ({
+                            ...currentStatus,
+                            [selectedFile.id]: {
+                                status:
+                                    "retrying",
+                                progress:
+                                    currentStatus[
+                                        selectedFile
+                                            .id
+                                    ]?.progress ??
+                                    0,
+                                retry:
+                                    attempt,
+                            },
+                        }),
+                    );
+                };
+
+                if (isNewSession) {
+                    await uploadAllChunks(
+                        session,
+                        updateProgress,
+                        updateRetry,
+                    );
+                }
+
+                await repairMissingChunks(
+                    session,
+                    updateProgress,
+                    updateRetry,
+                );
+
+                await completeUploadSession(
+                    session,
+                );
+
+                setUploadStatus(
+                    (currentStatus) => ({
+                        ...currentStatus,
+                        [selectedFile.id]: {
+                            status:
+                                "done",
+                            progress:
+                                100,
+                        },
+                    }),
+                );
+            } catch (error) {
+                console.error(
+                    `Upload failed for ${selectedFile.file.name}:`,
+                    error,
+                );
+
+                setUploadStatus(
+                    (currentStatus) => ({
+                        ...currentStatus,
+                        [selectedFile.id]: {
+                            status:
+                                "error",
+                            progress:
+                                currentStatus[
+                                    selectedFile.id
+                                ]?.progress ??
+                                0,
+                        },
+                    }),
+                );
+            }
+        },
+        [
+            attachUploadSession,
+            uuid,
+        ],
+    );
+
+    useEffect(() => {
+        if (
+            resumedUuidRef.current === uuid
+        ) {
+            return;
+        }
+
+        resumedUuidRef.current = uuid;
+
+        async function resumeSavedUploads():
+            Promise<void> {
+            setResuming(true);
+
+            try {
+                const savedSessions =
+                    await getUploadSessions(
+                        uuid,
+                    );
+
+                if (
+                    savedSessions.length === 0
+                ) {
+                    return;
+                }
+
+                const resumedFiles =
+                    savedSessions.map(
+                        (session) =>
+                            createSelectedFile(
+                                session.file,
+                                session,
+                            ),
+                    );
+
+                const existingTokens =
+                    new Set(
+                        selectedFilesRef.current
+                            .map(
+                                ({
+                                    uploadSession,
+                                }) =>
+                                    uploadSession
+                                        ?.uploadToken,
+                            )
+                            .filter(
+                                (
+                                    token,
+                                ): token is string =>
+                                    Boolean(token),
+                            ),
+                    );
+
+                const filesToResume =
+                    resumedFiles.filter(
+                        ({
+                            uploadSession,
+                        }) =>
+                            Boolean(
+                                uploadSession &&
+                                !existingTokens.has(
+                                    uploadSession.uploadToken,
+                                ),
+                            ),
+                    );
+
+                resumedFiles
+                    .filter(
+                        ({
+                            uploadSession,
+                        }) =>
+                            Boolean(
+                                uploadSession &&
+                                existingTokens.has(
+                                    uploadSession.uploadToken,
+                                ),
+                            ),
+                    )
+                    .forEach(
+                        ({ preview }) => {
+                            URL.revokeObjectURL(
+                                preview,
+                            );
+                        },
+                    );
+
+                setSelectedFiles(
+                    (currentFiles) => [
+                        ...currentFiles,
+                        ...filesToResume,
+                    ],
+                );
+
+                await runWithConcurrency(
+                    filesToResume,
+                    UPLOAD_CONCURRENCY,
+                    (selectedFile) =>
+                        processFile(
+                            selectedFile,
+                            true,
+                        ),
+                );
+            } catch (error) {
+                console.error(
+                    "Failed to resume interrupted uploads:",
+                    error,
+                );
+            } finally {
+                setResuming(false);
+            }
+        }
+
+        void resumeSavedUploads();
+    }, [
+        processFile,
+        uuid,
+    ]);
+
+    function handleBrowseClick(): void {
         fileInputRef.current?.click();
-    };
-    const addFiles = (files: FileList | File[]) => {
-        const newFiles = Array.from(files).map((file) => ({
-            id: crypto.randomUUID(),
-            file,
-            preview: URL.createObjectURL(file),
-        }));
+    }
 
-        setSelectedFiles((currentFiles) => {
-            const existingNames = new Set(
-                currentFiles.map((item) => item.file.name)
-            );
+    function addFiles(
+        files: FileList | File[],
+    ): void {
+        const incomingFiles =
+            Array.from(files);
 
-            const uniqueNewFiles = newFiles.filter(
-                (item) => !existingNames.has(item.file.name)
-            );
+        setSelectedFiles(
+            (currentFiles) => {
+                const existingKeys =
+                    new Set(
+                        currentFiles.map(
+                            ({ file }) =>
+                                getFileKey(
+                                    file,
+                                ),
+                        ),
+                    );
 
-            return [...currentFiles, ...uniqueNewFiles];
-        });
-    };
-    const handleFileChange = (
-        event: ChangeEvent<HTMLInputElement>,
-    ) => {
+                const filesToAdd:
+                    SelectedFile[] = [];
 
+                incomingFiles.forEach(
+                    (file) => {
+                        const fileKey =
+                            getFileKey(
+                                file,
+                            );
 
+                        if (
+                            existingKeys.has(
+                                fileKey,
+                            )
+                        ) {
+                            return;
+                        }
+
+                        existingKeys.add(
+                            fileKey,
+                        );
+
+                        filesToAdd.push(
+                            createSelectedFile(
+                                file,
+                            ),
+                        );
+                    },
+                );
+
+                return filesToAdd.length >
+                    0
+                    ? [
+                        ...currentFiles,
+                        ...filesToAdd,
+                    ]
+                    : currentFiles;
+            },
+        );
+    }
+
+    function handleFileChange(
+        event:
+            ChangeEvent<HTMLInputElement>,
+    ): void {
         if (!event.target.files) {
             return;
         }
 
-        addFiles(event.target.files);
+        addFiles(
+            event.target.files,
+        );
 
         event.target.value = "";
-    };
+    }
 
-    const removeFile = (indexToRemove: number) => {
-        setSelectedFiles((currentFiles) => {
-            const removed = currentFiles[indexToRemove];
-
-            if (removed) {
-                URL.revokeObjectURL(removed.preview);
-            }
-
-            return currentFiles.filter(
-                (_, index) => index !== indexToRemove
+    async function removeFile(
+        fileId: string,
+    ): Promise<void> {
+        const fileToRemove =
+            selectedFilesRef.current.find(
+                ({ id }) =>
+                    id === fileId,
             );
-        });
-    };
 
-    const handleDragOver = (
-        event: React.DragEvent<HTMLDivElement>
-    ) => {
-        event.preventDefault();
-        setDragActive(true);
-    };
-
-    const handleDragLeave = (
-        event: React.DragEvent<HTMLDivElement>
-    ) => {
-        event.preventDefault();
-        setDragActive(false);
-    };
-
-    const handleDrop = (
-        event: React.DragEvent<HTMLDivElement>
-    ) => {
-        event.preventDefault();
-        setDragActive(false);
-
-        if (event.dataTransfer.files.length > 0) {
-            addFiles(event.dataTransfer.files);
+        if (!fileToRemove) {
+            return;
         }
-    };
-    const uploadFiles = async () => {
+
+        URL.revokeObjectURL(
+            fileToRemove.preview,
+        );
+
+        setSelectedFiles(
+            (currentFiles) =>
+                currentFiles.filter(
+                    ({ id }) =>
+                        id !== fileId,
+                ),
+        );
+
+        setUploadStatus(
+            (currentStatus) => {
+                const nextStatus = {
+                    ...currentStatus,
+                };
+
+                delete nextStatus[fileId];
+
+                return nextStatus;
+            },
+        );
+
+        if (
+            fileToRemove.uploadSession &&
+            uploadStatus[fileId]
+                ?.status !== "done"
+        ) {
+            try {
+                await deleteUploadSession(
+                    fileToRemove
+                        .uploadSession
+                        .uploadToken,
+                );
+            } catch (error) {
+                console.error(
+                    "Failed to remove the saved upload session:",
+                    error,
+                );
+            }
+        }
+    }
+
+    function handleDragOver(
+        event:
+            DragEvent<HTMLDivElement>,
+    ): void {
+        event.preventDefault();
+
+        if (!isBusy) {
+            setDragActive(true);
+        }
+    }
+
+    function handleDragLeave(
+        event:
+            DragEvent<HTMLDivElement>,
+    ): void {
+        event.preventDefault();
+
+        const relatedTarget =
+            event.relatedTarget as
+            | Node
+            | null;
+
+        if (
+            relatedTarget &&
+            event.currentTarget.contains(
+                relatedTarget,
+            )
+        ) {
+            return;
+        }
+
+        setDragActive(false);
+    }
+
+    function handleDrop(
+        event:
+            DragEvent<HTMLDivElement>,
+    ): void {
+        event.preventDefault();
+        setDragActive(false);
+
+        if (
+            isBusy ||
+            event.dataTransfer.files
+                .length === 0
+        ) {
+            return;
+        }
+
+        addFiles(
+            event.dataTransfer.files,
+        );
+    }
+
+    async function uploadFiles():
+        Promise<void> {
+        if (isBusy) {
+            return;
+        }
+
+        const filesToUpload =
+            selectedFiles.filter(
+                ({ id }) =>
+                    uploadStatus[id]
+                        ?.status !== "done",
+            );
+
+        if (
+            filesToUpload.length === 0
+        ) {
+            return;
+        }
+
         setUploading(true);
 
         try {
-            await runWithConcurrency(selectedFiles, 3, async (item) => {
-                try {
-                    setUploadStatus((s) => ({
-                        ...s,
-                        [item.id]: {
-                            status: "uploading",
-                            progress: 0,
-                        },
-                    }));
-
-                    const fileHash = await sha256File(item.file);
-
-                    const startResponse = await fetch(
-                        `/api/uploadfile/${uuid}/start`,
-                        {
-                            method: "POST",
-                            headers: {
-                                "X-File-Name": item.file.name,
-                                "X-File-Hash": fileHash,
-                                "X-File-Size": item.file.size.toString(),
-                                "X-User-Location": "US",
-                            },
-                        },
-                    );
-
-                    if (!startResponse.ok) {
-                        throw new Error("Failed to start upload");
-                    }
-
-                    const {
-                        uploadToken,
-                        chunkSize,
-                    }: {
-                        uploadToken: string;
-                        chunkSize: number;
-                    } = await startResponse.json();
-
-                    await saveUploadSession({
-                        uuid,
-                        uploadToken,
-                        fileName: item.file.name,
-                        fileHash,
-                        fileSize: item.file.size,
-                        chunkSize,
-                        file: item.file,
-                    })
-
-
-                    let offset = 0;
-
-                    while (offset < item.file.size) {
-                        const end = Math.min(
-                            offset + chunkSize,
-                            item.file.size,
-                        );
-
-                        const chunk = item.file.slice(offset, end);
-
-                        let uploaded = false;
-                        let attempts = 0;
-
-
-                        while (!uploaded && attempts < 3) {
-                            try {
-                                await uploadChunk(
-                                    uuid,
-                                    uploadToken,
-                                    chunk,
-                                    offset,
-                                    chunk.size,
-                                );
-
-                                uploaded = true;
-
-                                setUploadStatus((s) => ({
-                                    ...s,
-                                    [item.id]: {
-                                        ...s[item.id],
-                                        status: "uploading",
-                                    },
-                                }));
-                            } catch {
-                                attempts++;
-
-                                setUploadStatus((s) => ({
-                                    ...s,
-                                    [item.id]: {
-                                        ...s[item.id],
-                                        status: "retrying",
-                                        retry: attempts,
-                                    },
-                                }));
-
-                                if (attempts >= 3) {
-                                    throw new Error("Chunk failed after retries");
-                                }
-
-                                await new Promise((resolve) => setTimeout(resolve, 1000));
-                            }
-                        }
-                        offset = end;
-                        const percent = Math.round((offset / item.file.size) * 100);
-
-                        setUploadStatus((s) => ({
-                            ...s,
-                            [item.id]: {
-                                ...s[item.id],
-                                progress: percent,
-                            },
-                        }));
-                    }
-                    let status = await getUploadStatus(uuid, uploadToken);
-
-                    while (!status.completed) {
-                        const missingOffsets: number[] = [];
-
-                        for (
-                            let offset = 0;
-                            offset < item.file.size;
-                            offset += chunkSize
-                        ) {
-                            const end = Math.min(
-                                offset + chunkSize,
-                                item.file.size,
-                            );
-
-                            const exists = status.receivedRanges.some(
-                                ([start, finish]) =>
-                                    start <= offset &&
-                                    finish >= end
-                            );
-
-                            if (!exists) {
-                                missingOffsets.push(offset);
-                            }
-                        }
-                        for (const offset of missingOffsets) {
-                            const end = Math.min(
-                                offset + chunkSize,
-                                item.file.size,
-                            );
-
-                            const chunk = item.file.slice(offset, end);
-
-                            await uploadChunk(
-                                uuid,
-                                uploadToken,
-                                chunk,
-                                offset,
-                                chunk.size,
-                            );
-                        }
-                        status = await getUploadStatus(uuid, uploadToken);
-                    }
-                    const completeResponse = await fetch(
-                        `/api/uploadfile/${uuid}/${uploadToken}/complete`,
-                        {
-                            method: "POST",
-                        },
-                    );
-
-                    if (!completeResponse.ok) {
-                        throw new Error("Failed to complete upload");
-                    }
-
-                    await deleteUploadSession(uploadToken);
-
-                    setUploadStatus((s) => ({
-                        ...s,
-                        [item.id]: {
-                            status: "done",
-                            progress: 100,
-                        },
-                    }));
-
-                } catch {
-                    setUploadStatus((s) => ({
-                        ...s,
-                        [item.id]: {
-                            ...s[item.id],
-                            status: "error",
-                        },
-                    }));
-                }
-            });
+            await runWithConcurrency(
+                filesToUpload,
+                UPLOAD_CONCURRENCY,
+                (selectedFile) =>
+                    processFile(
+                        selectedFile,
+                        Boolean(
+                            selectedFile.uploadSession,
+                        ),
+                    ),
+            );
         } finally {
             setUploading(false);
         }
-    };
+    }
 
     return (
         <section
@@ -537,112 +1230,177 @@ export function CustomerUpload() {
             aria-labelledby="customer-upload-heading"
         >
             <div className="upload-panel">
-
                 <h1 id="customer-upload-heading">
                     Upload your files
                 </h1>
 
-
                 <p className="upload-note">
-                    This link is temporary and will stop working after the
-                    assigned expiration time. Please upload your files before
-                    the link expires.
+                    This link is temporary and will
+                    stop working after the assigned
+                    expiration time. Please upload
+                    your files before the link
+                    expires.
                 </p>
 
                 <div
-                    className={`upload-box ${dragActive ? "drag-active" : ""}`}
-                    onDragOver={handleDragOver}
-                    onDragLeave={handleDragLeave}
+                    className={
+                        dragActive
+                            ? "upload-box drag-active"
+                            : "upload-box"
+                    }
+                    onDragLeave={
+                        handleDragLeave
+                    }
+                    onDragOver={
+                        handleDragOver
+                    }
                     onDrop={handleDrop}
                 >
-                    <p>Choose files or drag and drop here.</p>
+                    <p>
+                        Choose files or drag and
+                        drop them here.
+                    </p>
 
                     <button
                         className="browse-button"
                         type="button"
-                        onClick={handleBrowseClick}
+                        disabled={isBusy}
+                        onClick={
+                            handleBrowseClick
+                        }
                     >
-                        Browse files
+                        {resuming
+                            ? "Resuming uploads..."
+                            : "Browse files"}
                     </button>
 
                     <input
                         ref={fileInputRef}
+                        className="file-input"
                         type="file"
                         multiple
-                        className="file-input"
-                        onChange={handleFileChange}
+                        disabled={isBusy}
+                        aria-label="Select files to upload"
+                        onChange={
+                            handleFileChange
+                        }
                     />
 
-                    {selectedFiles.length > 0 && (
-                        <div className="selected-files">
-                            {selectedFiles.map((item, index) => (
-                                <div
-                                    key={`${item.id}-${index}`}
-                                    className="selected-file"
-                                >
-                                    <div className="selected-file-info">
-                                        <span>{item.file.name}</span>
+                    {selectedFiles.length >
+                        0 && (
+                            <div
+                                className="selected-files"
+                                aria-live="polite"
+                            >
+                                {selectedFiles.map(
+                                    (item) => {
+                                        const state =
+                                            uploadStatus[
+                                            item.id
+                                            ];
 
-                                        {uploadStatus[item.id] && (
-                                            <small>
-                                                {uploadStatus[item.id].status === "uploading" &&
-                                                    `Uploading (${uploadStatus[item.id].progress}%)`}
+                                        return (
+                                            <div
+                                                key={
+                                                    item.id
+                                                }
+                                                className="selected-file"
+                                            >
+                                                <div className="selected-file-info">
+                                                    <span>
+                                                        {
+                                                            item
+                                                                .file
+                                                                .name
+                                                        }
+                                                    </span>
 
-                                                {uploadStatus[item.id].status === "retrying" &&
-                                                    `Retrying... (${uploadStatus[item.id].retry}/3)`}
+                                                    {state && (
+                                                        <small>
+                                                            {getUploadStateText(
+                                                                state,
+                                                            )}
+                                                        </small>
+                                                    )}
 
-                                                {uploadStatus[item.id].status === "done" &&
-                                                    "Uploaded"}
+                                                    {state && (
+                                                        <div
+                                                            className="upload-progress"
+                                                            role="progressbar"
+                                                            aria-label={`Upload progress for ${item.file.name}`}
+                                                            aria-valuemin={
+                                                                0
+                                                            }
+                                                            aria-valuemax={
+                                                                100
+                                                            }
+                                                            aria-valuenow={
+                                                                state.progress
+                                                            }
+                                                        >
+                                                            <div
+                                                                className={`upload-progress-fill ${state.status}`}
+                                                                style={{
+                                                                    width: `${state.progress}%`,
+                                                                }}
+                                                            />
+                                                        </div>
+                                                    )}
+                                                </div>
 
-                                                {uploadStatus[item.id].status === "error" &&
-                                                    "Failed"}
-                                            </small>
-                                        )}
-                                        {uploadStatus[item.id] && (
-                                            <div className="upload-progress">
-                                                <div
-                                                    className={`upload-progress-fill ${uploadStatus[item.id].status}`}
-                                                    style={{
-                                                        width: `${uploadStatus[item.id].progress}%`,
-                                                    }}
-                                                />
+                                                <div className="selected-file-actions">
+                                                    <a
+                                                        href={
+                                                            item.preview
+                                                        }
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                    >
+                                                        Preview
+                                                    </a>
+
+                                                    <button
+                                                        className="delete-button"
+                                                        type="button"
+                                                        disabled={
+                                                            isBusy
+                                                        }
+                                                        onClick={() =>
+                                                            void removeFile(
+                                                                item.id,
+                                                            )
+                                                        }
+                                                    >
+                                                        Delete
+                                                    </button>
+                                                </div>
                                             </div>
-                                        )}
-                                    </div>
+                                        );
+                                    },
+                                )}
+                            </div>
+                        )}
 
-                                    <div className="selected-file-actions">
-                                        <a
-                                            href={item.preview}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                        >
-                                            Preview
-                                        </a>
-
-                                        <button
-                                            className="delete-button"
-                                            type="button"
-                                            disabled={uploading}
-                                            onClick={() => removeFile(index)}
-                                        >
-                                            Delete
-                                        </button>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-
-                    {selectedFiles.length > 0 && (
-                        <button
-                            className="browse-button"
-                            type="button"
-                            onClick={uploadFiles}
-                            disabled={uploading}
-                        >
-                            {uploading ? "Uploading..." : "Upload files"}
-                        </button>
-                    )}
+                    {selectedFiles.length >
+                        0 &&
+                        hasPendingFiles && (
+                            <button
+                                className="browse-button"
+                                type="button"
+                                disabled={
+                                    isBusy
+                                }
+                                onClick={() =>
+                                    void uploadFiles()
+                                }
+                            >
+                                {uploading
+                                    ? "Uploading..."
+                                    : resuming
+                                        ? "Resuming..."
+                                        : "Upload files"}
+                            </button>
+                        )}
                 </div>
             </div>
         </section>

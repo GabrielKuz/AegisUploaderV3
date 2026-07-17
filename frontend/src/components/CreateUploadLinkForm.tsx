@@ -3,69 +3,38 @@ import {
     type FormEvent,
 } from "react";
 import { useNavigate } from "react-router-dom";
-import { useMsal } from "@azure/msal-react";
 
-import { isEntraConfigured } from "../features/auth/authConfig";
-import {
-    getActiveAccount,
-    getApiAccessToken,
-} from "../features/auth/entraAuth";
-import { getDevToken } from "../features/auth/devAuth";
+import { useApiAccessToken } from "../features/auth/useApiAccessToken";
 
-import "../features/support/CreateSupportLinkPage.css";
+import "./CreateUploadLinkForm.css";
 
 type CreateUploadLinkFormProps = {
     cancelPath: string;
     successPath: string;
-    eyebrow?: string;
 };
 
-type LinkForm = {
-    caseId: string;
-};
-
-const INITIAL_FORM: LinkForm = {
-    caseId: "",
-};
-
+// Creates temporary customer upload link for support case.
 export function CreateUploadLinkForm({
     cancelPath,
     successPath,
-    eyebrow,
 }: CreateUploadLinkFormProps) {
     const navigate = useNavigate();
-    const { accounts, instance } = useMsal();
+    const getAccessToken = useApiAccessToken();
 
-    const [form, setForm] = useState<LinkForm>(INITIAL_FORM);
-    const [error, setError] = useState<string | null>(null);
-    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [caseId, setCaseId] = useState("");
+    const [error, setError] =
+        useState<string | null>(null);
+    const [isSubmitting, setIsSubmitting] =
+        useState(false);
 
-    async function getAccessToken() {
-        if (!isEntraConfigured) {
-            return getDevToken();
-        }
-
-        const account = getActiveAccount(instance) ?? accounts[0];
-
-        if (!account) {
-            return null;
-        }
-
-        if (!instance.getActiveAccount()) {
-            instance.setActiveAccount(account);
-        }
-
-        return getApiAccessToken(instance, account);
-    }
-
-    const handleSubmit = async (
+    async function handleSubmit(
         event: FormEvent<HTMLFormElement>,
-    ) => {
+    ): Promise<void> {
         event.preventDefault();
 
-        const caseId = form.caseId.trim();
+        const trimmedCaseId = caseId.trim();
 
-        if (!caseId) {
+        if (!trimmedCaseId) {
             setError("Case ID is required.");
             return;
         }
@@ -77,108 +46,128 @@ export function CreateUploadLinkForm({
             const accessToken = await getAccessToken();
 
             if (!accessToken) {
-                setError("Please sign in before creating a support link.");
+                setError(
+                    "Please sign in before creating an upload link.",
+                );
                 return;
             }
 
-            const response = await fetch("/api/links/create/", {
-                method: "POST",
-                headers: {
-                    Authorization: `Bearer ${accessToken}`,
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                    case_id: caseId,
+            const response = await fetch(
+                "/api/links/create/",
+                {
+                    method: "POST",
+                    headers: {
+                        Authorization: `Bearer ${accessToken}`,
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                        case_id: trimmedCaseId,
 
-                    // Keep this until the backend no longer requires ITAR.
-                    itar: false,
-                }),
-            });
+                        // Remove when the backend no longer requires this field.
+                        itar: false,
+                    }),
+                },
+            );
 
             if (!response.ok) {
                 const message = await response.text();
 
                 setError(
-                    message ||
-                    `Failed to create support link. Status: ${response.status}`,
+                    message.trim() ||
+                    `Failed to create the upload link. Status: ${response.status}`
                 );
-
                 return;
             }
 
-            navigate(successPath, { state: { refresh: true } });
+            navigate(successPath);
         } catch {
-            setError("Something went wrong while creating the support link.");
+            setError(
+                "Something went wrong while creating the upload link.",
+            );
         } finally {
             setIsSubmitting(false);
         }
-    };
+    }
 
     return (
         <section
-            className="create-support-link-page"
+            className="create-link-page"
             aria-labelledby="create-link-heading"
         >
             <header className="create-link-header">
-                {eyebrow && (
-                    <p className="create-link-eyebrow">
-                        {eyebrow}
-                    </p>
-                )}
-
                 <h1 id="create-link-heading">
                     Create a new upload link
                 </h1>
 
                 <p className="create-link-description">
-                    Enter the customer case ID to create a secure temporary upload link.
+                    Enter the customer case ID to create a secure
+                    temporary upload link.
                 </p>
             </header>
 
             <div className="create-link-shell">
                 <form
-                    className="link-form"
+                    className="create-link-form"
                     onSubmit={handleSubmit}
                     noValidate
                 >
                     {error && (
-                        <div className="link-form-error" role="alert">
+                        <div
+                            id="create-link-error"
+                            className="create-link-error"
+                            role="alert"
+                        >
                             {error}
                         </div>
                     )}
 
-                    <label className="link-form-field">
-                        <span>Case ID</span>
+                    <div className="create-link-field">
+                        <label htmlFor="case-id">
+                            Case ID
+                        </label>
 
                         <input
+                            id="case-id"
                             name="caseId"
-                            value={form.caseId}
+                            type="text"
+                            value={caseId}
                             placeholder="Example: AIS-12345"
-                            onChange={(event) =>
-                                setForm({
-                                    caseId: event.target.value,
-                                })
+                            autoComplete="off"
+                            aria-describedby={
+                                error
+                                    ? "create-link-error"
+                                    : undefined
                             }
+                            disabled={isSubmitting}
+                            onChange={(event) => {
+                                setCaseId(event.target.value);
+
+                                if (error) {
+                                    setError(null);
+                                }
+                            }}
                             required
                         />
-                    </label>
+                    </div>
 
-                    <div className="link-form-actions">
+                    <div className="create-link-actions">
                         <button
+                            className="create-link-cancel"
                             type="button"
-                            className="link-cancel-button"
-                            onClick={() => navigate(cancelPath)}
                             disabled={isSubmitting}
+                            onClick={() => navigate(cancelPath)}
                         >
                             Cancel
                         </button>
 
                         <button
+                            className="create-link-submit"
                             type="submit"
-                            className="link-submit-button"
                             disabled={isSubmitting}
                         >
-                            {isSubmitting ? "Creating..." : "Submit"}
+                            {isSubmitting
+                                ? "Creating..."
+                                : "Create link"}
                         </button>
                     </div>
                 </form>
@@ -187,8 +176,9 @@ export function CreateUploadLinkForm({
                     <h2>What happens next?</h2>
 
                     <p>
-                        A temporary upload link will be created for this case.
-                        Share it with the customer so they can submit files securely.
+                        A temporary upload link will be created for
+                        this case. Share it with the customer so they
+                        can submit files securely.
                     </p>
                 </aside>
             </div>

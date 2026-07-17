@@ -1,10 +1,19 @@
 import { PublicClientApplication } from "@azure/msal-browser";
 
+const DEFAULT_CLIENT_ID = "00000000-0000-0000-0000-000000000000";
+
 const tenantId = import.meta.env.VITE_AZURE_TENANT_ID ?? "common";
-const clientId = import.meta.env.VITE_AZURE_CLIENT_ID ?? "00000000-0000-0000-0000-000000000000";
-const isEntraConfigured = Boolean(
-  import.meta.env.VITE_AZURE_TENANT_ID && import.meta.env.VITE_AZURE_CLIENT_ID,
+
+const clientId = import.meta.env.VITE_AZURE_CLIENT_ID ?? DEFAULT_CLIENT_ID;
+
+export const isEntraConfigured = Boolean(
+  import.meta.env.VITE_AZURE_TENANT_ID &&
+  import.meta.env.VITE_AZURE_CLIENT_ID,
 );
+
+export const isDevAuthEnabled =
+  import.meta.env.DEV &&
+  !isEntraConfigured;
 
 const apiScope =
   import.meta.env.VITE_AZURE_API_SCOPE ??
@@ -12,8 +21,8 @@ const apiScope =
 
 export const msalConfig = {
   auth: {
-    clientId,
     authority: `https://login.microsoftonline.com/${tenantId}`,
+    clientId,
     redirectUri: window.location.origin,
   },
   cache: {
@@ -30,25 +39,26 @@ export const apiRequest = {
   scopes: [apiScope],
 };
 
-export { isEntraConfigured };
+export const msalInstance =
+  new PublicClientApplication(msalConfig);
 
-export const msalInstance = new PublicClientApplication(msalConfig);
-
-export async function initializeMsalInstance(): Promise<void> {
+/**
+ * Initializes MSAL, processes login redirect, and establishes
+ * active account used throughout application.
+ */
+export async function initializeMsalInstance():
+  Promise<void> {
   await msalInstance.initialize();
 
   const redirectResult = await msalInstance.handleRedirectPromise();
 
-  if (redirectResult?.account) {
-    msalInstance.setActiveAccount(redirectResult.account);
-  }
-
-  const activeAccount =
+  const account =
+    redirectResult?.account ??
     msalInstance.getActiveAccount() ??
     msalInstance.getAllAccounts()[0] ??
     null;
 
-  if (activeAccount) {
-    msalInstance.setActiveAccount(activeAccount);
+  if (account) {
+    msalInstance.setActiveAccount(account);
   }
 }

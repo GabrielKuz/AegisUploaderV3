@@ -4,35 +4,8 @@ import { AppLayout } from "./AppLayout";
 import {
     CustomerUploadProvider,
     useCustomerUpload,
-} from "../features/uploader/CustomerLayoutContext";
-
-import "./AppLayout.css";
-
-const BYTE_UNITS = [
-    "B",
-    "KB",
-    "MB",
-    "GB",
-    "TB",
-] as const;
-
-/**
- * Converts a byte count into a readable binary unit.
- */
-function formatBytes(bytes: number): string {
-    if (bytes <= 0) {
-        return "0 B";
-    }
-
-    const unitIndex = Math.min(
-        Math.floor(Math.log(bytes) / Math.log(1024)),
-        BYTE_UNITS.length - 1,
-    );
-
-    const value = bytes / 1024 ** unitIndex;
-
-    return `${value.toFixed(1)} ${BYTE_UNITS[unitIndex]}`;
-}
+} from "../features/uploader/CustomerUploadContext";
+import { formatBytes } from "../utils/formatters";
 
 /**
  * Displays customer upload statistics in the application sidebar.
@@ -91,7 +64,10 @@ export function CustomerLayout() {
     }
 
     return (
-        <CustomerUploadProvider uuid={uuid}>
+        <CustomerUploadProvider
+            key={uuid}
+            uuid={uuid}
+        >
             <AppLayout
                 productName="Customer Upload"
                 sectionName="Provide Files"

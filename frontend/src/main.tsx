@@ -23,4 +23,9 @@ async function bootstrap() {
   );
 }
 
-void bootstrap();
+void bootstrap().catch((error: unknown) => {
+  console.error(
+    "Application initialization failed:",
+    error,
+  );
+});

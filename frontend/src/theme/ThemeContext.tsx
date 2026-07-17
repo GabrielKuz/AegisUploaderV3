@@ -1,7 +1,7 @@
 import {
     createContext,
     useContext,
-    useEffect,
+    useLayoutEffect,
     useMemo,
     useState,
     type ReactNode,
@@ -45,7 +45,7 @@ function getInitialTheme(): Theme {
 export function ThemeProvider({ children }: ThemeProviderProps) {
     const [theme, setTheme] = useState<Theme>(getInitialTheme);
 
-    useEffect(() => {
+    useLayoutEffect(() => {
         document.documentElement.dataset.theme = theme;
         document.documentElement.style.colorScheme = theme;
 

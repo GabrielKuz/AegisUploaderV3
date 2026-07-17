@@ -1,8 +1,10 @@
 import type { ReactNode } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useMsal } from "@azure/msal-react";
-
-import { isEntraConfigured } from "../features/auth/authConfig";
+import {
+    isDevAuthEnabled,
+    isEntraConfigured,
+} from "../features/auth/authConfig";
 import { getDevUser, signOutDevUser } from "../features/auth/devAuth";
 import { getActiveAccount } from "../features/auth/entraAuth";
 
@@ -50,12 +52,15 @@ export function AppLayout({
     showSignOut = true,
 }: AppLayoutProps) {
     const navigate = useNavigate();
-    const { accounts, instance } = useMsal();
+    const { instance } = useMsal();
 
-    const devUser = getDevUser();
-    const account =
-        getActiveAccount(instance) ??
-        accounts[0];
+    const account = isEntraConfigured
+        ? getActiveAccount(instance)
+        : null;
+
+    const devUser = isDevAuthEnabled
+        ? getDevUser()
+        : null;
 
     const showSidebar =
         navItems.length > 0 ||

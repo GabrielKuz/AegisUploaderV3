@@ -1,7 +1,9 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 
-type LinkActionCardProps = {
+import "./LinkActionCard.css";
+
+export type LinkActionCardProps = {
     to: string;
     number: string;
     title: string;
@@ -22,21 +24,32 @@ export function LinkActionCard({
         <Link
             to={to}
             className="link-action-card"
-            aria-label={`${title}: ${actionLabel}`}
         >
-            <span className="link-action-accent" aria-hidden="true" />
+            <span
+                className="link-action-accent"
+                aria-hidden="true"
+            />
 
             <div className="link-action-top">
-                <span className="link-action-number" aria-hidden="true">
+                <span
+                    className="link-action-number"
+                    aria-hidden="true"
+                >
                     {number}
                 </span>
 
-                <span className="link-action-icon" aria-hidden="true">
+                <span
+                    className="link-action-icon"
+                    aria-hidden="true"
+                >
                     {icon}
                 </span>
             </div>
 
-            <div className="link-action-divider" aria-hidden="true" />
+            <div
+                className="link-action-divider"
+                aria-hidden="true"
+            />
 
             <div className="link-action-content">
                 <h2>{title}</h2>
@@ -63,14 +76,22 @@ export function LinkActionCard({
                 </svg>
             </div>
 
-            <span className="link-action-dots" aria-hidden="true" />
+            <span
+                className="link-action-dots"
+                aria-hidden="true"
+            />
         </Link>
     );
 }
 
 export function LinksIcon() {
     return (
-        <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true">
+        <svg
+            viewBox="0 0 24 24"
+            width="26"
+            height="26"
+            aria-hidden="true"
+        >
             <rect
                 x="5"
                 y="3.5"
@@ -95,7 +116,12 @@ export function LinksIcon() {
 
 export function CreateLinkIcon() {
     return (
-        <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true">
+        <svg
+            viewBox="0 0 24 24"
+            width="26"
+            height="26"
+            aria-hidden="true"
+        >
             <path
                 d="m4.5 19.5 4.2-1 10-10a2.1 2.1 0 0 0-3-3l-10 10-1.2 4Z"
                 fill="none"
@@ -118,7 +144,12 @@ export function CreateLinkIcon() {
 
 export function UploadsIcon() {
     return (
-        <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true">
+        <svg
+            viewBox="0 0 24 24"
+            width="26"
+            height="26"
+            aria-hidden="true"
+        >
             <path
                 d="M12 16V5M8 9l4-4 4 4"
                 fill="none"

@@ -10,6 +10,7 @@
     color: var(--white);
     background: transparent;
     border: 1px solid var(--gray);
+    border-radius: var(--radius-md);
 
     font: inherit;
     font-size: 14px;

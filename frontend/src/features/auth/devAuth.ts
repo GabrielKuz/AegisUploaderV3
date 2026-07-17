@@ -2,40 +2,39 @@ export type DevUser = {
   id: string;
   name: string;
   email: string;
-  role: "support" | "customer" | "admin";
+  role: "support" | "admin";
   token: string;
 };
 
 const DEV_USER_KEY = "aegis-dev-user";
 
-export function signInDevUser(
-  role: DevUser["role"] = "support",
-): DevUser {
-  const users: Record<DevUser["role"], DevUser> = {
-    support: {
+const DEV_USERS = {
+  support: {
     id: "dev-support-user",
     name: "Support User",
     email: "support.user@aegissoftware.com",
     role: "support",
     token: "dev-support-token",
-    },
-    customer: {
-      id: "dev-customer-user",
-      name: "Customer User",
-      email: "customer.user@example.com",
-      role: "customer",
-      token: "dev-customer-token",
-    },
-    admin: {
-      id: "dev-admin-user",
-      name: "Admin User",
-      email: "admin.user@aegissoftware.com",
-      role: "admin",
-      token: "dev-admin-token",
-    },
-  };
+  },
+  admin: {
+    id: "dev-admin-user",
+    name: "Admin User",
+    email: "admin.user@aegissoftware.com",
+    role: "admin",
+    token: "dev-admin-token",
+  },
+} satisfies Record<
+  DevUser["role"],
+  DevUser
+>;
 
-  const user = users[role];
+/**
+ * Creates and stores development user for requested role.
+*/
+export function signInDevUser(
+  role: DevUser["role"] = "support",
+): DevUser {
+  const user = DEV_USERS[role];
 
   window.localStorage.setItem(
     DEV_USER_KEY,
@@ -45,26 +44,46 @@ export function signInDevUser(
   return user;
 }
 
-export function getDevUser(): DevUser | null {
-  const storedUser = window.localStorage.getItem(DEV_USER_KEY);
+/**
+ * Returns the currently stored development user.
+*/
+export function getDevUser():
+  DevUser | null {
+  const storedUser =
+    window.localStorage.getItem(
+      DEV_USER_KEY,
+    );
 
   if (!storedUser) {
     return null;
   }
 
   try {
-    return JSON.parse(storedUser) as DevUser;
+    return JSON.parse(
+      storedUser,
+    ) as DevUser;
   } catch {
-    window.localStorage.removeItem(DEV_USER_KEY);
+    window.localStorage.removeItem(
+      DEV_USER_KEY,
+    );
+
     return null;
   }
 }
 
+/**
+ * Removes the current development session.
+*/
 export function signOutDevUser(): void {
-  window.localStorage.removeItem(DEV_USER_KEY);
+  window.localStorage.removeItem(
+    DEV_USER_KEY,
+  );
 }
 
-export function getDevToken(): string | null {
-  const user = getDevUser();
-  return user?.token ?? null;
+/**
+ * Returns current development API token.
+*/
+export function getDevToken():
+  string | null {
+  return getDevUser()?.token ?? null;
 }

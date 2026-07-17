@@ -5,31 +5,36 @@ import {
   Routes,
 } from "react-router-dom";
 
-import { LoginPage } from "./features/auth/LoginPage";
-import { RequireEntraUser } from "./features/auth/RequireEntraUser";
-import { RequireDevUser } from "./features/auth/RequireDevUser";
-import { SupportLayout } from "./layouts/SupportLayout";
-import { CustomerLayout } from "./layouts/CustomerLayout";
-import { AdminLayout } from "./layouts/AdminLayout";
-
-import { SupportHomePage } from "./features/support/SupportHomePage";
-import { SupportLinksPage } from "./features/support/SupportLinksPage";
-import { CreateSupportLinkPage } from "./features/support/CreateSupportLinkPage";
-
+import { AdminCreateSupportLinkPage } from "./features/admin/AdminCreateSupportLinkPage";
 import { AdminHomePage } from "./features/admin/AdminHomePage";
 import { AdminLinksPage } from "./features/admin/AdminLinksPage";
-import { AdminCreateSupportLinkPage } from "./features/admin/AdminCreateSupportLinkPage";
 import { AdminUploadPage } from "./features/admin/AdminUploadPage";
 
-import { CustomerUpload } from "./features/uploader/CustomerUpload";
+import { LoginPage } from "./features/auth/LoginPage";
+import { RequireAdminUser } from "./features/auth/RequireAdminUser";
+import { RequireAuthenticatedUser } from "./features/auth/RequireAuthenticatedUser";
+
+import { CreateSupportLinkPage } from "./features/support/CreateSupportLinkPage";
+import { SupportHomePage } from "./features/support/SupportHomePage";
+import { SupportLinksPage } from "./features/support/SupportLinksPage";
 import { SupportUploadPage } from "./features/support/SupportUploadPage";
+
+import { CustomerUpload } from "./features/uploader/CustomerUpload";
+
+import { AdminLayout } from "./layouts/AdminLayout";
+import { CustomerLayout } from "./layouts/CustomerLayout";
+import { SupportLayout } from "./layouts/SupportLayout";
 
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<LoginPage />} />
+        <Route
+          path="/"
+          element={<LoginPage />}
+        />
 
+        {/* Customer-facing secure upload link. */}
         <Route
           path="/upload/:uuid"
           element={<CustomerLayout />}
@@ -40,32 +45,70 @@ export default function App() {
         <Route
           path="/support"
           element={
-            <RequireEntraUser>
+            <RequireAuthenticatedUser>
               <SupportLayout />
-            </RequireEntraUser>
+            </RequireAuthenticatedUser>
           }
         >
-          <Route index element={<SupportHomePage />} />
-          <Route path="links" element={<SupportLinksPage />} />
-          <Route path="links/new" element={<CreateSupportLinkPage />} />
-          <Route path="view-uploads/:uuid" element={<SupportUploadPage />} />
+          <Route
+            index
+            element={<SupportHomePage />}
+          />
+
+          <Route
+            path="links"
+            element={<SupportLinksPage />}
+          />
+
+          <Route
+            path="links/new"
+            element={<CreateSupportLinkPage />}
+          />
+
+          <Route
+            path="view-uploads/:uuid"
+            element={<SupportUploadPage />}
+          />
         </Route>
 
         <Route
           path="/admin"
           element={
-            <RequireDevUser>
+            <RequireAdminUser>
               <AdminLayout />
-            </RequireDevUser>
+            </RequireAdminUser>
           }
         >
-          <Route index element={<AdminHomePage />} />
-          <Route path="links" element={<AdminLinksPage />} />
-          <Route path="links/new" element={<AdminCreateSupportLinkPage />} />
-          <Route path="view-uploads/:uuid" element={<AdminUploadPage />} />
+          <Route
+            index
+            element={<AdminHomePage />}
+          />
+
+          <Route
+            path="links"
+            element={<AdminLinksPage />}
+          />
+
+          <Route
+            path="links/new"
+            element={<AdminCreateSupportLinkPage />}
+          />
+
+          <Route
+            path="uploads"
+            element={<AdminUploadPage />}
+          />
         </Route>
 
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route
+          path="*"
+          element={
+            <Navigate
+              to="/"
+              replace
+            />
+          }
+        />
       </Routes>
     </BrowserRouter>
   );

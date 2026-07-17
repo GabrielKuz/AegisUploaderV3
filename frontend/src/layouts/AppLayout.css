@@ -1,15 +1,17 @@
 /* ==========================================================================
    APP LAYOUT
-   Shared shell for customer, support, and admin pages.
    ========================================================================== */
 
 .app-layout {
   background: var(--theme-page);
+  color: var(--theme-text);
   display: grid;
-  grid-template-columns: 240px minmax(0, 1fr);
+  grid-template-columns:
+    clamp(190px, 20vw, 240px) minmax(0, 1fr);
   grid-template-rows: 76px minmax(0, 1fr);
   height: 100vh;
   height: 100dvh;
+  min-height: 0;
   overflow: hidden;
   width: 100%;
 }
@@ -18,17 +20,13 @@
   grid-template-columns: minmax(0, 1fr);
 }
 
-.app-layout--no-sidebar .app-main {
-  grid-column: 1;
-}
-
 /* ==========================================================================
    HEADER
    ========================================================================== */
 
 .app-header {
   align-items: center;
-  background: var(--black);
+  background: #000000;
   border-bottom: 1px solid var(--theme-border-strong);
   border-top: 4px solid var(--theme-accent);
   color: var(--white);
@@ -49,6 +47,7 @@
 }
 
 .app-logo {
+  flex: 0 1 auto;
   height: auto;
   width: clamp(144px, 18vw, 181px);
 }
@@ -57,7 +56,6 @@
   background: rgba(255, 255, 255, 0.24);
   flex: 0 0 auto;
   height: 42px;
-  margin-left: 3px;
   width: 1px;
 }
 
@@ -88,46 +86,56 @@
   display: flex;
   flex: 0 0 auto;
   gap: 16px;
+  min-width: 0;
 }
 
 .app-user-details {
   display: grid;
-  gap: 3px;
+  gap: 2px;
+  min-width: 0;
   text-align: right;
 }
 
 .app-user-name {
   color: var(--white);
-  font-size: 14px;
-  font-weight: 600;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.3;
 }
 
 .app-user-email {
   color: rgba(255, 255, 255, 0.62);
-  font-size: 13px;
+  font-size: 11px;
+  line-height: 1.3;
+  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .app-sign-out {
   align-items: center;
   background: transparent;
-  border: 1px solid var(--gray);
-  box-shadow: var(--theme-control-shadow);
+  border: 1px solid rgba(255, 255, 255, 0.32);
+  border-radius: var(--radius-md);
   color: var(--white);
   display: inline-flex;
-  font-size: 14px;
-  font-weight: 600;
+  font-size: 13px;
+  font-weight: 700;
   justify-content: center;
   min-height: 40px;
   padding: 0 14px;
   transition:
+    background-color var(--transition-fast),
     border-color var(--transition-fast),
     color var(--transition-fast),
     transform var(--transition-fast);
 }
 
 .app-sign-out:hover {
-  border-color: var(--theme-mode);
-  color: var(--theme-mode);
+  background: var(--theme-accent);
+  border-color: var(--theme-accent);
+  color: var(--white);
   transform: translateY(-1px);
 }
 
@@ -140,31 +148,42 @@
    ========================================================================== */
 
 .app-sidebar {
-  background: #1a1a1a;
-  border-right: 1px solid var(--theme-border-strong);
+  background:
+    linear-gradient(180deg,
+      rgba(255, 255, 255, 0.025),
+      transparent),
+    #05090b;
+  border-right: 1px solid rgba(255, 255, 255, 0.12);
+  color: var(--white);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
   grid-column: 1;
   grid-row: 2;
+  min-height: 0;
   min-width: 0;
-  overflow: auto;
-  padding: 28px 16px;
-}
-
-.app-sidebar nav {
-  display: grid;
-  gap: 8px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 24px 16px;
+  scrollbar-gutter: stable;
 }
 
 .app-nav-link {
   align-items: center;
   border-left: 3px solid transparent;
-  color: rgba(255, 255, 255, 0.72);
+  color: rgba(255, 255, 255, 0.7);
   display: flex;
+  font-size: 14px;
+  font-weight: 600;
   min-height: 46px;
-  padding: 0 16px;
+  overflow-wrap: anywhere;
+  padding: 10px 14px;
   transition:
     background-color var(--transition-fast),
     border-color var(--transition-fast),
     color var(--transition-fast);
+  width: 100%;
 }
 
 .app-nav-link:hover {
@@ -173,9 +192,34 @@
 }
 
 .app-nav-link--active {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--theme-accent-soft);
   border-left-color: var(--theme-accent);
-  color: var(--white);
+  color: var(--theme-accent);
+}
+
+/* ==========================================================================
+   MAIN CONTENT
+   ========================================================================== */
+
+.app-main {
+  grid-column: 2;
+  grid-row: 2;
+  min-height: 0;
+  min-width: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding:
+    clamp(24px, 4vw, 48px) clamp(20px, 4vw, 52px);
+}
+
+.app-main>* {
+  max-width: 100%;
+  min-width: 0;
+}
+
+.app-layout--no-sidebar .app-main {
+  grid-column: 1;
 }
 
 /* ==========================================================================
@@ -236,118 +280,120 @@
 }
 
 /* ==========================================================================
-   MAIN CONTENT
+   RESPONSIVE
+   The sidebar remains vertical at every viewport size.
    ========================================================================== */
 
-.app-main {
-  background: var(--theme-page);
-  color: var(--theme-text);
-  grid-column: 2;
-  grid-row: 2;
-  min-height: 0;
-  min-width: 0;
-  overflow: hidden;
-  padding: clamp(28px, 4vw, 48px);
-  position: relative;
-}
-
-/* ==========================================================================
-   TABLET AND MOBILE
-   ========================================================================== */
-
-@media (max-width: 760px) {
+@media (max-width: 900px) {
   .app-layout {
-    grid-template-columns: 1fr;
-    grid-template-rows: auto auto minmax(0, 1fr);
-    height: 100vh;
-    height: 100dvh;
-    overflow: hidden;
-  }
-
-  .app-layout--no-sidebar {
-    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-columns:
+      clamp(170px, 28vw, 210px) minmax(0, 1fr);
   }
 
   .app-header {
-    align-items: flex-start;
-    grid-column: 1;
-    grid-row: 1;
-    min-height: 76px;
-    padding: 18px 20px;
+    gap: 16px;
+    padding-inline: 20px;
   }
 
   .app-brand {
     gap: 16px;
   }
 
-  .app-logo {
-    width: 180px;
+  .app-user-email {
+    max-width: 150px;
   }
 
+  .app-sidebar {
+    padding: 20px 12px;
+  }
+
+  .app-main {
+    padding:
+      clamp(20px, 3vw, 32px) clamp(16px, 3vw, 30px);
+  }
+}
+
+@media (min-width: 721px) and (max-height: 820px) {
+  .app-main {
+    padding-block: 24px;
+  }
+}
+
+@media (min-width: 721px) and (max-height: 680px) {
+  .app-main {
+    padding-block: 16px;
+  }
+}
+
+@media (max-width: 720px) {
+  .app-layout {
+    grid-template-columns:
+      clamp(150px, 38vw, 190px) minmax(0, 1fr);
+  }
+
+  .app-header {
+    padding-inline: 16px;
+  }
+
+  .app-logo {
+    width: 132px;
+  }
+
+  .app-divider,
+  .app-title,
   .app-user-details {
     display: none;
   }
 
-  .app-sidebar {
-    border-bottom: 1px solid var(--theme-border-strong);
-    border-right: 0;
-    grid-column: 1;
-    grid-row: 2;
-    overflow-x: auto;
-    overflow-y: hidden;
-    padding: 12px 16px;
+  .app-header-actions {
+    gap: 10px;
   }
 
-  .app-sidebar nav {
-    display: flex;
-    gap: 8px;
+  .app-sidebar {
+    padding: 16px 10px;
   }
 
   .app-nav-link {
-    border-bottom: 3px solid transparent;
-    border-left: 0;
-    min-height: 42px;
-    min-width: max-content;
-    padding: 0 14px;
-  }
-
-  .app-nav-link--active {
-    border-bottom-color: var(--theme-accent);
-    border-left-color: transparent;
+    font-size: 13px;
+    padding-inline: 10px;
   }
 
   .app-main {
-    grid-column: 1;
-    grid-row: 3;
-    padding: 28px 20px;
-  }
-
-  .app-layout--no-sidebar .app-main {
-    grid-row: 2;
+    padding: 18px 14px 28px;
   }
 }
 
-@media (max-width: 520px) {
+@media (max-width: 420px) {
+  .app-layout {
+    grid-template-columns:
+      144px minmax(0, 1fr);
+  }
+
   .app-header {
-    gap: 14px;
+    padding-inline: 12px;
   }
 
   .app-logo {
-    width: 150px;
+    width: 118px;
   }
 
-  .app-product-name {
-    font-size: 13px;
+  .app-sign-out {
+    min-height: 38px;
+    padding-inline: 10px;
   }
 
-  .app-section-name {
-    font-size: 10px;
+  .app-sidebar {
+    padding-inline: 8px;
   }
 
   .app-main {
-    padding: 24px 16px;
+    padding-inline: 12px;
   }
 }
+
+/* ==========================================================================
+   REDUCED MOTION
+   ========================================================================== */
 
 @media (prefers-reduced-motion: reduce) {
 

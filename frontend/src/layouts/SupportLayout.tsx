@@ -8,22 +8,22 @@ const SUPPORT_NAV_ITEMS = [
   },
   {
     to: "/support/links",
-    label: "Created links",
+    label: "Links",
     end: true,
   },
   {
     to: "/support/links/new",
     label: "Create link",
+    end: true,
   },
-];
+] as const;
 
-// Configures shared support user layout
 export function SupportLayout() {
   return (
     <AppLayout
       productName="Secure Data Portal"
-      sectionName="Customer Support"
-      navLabel="Customer support"
+      sectionName="Support Portal"
+      navLabel="Support navigation"
       navItems={SUPPORT_NAV_ITEMS}
     />
   );

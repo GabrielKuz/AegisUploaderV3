@@ -8,24 +8,28 @@ const ADMIN_NAV_ITEMS = [
   },
   {
     to: "/admin/links",
-    label: "Created links",
+    label: "Links",
     end: true,
   },
   {
     to: "/admin/links/new",
     label: "Create link",
+    end: true,
   },
-];
+  {
+    to: "/admin/uploads",
+    label: "Uploads",
+  },
+] as const;
 
-// Configures shared administrator layout
 export function AdminLayout() {
   return (
     <AppLayout
       productName="Secure Data Portal"
-      sectionName="Administrative Support"
-      navLabel="Administration"
-      defaultUserName="Admin User"
+      sectionName="Admin Portal"
+      navLabel="Admin navigation"
       navItems={ADMIN_NAV_ITEMS}
+      defaultUserName="Admin User"
     />
   );
 }

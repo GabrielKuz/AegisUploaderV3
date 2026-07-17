@@ -8,16 +8,6 @@
   width: 100%;
 }
 
-
-.customer-upload-grid {
-  align-items: stretch;
-  display: grid;
-  gap: 0;
-  grid-template-columns: minmax(0, 1fr);
-  min-height: 100%;
-  width: 100%;
-}
-
 /* ==========================================================================
    MAIN PANEL
    ========================================================================== */
@@ -38,18 +28,13 @@
   margin: 0;
 }
 
-.upload-link-id,
 .upload-note {
   font-size: 17px;
   line-height: 1.65;
   margin: 0;
   max-width: 680px;
-}
-
-.upload-link-id {
-  color: var(--theme-accent);
-  font-family: var(--font-mono);
-  font-weight: 700;
+  font-style: italic;
+  font-weight: 400;
 }
 
 /* ==========================================================================
@@ -73,6 +58,15 @@
   place-items: center;
   text-align: center;
   width: 100%;
+}
+
+.upload-box.drag-active {
+  background:
+    linear-gradient(135deg,
+      var(--theme-accent-soft),
+      transparent 36%),
+    var(--theme-surface-hover);
+  border-color: var(--theme-accent);
 }
 
 .upload-box p {
@@ -102,12 +96,12 @@
     transform var(--transition-fast);
 }
 
-.browse-button:hover {
+.browse-button:hover:not(:disabled) {
   opacity: 0.9;
   transform: translateY(-1px);
 }
 
-.browse-button:active {
+.browse-button:active:not(:disabled) {
   opacity: 1;
   transform: translateY(0);
 }
@@ -115,6 +109,7 @@
 .browse-button:disabled {
   opacity: 0.68;
   transform: none;
+  cursor: not-allowed;
 }
 
 .delete-button {
@@ -132,13 +127,14 @@
     opacity var(--transition-fast);
 }
 
-.delete-button:hover {
+.delete-button:hover:not(:disabled) {
   background: var(--aegis-red);
   color: var(--white);
 }
 
 .delete-button:disabled {
   opacity: 0.6;
+  cursor: not-allowed;
 }
 
 /* ==========================================================================

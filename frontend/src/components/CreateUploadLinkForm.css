@@ -1,0 +1,273 @@
+/* ==========================================================================
+   CREATE UPLOAD LINK
+   ========================================================================== */
+
+.create-link-page {
+    align-content: safe center;
+    color: var(--theme-text);
+    display: grid;
+    margin-inline: auto;
+    max-width: 940px;
+    min-height: 100%;
+    width: 100%;
+}
+
+/* ==========================================================================
+   PAGE HEADER
+   ========================================================================== */
+
+.create-link-header {
+    margin-bottom: 24px;
+}
+
+.create-link-header h1 {
+    color: var(--theme-text);
+    font-family: var(--font-heading);
+    font-size: clamp(46px, 5vw, 68px);
+    font-weight: 400;
+    letter-spacing: -0.055em;
+    line-height: 1.04;
+    margin: 0;
+}
+
+.create-link-description {
+    color: var(--theme-accent);
+    font-size: 16px;
+    line-height: 1.6;
+    margin: 12px 0 0;
+    max-width: 700px;
+    font-style: italic;
+    font-weight: 400;
+}
+
+/* ==========================================================================
+   CONTENT
+   ========================================================================== */
+
+.create-link-shell {
+    align-items: stretch;
+    display: grid;
+    gap: 24px;
+    grid-template-columns: minmax(0, 1fr) 280px;
+}
+
+.create-link-form,
+.create-link-info {
+    background:
+        linear-gradient(135deg,
+            var(--theme-accent-soft),
+            transparent 42%),
+        var(--theme-surface);
+    border: 1px solid var(--theme-card-border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--theme-card-shadow);
+}
+
+/* ==========================================================================
+   FORM
+   ========================================================================== */
+
+.create-link-form {
+    display: grid;
+    gap: 20px;
+    padding: clamp(24px, 4vw, 34px);
+}
+
+.create-link-field {
+    display: grid;
+    gap: 8px;
+    min-width: 0;
+}
+
+.create-link-field label {
+    color: var(--theme-text);
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.create-link-field input {
+    background: var(--theme-control-bg);
+    border: 1px solid var(--theme-control-border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--theme-control-shadow);
+    color: var(--theme-text);
+    min-height: 46px;
+    padding: 0 14px;
+    transition:
+        background-color var(--transition-fast),
+        border-color var(--transition-fast),
+        box-shadow var(--transition-fast);
+    width: 100%;
+}
+
+.create-link-field input::placeholder {
+    color: var(--theme-muted);
+}
+
+.create-link-field input:hover:not(:disabled) {
+    border-color: var(--theme-control-border-hover);
+}
+
+.create-link-field input:focus-visible {
+    border-color: var(--theme-accent);
+    box-shadow: none;
+    outline: 3px solid var(--theme-focus-ring);
+    outline-offset: 1px;
+}
+
+.create-link-field input:disabled {
+    cursor: not-allowed;
+    opacity: 0.68;
+}
+
+/* ==========================================================================
+   VALIDATION
+   ========================================================================== */
+
+.create-link-error {
+    background: var(--status-error-bg);
+    border-left: 4px solid var(--status-error-border);
+    border-radius: var(--radius-md);
+    color: var(--status-error-text);
+    font-size: 14px;
+    line-height: 1.5;
+    padding: 14px 16px;
+}
+
+/* ==========================================================================
+   ACTIONS
+   ========================================================================== */
+
+.create-link-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    padding-top: 4px;
+}
+
+.create-link-actions button {
+    border-radius: var(--radius-md);
+    font-size: 14px;
+    font-weight: 700;
+    min-height: 44px;
+    padding: 0 20px;
+    transition:
+        background-color var(--transition-fast),
+        border-color var(--transition-fast),
+        box-shadow var(--transition-fast),
+        color var(--transition-fast),
+        opacity var(--transition-fast),
+        transform var(--transition-fast);
+}
+
+.create-link-actions button:hover:not(:disabled) {
+    transform: translateY(-1px);
+}
+
+.create-link-actions button:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+.create-link-actions button:disabled {
+    cursor: not-allowed;
+    opacity: 0.68;
+    transform: none;
+}
+
+.create-link-cancel,
+.create-link-submit {
+    background: var(--theme-button-bg);
+    border: 2px solid var(--theme-button-border);
+    color: var(--theme-text);
+}
+
+.create-link-cancel:hover:not(:disabled),
+.create-link-submit:hover:not(:disabled) {
+    background: var(--theme-button-bg-hover);
+    border-color: var(--theme-button-border-hover);
+    color: var(--theme-button-text);
+}
+
+.create-link-submit {
+    box-shadow: var(--theme-button-shadow);
+}
+
+.create-link-submit:active:not(:disabled) {
+    background: var(--theme-button-bg-active);
+}
+
+/* ==========================================================================
+   INFORMATION PANEL
+   ========================================================================== */
+
+.create-link-info {
+    padding: 24px;
+}
+
+.create-link-info h2 {
+    color: var(--theme-text);
+    font-family: var(--font-heading);
+    font-size: 22px;
+    font-weight: 500;
+    letter-spacing: -0.04em;
+    line-height: 1.2;
+    margin: 0 0 12px;
+}
+
+.create-link-info p {
+    color: var(--theme-text-secondary);
+    font-size: 14px;
+    line-height: 1.6;
+    margin: 0;
+}
+
+/* ==========================================================================
+   RESPONSIVE
+   ========================================================================== */
+
+@media (min-width: 761px) and (max-height: 760px) {
+    .create-link-page {
+        align-content: start;
+    }
+
+    .create-link-header {
+        margin-bottom: 18px;
+    }
+
+    .create-link-header h1 {
+        font-size: clamp(34px, 4vw, 46px);
+    }
+}
+
+@media (max-width: 760px) {
+    .create-link-page {
+        align-content: start;
+        min-height: auto;
+    }
+
+    .create-link-shell {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 480px) {
+    .create-link-header h1 {
+        font-size: 40px;
+    }
+
+    .create-link-actions {
+        flex-direction: column-reverse;
+    }
+
+    .create-link-actions button {
+        width: 100%;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+    .create-link-actions button:hover,
+    .create-link-actions button:active {
+        transform: none;
+    }
+}

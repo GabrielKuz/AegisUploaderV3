@@ -1,10 +1,20 @@
 import { useEffect } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
 import { useMsal } from "@azure/msal-react";
+import {
+  useLocation,
+  useNavigate,
+} from "react-router-dom";
 
 import { ThemeToggle } from "../../theme/ThemeToggle";
-import { isEntraConfigured, loginRequest } from "./authConfig";
-import { signInDevUser } from "./devAuth";
+import {
+  isDevAuthEnabled,
+  isEntraConfigured,
+  loginRequest,
+} from "./authConfig";
+import {
+  signInDevUser,
+  type DevUser,
+} from "./devAuth";
 import {
   clearPostLoginRedirect,
   getActiveAccount,
@@ -26,7 +36,7 @@ type SecurityItem = {
 
 const DEFAULT_DESTINATION = "/support";
 
-const securityItems: SecurityItem[] = [
+const SECURITY_ITEMS: SecurityItem[] = [
   {
     number: "01",
     title: "Single Sign-On",
@@ -47,7 +57,9 @@ const securityItems: SecurityItem[] = [
   },
 ];
 
-function getSafeDestination(state: unknown): string {
+function getSafeDestination(
+  state: unknown,
+): string {
   if (
     typeof state !== "object" ||
     state === null ||
@@ -56,57 +68,107 @@ function getSafeDestination(state: unknown): string {
     return DEFAULT_DESTINATION;
   }
 
-  const { from } = state as LoginLocationState;
+  const { from } =
+    state as LoginLocationState;
 
-  const isValidInternalPath =
+  const isSafeInternalPath =
     typeof from === "string" &&
     from.startsWith("/") &&
     !from.startsWith("//");
 
-  return isValidInternalPath ? from : DEFAULT_DESTINATION;
+  return isSafeInternalPath
+    ? from
+    : DEFAULT_DESTINATION;
+}
+
+/**
+ * Chooses the development role that corresponds to the requested
+ * destination.
+ */
+function getDevRole(
+  destination: string,
+): DevUser["role"] {
+  if (
+    destination.startsWith("/admin")
+  ) {
+    return "admin";
+  }
+
+  return "support";
 }
 
 export function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { accounts, instance } = useMsal();
-  const account = getActiveAccount(instance);
+  const { instance } = useMsal();
 
-  useEffect(() => {
-    if (!instance.getActiveAccount() && accounts[0]) {
-      instance.setActiveAccount(accounts[0]);
-    }
-  }, [accounts, instance]);
+  const account =
+    getActiveAccount(instance);
 
+  /**
+   * Sends an already authenticated Entra user to the originally
+   * requested protected page.
+   */
   useEffect(() => {
-    if (!account) {
+    if (
+      !isEntraConfigured ||
+      !account
+    ) {
       return;
     }
 
-    const destination = getPostLoginRedirect(
-      getSafeDestination(location.state),
-    );
+    const fallbackDestination =
+      getSafeDestination(
+        location.state,
+      );
+
+    const destination =
+      getPostLoginRedirect(
+        fallbackDestination,
+      );
 
     clearPostLoginRedirect();
-    navigate(destination, { replace: true });
-  }, [account, location.state, navigate]);
 
-  const handleSsoLogin = () => {
-    const destination = getSafeDestination(location.state);
+    navigate(destination, {
+      replace: true,
+    });
+  }, [
+    account,
+    location.state,
+    navigate,
+  ]);
+
+  function handleSsoLogin(): void {
+    const destination =
+      getSafeDestination(
+        location.state,
+      );
+
+    if (isDevAuthEnabled) {
+      signInDevUser(
+        getDevRole(destination),
+      );
+
+      navigate(destination, {
+        replace: true,
+      });
+
+      return;
+    }
 
     if (!isEntraConfigured) {
-      const role = destination.startsWith("/upload/")
-        ? "customer"
-        : "support";
-
-      signInDevUser(role);
-      navigate(destination, { replace: true });
+      console.error(
+        "Microsoft Entra authentication is not configured.",
+      );
       return;
     }
 
     setPostLoginRedirect(destination);
-    void instance.loginRedirect(loginRequest);
-  };
+
+    void instance.loginRedirect(
+      loginRequest,
+    );
+  }
 
   return (
     <main className="login-page">
@@ -118,7 +180,10 @@ export function LoginPage() {
             alt="Aegis Software"
           />
 
-          <div className="login-header-divider" aria-hidden="true" />
+          <div
+            className="login-header-divider"
+            aria-hidden="true"
+          />
 
           <div className="login-header-title">
             <span className="login-product-name">
@@ -147,9 +212,15 @@ export function LoginPage() {
         className="brand-side"
         aria-labelledby="portal-heading"
       >
-        <div className="brand-grid" aria-hidden="true" />
+        <div
+          className="brand-grid"
+          aria-hidden="true"
+        />
 
-        <div className="brand-shapes" aria-hidden="true">
+        <div
+          className="brand-shapes"
+          aria-hidden="true"
+        >
           <span className="shape shape-one" />
           <span className="shape shape-two" />
           <span className="shape shape-three" />
@@ -159,12 +230,15 @@ export function LoginPage() {
         <div className="brand-message">
           <h1 id="portal-heading">
             Secure access for{" "}
-            <span>controlled customer data.</span>
+            <span>
+              controlled customer data.
+            </span>
           </h1>
 
           <p className="brand-description">
-            A protected portal for transferring controlled files with
-            clear access control, expiration, and audit visibility.
+            A protected portal for transferring controlled
+            files with clear access control, expiration,
+            and audit visibility.
           </p>
         </div>
 
@@ -172,9 +246,15 @@ export function LoginPage() {
           className="security-list"
           aria-label="Security highlights"
         >
-          {securityItems.map((item) => (
-            <article className="security-item" key={item.number}>
-              <span className="security-number" aria-hidden="true">
+          {SECURITY_ITEMS.map((item) => (
+            <article
+              className="security-item"
+              key={item.number}
+            >
+              <span
+                className="security-number"
+                aria-hidden="true"
+              >
                 {item.number}
               </span>
 
@@ -204,8 +284,8 @@ export function LoginPage() {
           </h2>
 
           <p className="auth-copy">
-            Continue with your company Single Sign-On account to access
-            secure customer upload tools.
+            Continue with your company Single Sign-On account
+            to access secure customer upload tools.
           </p>
 
           <button
@@ -224,7 +304,10 @@ export function LoginPage() {
               Continue with Microsoft Entra ID
             </span>
 
-            <span className="sso-button-arrow" aria-hidden="true">
+            <span
+              className="sso-button-arrow"
+              aria-hidden="true"
+            >
               ↗
             </span>
           </button>
@@ -244,9 +327,17 @@ export function LoginPage() {
           </span>
 
           <nav aria-label="Legal links">
-            <a href="https://www.aiscorp.com/privacy-policy/">Privacy Policy</a>
-            <span aria-hidden="true">/</span>
-            <a href="https://www.aiscorp.com/support-addendum/">Terms of Use</a>
+            <a href="https://www.aiscorp.com/privacy-policy/">
+              Privacy Policy
+            </a>
+
+            <span aria-hidden="true">
+              /
+            </span>
+
+            <a href="https://www.aiscorp.com/support-addendum/">
+              Terms of Use
+            </a>
           </nav>
         </footer>
       </section>
