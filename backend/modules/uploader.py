@@ -666,7 +666,7 @@ def listFiles(linkUUID: str, current_user: Annotated[User, Depends(requireRoles(
         badUUID = HTTPException(400,detail={"message": "Invalid uuid"})
         raise badUUID
     
-    uploads = (
+    authorized_uploads = (
         db.query(UploadRecord)
         .filter(
             UploadRecord.link_uuid == linkUUID,
@@ -674,8 +674,6 @@ def listFiles(linkUUID: str, current_user: Annotated[User, Depends(requireRoles(
             UploadRecord.users_with_access.contains([current_user.username])
         ).all()
     )
-
-    return uploads
 
     if uploads and not authorized_uploads: # If any one of the uploads is not authorized return forbidden
         raise HTTPException(
