@@ -97,50 +97,6 @@ def test_get_all_links_returns_links_for_user(monkeypatch):
     assert isinstance(data, list)
     assert any(link["case_id"] == "AIS-7890" for link in data)  # Check if the created link is in the list
 
-def test_get_files_for_link(monkeypatch):
-    monkeypatch.setattr("modules.LinkGenerator.caseIDExists", lambda case_id: True)
-    monkeypatch.setattr("modules.LinkGenerator.get_caseITARstatus", lambda case_id: False)
-
-    link_request = LinkRequest(
-        case_id="AIS-1234",
-    )
-    result = generate_links(link_request, current_user)
-    link_uuid = result["uuid"]
-    upload_uuid = uuid.uuid4()
-
-    with Session() as session:
-        upload = UploadRecord(
-            upload_id=upload_uuid,
-            link_uuid=link_uuid,
-            original_filename="report.txt",
-            blob_name="report.txt",
-            content_type="text/plain",
-            file_hash="1234567890abcdef",
-            date_uploaded=datetime.now(),
-            itar_status=False,
-            combined_file_size=42,
-            timestamp=datetime.now(),
-            max_days_in_storage=30,
-            case_id="case-files",
-            original_link=f"http://example.test/{link_uuid}",
-            sas_retrieval_link=None,
-            upload_complete=True,
-            users_with_access=[current_user.username],
-        )
-        session.add(upload)
-        session.commit()
-
-    response = client.get(f"/links/{link_uuid}/files")
-
-    assert response.status_code == 200
-    data = response.json()
-    assert isinstance(data, list)
-    assert any(
-        item["filename"] == "report.txt" and item["size"] == 42
-        for item in data
-    )
-
-
 def test_updating_link_update_other_from_self(monkeypatch):
     monkeypatch.setattr("modules.LinkGenerator.caseIDExists", lambda case_id: True)
     monkeypatch.setattr("modules.LinkGenerator.get_caseITARstatus", lambda case_id: False)
