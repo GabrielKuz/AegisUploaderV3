@@ -14,8 +14,9 @@ from Utils import IsUUID
 from pathlib import Path
 from typing import Annotated, Literal
 
-from sqlalchemy import Column, String, Integer, DateTime, Boolean, Text, JSON, text
+from sqlalchemy import Column, String, Integer, DateTime, Boolean, Text, JSON, cast, text
 from sqlalchemy import or_
+from sqlalchemy.dialects.postgresql import JSONB
 from modules.StorageProvider import StorageProvider, AzureFileStorageProvider, LocalStorageProvider
 from warnings import warn, deprecated
 from modules import usFileStorageProvider, euFileStorageProvider, itarFileStorageProvider, STORAGE_ROOT
@@ -671,13 +672,11 @@ def listFiles(linkUUID: str, current_user: Annotated[User, Depends(requireRoles(
         .filter(
             UploadRecord.link_uuid == linkUUID,
             UploadRecord.for_deletion.is_(False),
+            cast(UploadRecord.users_with_access, JSONB).contains([current_user.username])
         ).all()
     )
-    authorized_uploads = [
-        upload for upload in uploads if current_user.username in (upload.users_with_access or [])
-    ]
 
-    if uploads and not authorized_uploads: # If any one of the uploads is not authorized return forbidden
+    if not uploads: # If any one of the uploads is not authorized return forbidden
         raise HTTPException(
             status_code=403,
             detail="You do not have permission to access files for this link",
@@ -694,7 +693,7 @@ def listFiles(linkUUID: str, current_user: Annotated[User, Depends(requireRoles(
             expiration_date=(upload.date_uploaded + datetime.timedelta(days=upload.max_days_in_storage)).isoformat() if upload.date_uploaded and upload.max_days_in_storage else None,
             upload_complete=upload.upload_complete,
         )
-        for upload in authorized_uploads
+        for upload in uploads
     ]
 
 @router.post("/uploads/{upload_id}/extend_expiration", response_model=ExtendExpirationResponse)

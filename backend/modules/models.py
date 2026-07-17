@@ -6,6 +6,7 @@ import uuid
 
 from datetime import datetime, timezone, timedelta
 from sqlalchemy import UUID, BigInteger, Column, String, Integer, DateTime, Boolean, Text, JSON, Table, UniqueConstraint, ForeignKey, select, update
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.mutable import MutableList
 from sqlalchemy.orm import declarative_base, Mapped, mapped_column, relationship
 
@@ -67,7 +68,7 @@ class UploadRecord(Base): # "LinkDB".uploads table
     case_id: Mapped[str | None] = mapped_column(String, nullable=True)
     timestamp: Mapped[object | None] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     itar_status: Mapped[bool | None] = mapped_column(Boolean, default=False)
-    users_with_access: Mapped[object | None] = mapped_column(JSON, nullable=True)
+    users_with_access: Mapped[object | None] = mapped_column(JSONB, nullable=True)
     parent: Mapped["LinkRecord"] = relationship(back_populates="child", primaryjoin="UploadRecord.link_uuid == LinkRecord.uuid",)
     upload_id = Column(UUID(as_uuid=False), primary_key=True, default=lambda: str(uuid.uuid4()))
     original_filename = Column(Text, nullable=True)
