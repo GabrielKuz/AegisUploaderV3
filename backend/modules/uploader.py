@@ -13,6 +13,7 @@ from typing import Annotated, Literal
 
 from sqlalchemy import text
 from sqlalchemy import or_
+from modules.StorageProvider import StorageProvider, AzureFileStorageProvider, LocalStorageProvider
 from modules import usFileStorageProvider, euFileStorageProvider, itarFileStorageProvider, STORAGE_ROOT
 from fastapi import APIRouter, Depends, Header, HTTPException
 from fastapi import Query
@@ -176,7 +177,7 @@ async def start_upload(
     filename = sanitize_filename(filename)  # Sanitize the filename to prevent directory traversal and other issues
     path_filename = Path(filename).name # deal with dir traversal and get just the filename
     try:
-        validate_filename(path_filename, min_length=1, max_length=255) # Validate the sanitized filename to ensure it meets the criteria for a valid filename
+        validate_filename(path_filename, min_len=1, max_len=255) # Validate the sanitized filename to ensure it meets the criteria for a valid filename
     except Exception:
         raise HTTPException(status_code=400, detail="Invalid filename after sanitization, check for invalid characters or length issues")
     blob_name = path_filename

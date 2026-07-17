@@ -316,6 +316,8 @@ def test_status_after_start(upload_test_setup):
                 "X-File-Size": str(len(payload)),
             },
         )
+        print(start.status_code)
+        print(start.json())
 
         token = start.json()["uploadToken"]
 
@@ -324,6 +326,9 @@ def test_status_after_start(upload_test_setup):
         )
 
     body = response.json()
+
+    print(body)
+    print(response.status_code)
 
     assert response.status_code == 200
     assert body["receivedSize"] == 0
