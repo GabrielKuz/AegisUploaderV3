@@ -1,4 +1,6 @@
-[![Pytest](https://github.com/GabrielKuz/AegisSummerInterns2026/actions/workflows/pytest.yml/badge.svg?event=push)](https://github.com/GabrielKuz/AegisSummerInterns2026/actions/workflows/pytest.yml)
+[![Pytest](https://github.com/GabrielKuz/AegisSummerInterns2026/actions/workflows/pytest.yml/badge.svg?event=push)](https://github.com/GabrielKuz/AegisSummerInterns2026/actions/workflows/pytest.yml) 
+![GitHub Release](https://img.shields.io/github/v/release/GabrielKuz/AegisUploaderV3)
+![GitHub language count](https://img.shields.io/github/languages/count/GabrielKuz/AegisUploaderV3)
 
 # UploaderV3
 
