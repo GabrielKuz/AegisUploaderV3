@@ -20,4 +20,4 @@ Backend and frontend are behind nginx, so frontend can directly call apis with `
 
 To migrate db after changing models run `Scripts/migrateDB.ps1 "migrationName"` with the container up then `docker compose down -v` 
 
-If git doesn't pull alembic run `git checkout origin/main backend\migrations\versions` from top level dir
+If git doesn't pull alembic versions run `git checkout origin/main backend\migrations\versions` from top level dir
