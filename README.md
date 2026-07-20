@@ -117,6 +117,7 @@ Examples:
 
 ```bash
 docker compose exec backend python test.py
+docker compose exec backend sh
 docker compose exec postgres psql -U <username> -d <Database>
 ```
 
