@@ -3,6 +3,7 @@
 ![GitHub language count](https://img.shields.io/github/languages/count/GabrielKuz/AegisUploaderV3)
 ![GitHub branch count](https://img.shields.io/github/branches/GabrielKuz/AegisUploaderV3)
 [![CodeQL](https://github.com/GabrielKuz/AegisUploaderV3/actions/workflows/codeql.yml/badge.svg)](https://github.com/GabrielKuz/AegisUploaderV3/actions/workflows/codeql.yml)
+![Pull Requests](https://img.shields.io/github/issues-pr-closed/GabrielKuz/AegisUploaderV3?color=%23663399)
 
 # UploaderV3
 
