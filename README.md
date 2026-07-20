@@ -73,7 +73,7 @@ Copy the example environment file:
 copy .env.example .env
 ```
 
-Then fill in the required values.
+Then fill in the required values, including Azure Storage credentials, PostgreSQL configuration, and Microsoft Entra application settings.
 
 ### Start the Development Environment
 
@@ -153,7 +153,7 @@ Nginx automatically removes the `/api` prefix before forwarding requests to the 
 │   ├── migrations/      # Alembic database migrations
 │   ├── modules/         # FastAPI application code
 │   ├── tests/           # Backend tests
-|   └── main.py          # Entrypoint into backend
+│   └── main.py          # Entrypoint into backend
 ├── frontend/
 │   ├── public/          # Static assets
 │   └── src/             # React application
