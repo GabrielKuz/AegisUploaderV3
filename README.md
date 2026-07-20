@@ -1,10 +1,12 @@
-[![Pytest](https://github.com/GabrielKuz/AegisSummerInterns2026/actions/workflows/pytest.yml/badge.svg?event=push)](https://github.com/GabrielKuz/AegisSummerInterns2026/actions/workflows/pytest.yml) 
-![GitHub Release](https://img.shields.io/github/v/release/GabrielKuz/AegisUploaderV3)
-![Language count](https://img.shields.io/github/languages/count/GabrielKuz/AegisUploaderV3)
-![Branch branch count](https://img.shields.io/github/branches/GabrielKuz/AegisUploaderV3)
-[![CodeQL](https://github.com/GabrielKuz/AegisUploaderV3/actions/workflows/codeql.yml/badge.svg)](https://github.com/GabrielKuz/AegisUploaderV3/actions/workflows/codeql.yml)
-![Pull Requests](https://img.shields.io/github/issues-pr-closed/GabrielKuz/AegisUploaderV3?color=%23663399)
-![Static Badge](https://img.shields.io/badge/Dependabot-passing-success)
+<p>
+<img src="https://github.com/GabrielKuz/AegisSummerInterns2026/actions/workflows/pytest.yml/badge.svg?event=push">
+<img src="https://img.shields.io/github/v/release/GabrielKuz/AegisUploaderV3">
+<img src="https://img.shields.io/github/languages/count/GabrielKuz/AegisUploaderV3?label=lang">
+<img src="https://img.shields.io/github/branches/GabrielKuz/AegisUploaderV3">
+<img src="https://github.com/GabrielKuz/AegisUploaderV3/actions/workflows/codeql.yml/badge.svg">
+<img src="https://img.shields.io/github/issues-pr-closed/GabrielKuz/AegisUploaderV3?label=PRs&color=%23663399">
+<img src="https://img.shields.io/badge/Dependabot-passing-success">
+</p>
 
 # UploaderV3
 
