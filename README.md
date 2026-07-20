@@ -8,6 +8,15 @@ Customer file upload application developed by the Aegis Software Summer 2026 int
 
 This application provides a secure mechanism for customers to upload files associated with support cases. The system supports chunked uploads, Microsoft Entra authentication for internal users, Azure File Storage, and automatic routing of ITAR data to the appropriate storage region.
 
+## Features
+
+- Secure customer file uploads
+- Chunked upload support
+- Microsoft Entra authentication
+- Azure File Storage integration
+- Automatic ITAR data routing
+- REST API with Swagger documentation
+---
 ## Tech Stack
 
 ### Backend
@@ -28,7 +37,7 @@ This application provides a secure mechanism for customers to upload files assoc
 - Vite
 
 ## Getting Started
-> These setup steps are written for Windows only.
+> These setup steps are only written for Windows. They can be adapted to support other operating systems.  
 ### Prerequisites
 
 - Docker Desktop
@@ -36,9 +45,17 @@ This application provides a secure mechanism for customers to upload files assoc
 - mkcert
 - PowerShell (Windows)
 
+### Clone the Repository
+
+Clone the repository to access it locally:
+
+```bash
+git clone https://github.com/GabrielKuz/AegisUploaderV3.git
+```
+
 ### Generate TLS/SSL certificates
 
-Install mkcert:
+Install mkcert to generate locally trusted SSL certificates which allows us to use MSAL.js and Microsoft EntraID:
 ```bash
 winget install -e --id FiloSottile.mkcert
 ```
@@ -48,7 +65,7 @@ Run the script to generate the certificates:
 ```powershell
 Scripts/generateCert.ps1
 ```
-### Configure enviroment variables
+### Configure Environment Variables
 
 Copy the example environment file:
 
@@ -74,12 +91,12 @@ docker compose up -d --build
 
 The frontend and backend are both served behind Nginx.
 
-## Application URLs
+## Local Application URLs
 
 - Frontend: https://localhost
 - Backend API: https://localhost/api
 - Swagger: https://localhost/api/docs
-
+---
 ## Common Commands
 
 ### Run Backend Tests
@@ -100,7 +117,7 @@ Examples:
 
 ```bash
 docker compose exec backend python test.py
-docker compose exec backend ls
+docker compose exec postgres psql -U <username> -d <Database>
 ```
 
 ### Database Migrations
@@ -128,14 +145,22 @@ fetch("/api/health")
 
 Nginx automatically removes the `/api` prefix before forwarding requests to the FastAPI backend, allowing the frontend to avoid hardcoding backend URLs.
 
-## Project Structure
+## Repository Structure
 
 ```
 .
 ├── backend/
+│   ├── migrations/      # Alembic database migrations
+│   ├── modules/         # FastAPI application code
+│   ├── tests/           # Backend tests
+|   └── main.py          # Entrypoint into backend
 ├── frontend/
-├── nginx/
-├── Scripts/
+│   ├── public/          # Static assets
+│   └── src/             # React application
+├── nginx/               # Reverse proxy configuration
+├── Scripts/             # Development scripts
+├── .github/
+│   └── workflows/       # CI/CD workflows
 ├── docker-compose.yml
 └── README.md
 ```
@@ -158,19 +183,13 @@ View logs:
 docker compose logs -f
 ```
 
-Restart containers:
-
-```bash
-docker compose restart
-```
-
 Stop containers:
 
 ```bash
 docker compose down
 ```
 
-Stop containers and remove volumes:
+Stop containers and delete volumes (Including database volume):
 
 ```bash
 docker compose down -v
