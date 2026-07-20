@@ -52,15 +52,27 @@ jobs:
             -U test_user \
             -d test_db \
             -c '\dt "LinkDB".*'
-            
+
       - name: Debug containers
         run: |
           docker compose ps
           docker compose exec -T backend env | grep DATABASE_URL
           docker compose exec -T postgres pg_isready -U test_user -d test_db
 
-      - name: Run pytest
-        run: docker compose exec -T backend uv run pytest -v
+      - name: Run pytest with coverage
+        run: |
+          docker compose exec -T backend uv run pytest \
+            --cov=modules \
+            --cov-report=xml
+
+      - name: Copy coverage report
+        run: |
+          docker compose cp backend:/app/coverage.xml ./coverage.xml
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          files: ./coverage.xml
 
       - name: Show logs on failure
         if: failure()
