@@ -78,7 +78,7 @@ http {
 
     ssl_prefer_server_ciphers off;
 
-    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always; # Add once stable
+    # add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always; # Add once stable
 
     root /usr/share/nginx/html;
     index index.html;
@@ -137,13 +137,13 @@ http {
 
     # api docs. disable in prod from main.py and change this to serve 404
     location /api/openapi.json {
-      return 404;
+      #return 404;
       
       proxy_pass http://backend:8000/openapi.json;
     }
 
     location /api/docs {
-      return 404;
+      #return 404;
 
       proxy_pass http://backend:8000/docs;
 

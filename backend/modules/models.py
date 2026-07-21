@@ -80,6 +80,7 @@ class UploadRecord(Base): # "LinkDB".uploads table
     max_days_in_storage = Column(Integer, default=30)
     original_link = Column(Text, nullable=True)
     sas_retrieval_link = Column(Text, nullable=True)
+    storage_region = Column(sqlalchemy.Enum(StorageRegion), nullable=True) # US, EU, ITAR
     upload_complete = Column(Boolean, default=False)
     for_deletion = Column(Boolean, default=False, nullable=False)  # flag to mark the record for deletion
 
@@ -100,6 +101,9 @@ class LinkRecord(Base): # "LinkDB".links table
     creator = Column(String) # From entra token
     expiration_date = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc) + AppConstants.LINK_EXPIRATION_TIME)# 48 hours from creation
     expired = Column(Boolean)
+    customer = Column(String, nullable=True) # Company
+    status = Column(String, nullable=True) # Status from Hubspot
+
 
 
 #=======================================================================================================

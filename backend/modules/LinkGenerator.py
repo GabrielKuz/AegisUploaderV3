@@ -3,8 +3,9 @@ import os
 import uuid
 
 from datetime import datetime, timedelta, timezone
-from fastapi import HTTPException, status
-from modules import Session, engine
+from sqlalchemy import create_engine, select, update
+from typing import Dict
+from modules.HubSpotIntegration import get_caseITARstatus, caseIDExists, get_caseCompany, get_caseStatus
 from modules.auth import User
 from modules.HubSpotIntegration import get_caseITARstatus, caseIDExists
 from modules.models import LinkRecord, UploadRecord, update_other_from_self, update_similar_between_LinkDB_and_UploadDB
@@ -24,7 +25,7 @@ class LinkRequest(BaseModel): # structure of a link request from the client
 
 link_data: Dict[str, LinkRequest] = {} # mapping uuid to case info
 
-url = f"http://{os.getenv('FRONTEND_URL')}/links/" # base url to be concatenated with the uuid
+url = f"https://{os.getenv('FRONTEND_URL') or 'localhost'}/uploads/" # base url to be concatenated with the uuid
 
 
 def generate_links(link_request: LinkRequest, current_user: User):
@@ -73,15 +74,13 @@ def store_link(link_request: LinkRequest, uuid_str: str, current_user: User):
             expiration_date=datetime.now(timezone.utc) + AppConstants.LINK_EXPIRATION_TIME, # Always expires after the default expiration time
             users_with_access=[current_user.username], # TODO: Change to inclide the admin list
             expired=False,
+            customer=get_caseCompany(link_request.case_id) or "Unknown",
+            status=get_caseStatus(link_request.case_id) or "Unknown"
         )
 
         session.add(record) # add new reccord to session
         session.commit() # commit session to db so it persists
         update_similar_between_LinkDB_and_UploadDB(session)
-
-@deprecated("This doesn't work in all cases. alternative will be merged into main branch soon.")
-def expire_old_links(expiry_days: int = 2) -> bool:
-     record_expiry: bool = False
 
 def _serialize_link_record(record: LinkRecord):
     """
@@ -101,6 +100,8 @@ def _serialize_link_record(record: LinkRecord):
         "users_with_access": record.users_with_access,
         "expired": record.expired,
         "expiration_date": expiration_date,
+        "customer": record.customer,
+        "status": record.status
     }
 
 def get_link(uuid_str: str): # get a link record from the db by uuid
@@ -123,6 +124,8 @@ def get_link(uuid_str: str): # get a link record from the db by uuid
             "expiration_date": record.expiration_date,
             "users_with_access": record.users_with_access,
             "expired": record.expired,
+            "customer": record.customer,
+            "status": record.status
         }
 
 def get_all_links(current_user: User): 
@@ -134,10 +137,21 @@ def get_all_links(current_user: User):
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="User not authenticated"
         )
-    with Session() as session:
-        stmt = select(LinkRecord).where(LinkRecord.creator == current_user.username)
-        records = session.scalars(stmt).all()
-        return [_serialize_link_record(r) for r in records]
+    if "User" in current_user.roles:
+        with Session() as session:
+            stmt = select(LinkRecord).where(LinkRecord.creator == current_user.username)
+            records = session.scalars(stmt).all()
+            return [_serialize_link_record(r) for r in records]
+    elif "Admin" in current_user.roles: # Admin can see all links
+        with Session() as session:
+            stmt = select(LinkRecord)
+            records = session.scalars(stmt).all()
+            return [_serialize_link_record(r) for r in records]
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="User does not have permission to access this resource"
+        )
     
 def get_all_files_for_link(uuid_str: str, current_user: User):
     """

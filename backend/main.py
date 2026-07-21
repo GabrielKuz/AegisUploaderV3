@@ -22,7 +22,9 @@ from zoneinfo import ZoneInfo
 logging.basicConfig(level=logging.INFO) # setup logging server. TODO: change to file and add more logging
 testing = False
 scheduler = AsyncIOScheduler(timezone=ZoneInfo("America/New_York"))
-interval = False
+interval = testing 
+from modules.refreshStatus import update_link_status_from_hubspot
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     if interval:
@@ -35,6 +37,15 @@ async def lifespan(app: FastAPI):
             max_instances=1,
             coalesce=True,
         )
+        scheduler.add_job(
+            update_link_status_from_hubspot,
+            trigger="interval",
+            seconds=30,
+            id="test_link_status_refresh",
+            replace_existing=True,
+            max_instances=1,
+            coalesce=True,
+        )   
     else:
         scheduler.add_job( # every 6 hours on the hour
             expireAndDeleteOldData,
@@ -42,6 +53,16 @@ async def lifespan(app: FastAPI):
             hour="0,6,12,18",
             minute="0",
             id="daily_cleanup",
+            replace_existing=True,
+            max_instances=1,
+            coalesce=True,
+        )
+        scheduler.add_job(
+            update_link_status_from_hubspot,
+            trigger="cron",
+            hour="*", # every hour on the hour
+            minute="0",
+            id="link_status_refresh",
             replace_existing=True,
             max_instances=1,
             coalesce=True,
@@ -58,7 +79,7 @@ app.add_middleware(TelemetryMiddleware)
 @app.post("/links/create/")
 def create_link(link_request: LinkRequest, current_user: Annotated[User, Depends(requireRoles("User", "Admin"))]):  # TODO: Change to getCurrentActiveUser after testing
     #authentication: bool = userAuthenticated(getCurrentUser())
-    return generate_links(link_request, current_user) #TODO: CHANGE IMMENDIATLY AFTER TESTING
+    return generate_links(link_request, current_user)
 
 @app.get("/links/")
 def get_links(current_user: Annotated[User, Depends(requireRoles("User", "Admin"))]):  # TODO: Change to getCurrentActiveUser after testing

@@ -20,11 +20,11 @@ export function getAccountEmail(account: AccountInfo | null): string {
 }
 
 export function setPostLoginRedirect(destination: string): void {
-  window.sessionStorage.setItem(POST_LOGIN_REDIRECT_KEY, destination);
+  window.localStorage.setItem(POST_LOGIN_REDIRECT_KEY, destination);
 }
 
 export function getPostLoginRedirect(defaultDestination = "/support"): string {
-  const storedDestination = window.sessionStorage.getItem(POST_LOGIN_REDIRECT_KEY);
+  const storedDestination = window.localStorage.getItem(POST_LOGIN_REDIRECT_KEY);
 
   if (
     storedDestination &&
@@ -38,7 +38,7 @@ export function getPostLoginRedirect(defaultDestination = "/support"): string {
 }
 
 export function clearPostLoginRedirect(): void {
-  window.sessionStorage.removeItem(POST_LOGIN_REDIRECT_KEY);
+  window.localStorage.removeItem(POST_LOGIN_REDIRECT_KEY);
 }
 
 export async function getApiAccessToken(
