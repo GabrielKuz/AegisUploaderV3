@@ -138,4 +138,5 @@ def download_upload(upload_id: str, currentUser: Annotated[User, Depends(require
     return downloadData(upload_id, currentUser)
 
 if __name__ == "__main__": # Doesnt get run by docker
+    print("v0.1.16")
     main()
