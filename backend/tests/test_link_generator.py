@@ -173,6 +173,7 @@ def test_get_files_for_link(monkeypatch):
             timestamp=datetime.now(),
             max_days_in_storage=30,
             case_id="case-files",
+            storage_region="US",
             original_link=f"http://example.test/{link_uuid}",
             sas_retrieval_link=None,
             upload_complete=True,
@@ -210,6 +211,7 @@ def test_updating_link_update_other_from_self(monkeypatch):
         )
         upload = UploadRecord(
             upload_id=uuid.uuid4(),
+            storage_region="US",
             link_uuid=link.uuid,
             case_id="old-case",
             original_filename="report.txt",
@@ -262,6 +264,7 @@ def test_updating_link_update_similar_between_LinkDB_and_UploadDB(monkeypatch):
             link_uuid=link.uuid,
             case_id="AIS-6614",
             original_filename="report.txt",
+            storage_region="US",
             blob_name="report.txt",
             content_type="text/plain",
             file_hash="1234567890abcdef",

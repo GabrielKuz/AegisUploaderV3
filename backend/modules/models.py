@@ -79,6 +79,7 @@ class UploadRecord(Base): # "LinkDB".uploads table
     max_days_in_storage = Column(Integer, default=30)
     original_link = Column(Text, nullable=True)
     sas_retrieval_link = Column(Text, nullable=True)
+    storage_region = Column(sqlalchemy.Enum(StorageRegion), nullable=True) # US, EU, ITAR
     upload_complete = Column(Boolean, default=False)
     for_deletion = Column(Boolean, default=False, nullable=False)  # flag to mark the record for deletion
 

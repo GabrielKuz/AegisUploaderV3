@@ -1,3 +1,4 @@
+import asyncio
 from io import BytesIO
 import os
 import datetime
@@ -10,6 +11,7 @@ from sqlalchemy.orm import Session
 from Utils import IsUUID
 from pathlib import Path
 from typing import Annotated, Literal
+import logging
 
 from sqlalchemy import text
 from modules.StorageProvider import StorageProvider, LocalStorageProvider
@@ -23,8 +25,12 @@ from fastapi import Request
 from pathvalidate import sanitize_filename, validate_filename
 from modules.auth import User, requireRoles
 from modules.models import StorageRegion, UploadChunk, UploadRecord, LinkRecord, UploadSession
+from azure.communication.email.aio import EmailClient
+from zoneinfo import ZoneInfo
 
 router = APIRouter()
+
+
 
 MAX_FILE_SIZE = 2.5 * 1024 * 1024 * 1024 * 1024  # nginx limits to 2.5 TiB to ensure we dont accept arbitary requests
 def get_db(): # Avoid reusing the same session across requests, which can cause issues with concurrent transactions
@@ -585,6 +591,7 @@ async def complete_upload(link_uuid: str, upload_token: str, db: Annotated[sqlal
             content_type=upload_session.content_type,
             file_hash=server_hash,
             date_uploaded=now,
+            storage_region=upload_session.storage_region,
             itar_status=upload_session.itar_status,
             combined_file_size=upload_session.expected_size,
             timestamp=now,
@@ -614,6 +621,8 @@ async def complete_upload(link_uuid: str, upload_token: str, db: Annotated[sqlal
         db.rollback()
         traceback.print_exc() # For debugging 
         raise HTTPException(status_code=500, detail="Failed to complete upload")
+    async with asyncio.TaskGroup() as tg: # Send the email in a background task so we dont block the response to the client and use task group to ensure cleanup
+        tg.create_task(sendCompletetionEmail(record))
     
     return CompleteUploadResponse( # Confirm to the client the uplaod is complete and provide our final hash for their verification
         filename=upload_session.original_filename,
@@ -693,3 +702,104 @@ def extendFileExpiration(upload_id: str, additional_days: Annotated[int, Query(g
         newExpirationDate=(upload_record.date_uploaded + datetime.timedelta(days=upload_record.max_days_in_storage)).isoformat() if upload_record.date_uploaded else None
     )
 
+
+ACS_CONNECTION_STRING = os.getenv("ACS_CONNECTION_STRING")
+
+# Source - https://stackoverflow.com/a/1094933
+# Posted by Sridhar Ratnakumar, modified by community. See post 'Timeline' for change history
+# Retrieved 2026-07-21, License - CC BY-SA 4.0
+
+def sizeof_fmt(num, suffix="B"):
+    for unit in ("", "Ki", "Mi", "Gi", "Ti", "Pi", "Ei", "Zi"):
+        if abs(num) < 1024.0:
+            return f"{num:3.1f} {unit}{suffix}"
+        num /= 1024.0
+    return f"{num:.1f}Yi{suffix}"
+
+
+async def sendCompletetionEmail(upload_record: UploadRecord):
+    db = next(get_db())  # Get a new database session for this async function
+    if os.getenv("TESTING") and os.getenv("TESTING").lower() == "true":
+        return
+
+    link_entry = find_link_entry(upload_record.link_uuid, db=db)
+    viewURL = f"https://{os.getenv('FRONTEND_URL')}/support/view-uploads/{upload_record.link_uuid}"
+    if not link_entry:
+        logging.warning(f"Unable to send completion email. Link {upload_record.link_uuid} not found.")
+        return
+
+    async with EmailClient.from_connection_string(ACS_CONNECTION_STRING) as client:
+        message = {
+            "content": {
+                "subject": f"File Upload Complete - {upload_record.case_id}",
+                "plainText": f"""A file has been successfully uploaded through Uploader V3.
+
+Case ID: {upload_record.case_id}
+File Name: {upload_record.blob_name}
+File Size: {sizeof_fmt(upload_record.combined_file_size)} 
+Uploaded At: {upload_record.date_uploaded.astimezone(ZoneInfo("America/New_York")).strftime("%B %-d, %Y at %-I:%M:%S %p %Z")}
+
+The uploaded file is now available for review at {viewURL}.
+""",
+                "html": f"""
+                <html>
+                    <body style="font-family: Arial, Helvetica, sans-serif; color: #333;">
+                        <h2 style="color: #2e8b57;">File Upload Complete</h2>
+
+                        <p>
+                            A file has been successfully uploaded through <strong>Uploader V3</strong>.
+                        </p>
+
+                        <table style="border-collapse: collapse;">
+                            <tr>
+                                <td><strong>Case ID:</strong></td>
+                                <td>{upload_record.case_id}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>File Name:</strong></td>
+                                <td>{upload_record.blob_name}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>File Size:</strong></td>
+                                <td>{sizeof_fmt(upload_record.combined_file_size)}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Uploaded At:</strong></td>
+                                <td>{upload_record.date_uploaded.astimezone(ZoneInfo("America/New_York")).strftime("%B %-d, %Y at %-I:%M:%S %p %Z")}</td>
+                            </tr>
+                        </table>
+                        <table style="border-collapse: collapse;">
+                            <tr>
+                                <td><strong>View URL:</strong></td>
+                                <td><a href="{viewURL}">{viewURL}</a></td>
+                            </tr>
+                        </table>
+
+                        <hr>
+                    </body>
+                </html>
+                """
+            },
+            "recipients": {
+                "to": [
+                    {
+                        "address": link_entry.creator,
+                        "displayName": link_entry.creator
+                    }
+                ],
+                "cc": [ #All other users with access
+                    {
+                        "address": user,
+                        "displayName": user
+                    } for user in (link_entry.users_with_access or []) if user != link_entry.creator
+                ]
+            },
+            "senderAddress": os.getenv("ACS_SENDER_ADDRESS", "DoNotReply@aiscorp.com")
+        }
+
+        try:
+            response = await client.begin_send(message)
+            await response.result()
+            logging.info(f"Completion email sent successfully to {link_entry.creator}.")
+        except Exception as e:
+            logging.warning(f"Error occurred while sending completion email: {e}")
