@@ -89,4 +89,4 @@ venv/
 .vscode/
 
 # Secret files
-backend\modules\UFO.py
+backend/modules/UFO.py
