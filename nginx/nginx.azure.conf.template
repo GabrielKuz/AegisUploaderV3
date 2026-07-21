@@ -82,9 +82,6 @@ http {
 
     root /usr/share/nginx/html;
     index index.html;
-    if ($http_user_agent = "") {
-      return 403;
-    }
     if ($bad_ua) {
         return 403;
     }
