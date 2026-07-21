@@ -148,10 +148,16 @@ def get_all_links(current_user: User):
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="User not authenticated"
         )
-    with Session() as session:
-        stmt = select(LinkRecord).where(LinkRecord.creator == current_user.username)
-        records = session.scalars(stmt).all()
-        return [_serialize_link_record(r) for r in records]
+    if current_user.role is "User":
+        with Session() as session:
+            stmt = select(LinkRecord).where(LinkRecord.creator == current_user.username)
+            records = session.scalars(stmt).all()
+            return [_serialize_link_record(r) for r in records]
+    elif current_user.role is "Admin": # Admin can see all links
+        with Session() as session:
+            stmt = select(LinkRecord)
+            records = session.scalars(stmt).all()
+            return [_serialize_link_record(r) for r in records]
     
 def get_all_files_for_link(uuid_str: str, current_user: User):
     """
