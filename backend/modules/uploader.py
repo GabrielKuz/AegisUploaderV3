@@ -13,7 +13,8 @@ from pathlib import Path
 from typing import Annotated, Literal
 import logging
 
-from sqlalchemy import text
+from sqlalchemy import text, cast
+from sqlalchemy.dialects.postgresql import JSONB
 from modules.StorageProvider import StorageProvider, LocalStorageProvider
 from modules import usFileStorageProvider, euFileStorageProvider, itarFileStorageProvider
 from fastapi import APIRouter, Depends, Header, HTTPException
@@ -631,9 +632,6 @@ async def complete_upload(link_uuid: str, upload_token: str, db: Annotated[sqlal
         completed=True,
     )
 
-def get_uploads_for_link(link_uuid: str, db: Annotated[sqlalchemy.orm.Session, Depends(get_db)]): # Get all uploads for a given link uuid from the db
-    return db.query(UploadRecord).filter(UploadRecord.link_uuid == link_uuid).all()
-
 @router.post("/uploads/{upload_id}/mark_for_deletion", response_model=MarkForDeletionResponse)
 def mark_for_deletion(upload_id: str, current_user: Annotated[User, Depends(requireRoles("Admin", strict=True))], db: Annotated[sqlalchemy.orm.Session, Depends(get_db)]):
     if not IsUUID(upload_id):
@@ -651,13 +649,17 @@ def listFiles(linkUUID: str, current_user: Annotated[User, Depends(requireRoles(
     if not IsUUID(linkUUID):
         badUUID = HTTPException(400,detail={"message": "Invalid uuid"})
         raise badUUID
-    uploads = get_uploads_for_link(linkUUID, db) # Get all uploads for the given link uuid
-    authorized_uploads = [ # Filter the uploads to only include what the user can access
-        upload for upload in uploads
-        if current_user.username in (upload.users_with_access or [] and upload.for_deletion == False)
-    ]
+    
+    uploads = (
+        db.query(UploadRecord)
+        .filter(
+            UploadRecord.link_uuid == linkUUID,
+            UploadRecord.for_deletion.is_(False),
+            cast(UploadRecord.users_with_access, JSONB).contains([current_user.username])
+        ).all()
+    )
 
-    if uploads and not authorized_uploads: # If any one of the uploads is not authorized return forbidden
+    if not uploads: # If any one of the uploads is not authorized return forbidden
         raise HTTPException(
             status_code=403,
             detail="You do not have permission to access files for this link",
@@ -674,7 +676,8 @@ def listFiles(linkUUID: str, current_user: Annotated[User, Depends(requireRoles(
             expiration_date=(upload.date_uploaded + datetime.timedelta(days=upload.max_days_in_storage)).isoformat() if upload.date_uploaded and upload.max_days_in_storage else None,
             upload_complete=upload.upload_complete,
         )
-        for upload in authorized_uploads]
+        for upload in uploads
+    ]
 
 @router.post("/uploads/{upload_id}/extend_expiration", response_model=ExtendExpirationResponse) # Extend the expiration of a file upload by a specified number of additional days
 def extendFileExpiration(upload_id: str, additional_days: Annotated[int, Query(gt=0, le=365)], current_user: Annotated[User, Depends(requireRoles("Admin", strict=True))], db: Annotated[sqlalchemy.orm.Session, Depends(get_db)]):  # Only admin can extend expiration

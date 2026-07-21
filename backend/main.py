@@ -9,7 +9,7 @@ from modules.auth import getCurrentActiveUser, getCurrentUser, User, userAuthent
 from modules.DataCleaner import expireAndDeleteOldData
 from modules.deletionRequest import router as deletionRequest_router
 from modules.downloadData import downloadData
-from modules.LinkGenerator import LinkRequest, generate_links, get_all_links, get_all_files_for_link, get_link
+from modules.LinkGenerator import LinkRequest, generate_links, get_all_links, get_link
 from modules.telemetry import setup_telemetry, TelemetryMiddleware
 from modules.uploader import router as uploader_router, listFiles
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor

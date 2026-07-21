@@ -1,17 +1,19 @@
-from fastapi import HTTPException, status
+import asyncio
 from pydantic import BaseModel, Field
-import uuid
-from datetime import datetime, timedelta, timezone
-from sqlalchemy import create_engine, select, update
-from typing import Dict
-from modules.HubSpotIntegration import get_caseITARstatus, caseIDExists, get_caseCompany, get_caseStatus
-from modules.auth import User
-from modules.models import LinkRecord, UploadRecord, update_other_from_self, update_similar_between_LinkDB_and_UploadDB
-import os
+from fastapi import HTTPException, status
+from urllib import response
+from fastapi.testclient import TestClient
 import AppConstants
-from warnings import warn, deprecated
-from modules import Session, engine
+from modules.HubSpotIntegration import caseIDExists, get_caseCompany, get_caseITARstatus, get_caseStatus
+from modules import Session
 from Utils import IsCaseID
+from sqlalchemy import select
+from modules.models import UploadRecord, LinkRecord, update_similar_between_LinkDB_and_UploadDB
+from typing import Dict
+import uuid
+from datetime import datetime, timezone
+from modules.auth import User
+import os
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 if DATABASE_URL is None:
@@ -76,10 +78,6 @@ def store_link(link_request: LinkRequest, uuid_str: str, current_user: User):
             status=get_caseStatus(link_request.case_id) or "Unknown"
         )
 
-        # print("TABLE:", LinkRecord.__table__) 
-        # print("SCHEMA:", LinkRecord.__table__.schema)
-        # print("FULLNAME:", LinkRecord.__table__.fullname)
-
         session.add(record) # add new reccord to session
         session.commit() # commit session to db so it persists
         update_similar_between_LinkDB_and_UploadDB(session)
@@ -105,15 +103,6 @@ def _serialize_link_record(record: LinkRecord):
         "customer": record.customer,
         "status": record.status
     }
-
-
-@deprecated("This endpoint shouldnt exist and will be removed in a future pr. Use /uploads/{upload_uuid}/extend")
-def extend_link_expiration(uuid_str: str, current_user: User, extension: int):
-    if not current_user or current_user.disabled:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="User not authenticated"
-        )
 
 def get_link(uuid_str: str): # get a link record from the db by uuid
     """
