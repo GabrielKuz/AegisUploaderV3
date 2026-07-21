@@ -1,13 +1,13 @@
 import asyncio
 from urllib import response
 from fastapi.testclient import TestClient
+import AppConstants
 from main import app
 from modules.LinkGenerator import LinkRequest, generate_links, get_all_links
 from datetime import datetime, timedelta
 from modules.auth import User, getCurrentActiveUser, requireRoles
 from modules import Session
 from modules.models import UploadRecord, LinkRecord, update_other_from_self, update_similar_between_LinkDB_and_UploadDB
-from modules.uploader import ensure_uploads_table
 import os
 import uuid
 from modules.LinkGenerator import LinkRequest, generate_links, get_all_links
@@ -17,7 +17,7 @@ import os
 
 client = TestClient(app)
 current_user = User(username="testuser", disabled=False, roles=["User"])  # Mock user for testing
-url = f"http://{os.getenv('FRONTEND_URL')}/links/"  # Assuming this is the base URL for links
+url = f"https://{os.getenv('FRONTEND_URL') or "localhost"}/uploads/"  # Assuming this is the base URL for links
 
 async def override_get_current_active_user() -> User:
     return User(username="testuser", disabled=False, roles=["User"]) 
@@ -30,7 +30,9 @@ def test_generate_links_returns_link_and_uuid(monkeypatch):
         case_id="AIS-1234",
     )
     monkeypatch.setattr("modules.LinkGenerator.caseIDExists", lambda case_id: True)
-    monkeypatch.setattr("modules.LinkGenerator.get_caseITARstatus", lambda case_id: False)  
+    monkeypatch.setattr("modules.LinkGenerator.get_caseITARstatus", lambda case_id: False) 
+    monkeypatch.setattr("modules.LinkGenerator.get_caseCompany", lambda case_id: "Test Company")
+    monkeypatch.setattr("modules.LinkGenerator.get_caseStatus", lambda case_id: "Open")
 
     result = generate_links(link_request, current_user)
 
@@ -45,6 +47,8 @@ def test_create_link_endpoint_returns_generated_link(monkeypatch):
         "case_id": "AIS-1234",
     }
     monkeypatch.setattr("modules.LinkGenerator.caseIDExists", lambda case_id: True)
+    monkeypatch.setattr("modules.LinkGenerator.get_caseCompany", lambda case_id: "Test Company")
+    monkeypatch.setattr("modules.LinkGenerator.get_caseStatus", lambda case_id: "Open")
     monkeypatch.setattr("modules.LinkGenerator.get_caseITARstatus", lambda case_id: False)  
     
     response = client.post("/links/create/", json=payload)
@@ -162,13 +166,14 @@ def test_get_files_for_link(monkeypatch):
             original_filename="report.txt",
             blob_name="report.txt",
             content_type="text/plain",
-            sha256="1234567890abcdef",
+            file_hash="1234567890abcdef",
             date_uploaded=datetime.now(),
             itar_status=False,
             combined_file_size=42,
             timestamp=datetime.now(),
             max_days_in_storage=30,
             case_id="case-files",
+            storage_region="US",
             original_link=f"http://example.test/{link_uuid}",
             sas_retrieval_link=None,
             upload_complete=True,
@@ -200,18 +205,19 @@ def test_updating_link_update_other_from_self(monkeypatch):
             itar=True,
             creator=current_user.username,
             timestamp=datetime.now(),
-            expiration_date=datetime.now() + timedelta(days=2),
+            expiration_date=datetime.now() + AppConstants.LINK_EXPIRATION_TIME,
             users_with_access=[current_user.username],
             expired=False,
         )
         upload = UploadRecord(
             upload_id=uuid.uuid4(),
+            storage_region="US",
             link_uuid=link.uuid,
             case_id="old-case",
             original_filename="report.txt",
             blob_name="report.txt",
             content_type="text/plain",
-            sha256="1234567890abcdef",
+            file_hash="1234567890abcdef",
             date_uploaded=datetime.now() - timedelta(days=1),
             itar_status=False,
             combined_file_size=42,
@@ -249,7 +255,7 @@ def test_updating_link_update_similar_between_LinkDB_and_UploadDB(monkeypatch):
             itar=True,
             creator=current_user.username,
             timestamp=datetime.now(),
-            expiration_date=datetime.now() + timedelta(days=2),
+            expiration_date=datetime.now() + AppConstants.LINK_EXPIRATION_TIME,
             users_with_access=[current_user.username],
             expired=False,
         )
@@ -258,9 +264,10 @@ def test_updating_link_update_similar_between_LinkDB_and_UploadDB(monkeypatch):
             link_uuid=link.uuid,
             case_id="AIS-6614",
             original_filename="report.txt",
+            storage_region="US",
             blob_name="report.txt",
             content_type="text/plain",
-            sha256="1234567890abcdef",
+            file_hash="1234567890abcdef",
             date_uploaded=datetime.now() - timedelta(days=1),
             itar_status=False,
             combined_file_size=42,

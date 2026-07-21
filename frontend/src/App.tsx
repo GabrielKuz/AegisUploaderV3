@@ -12,6 +12,9 @@ import { AdminUploadPage } from "./features/admin/AdminUploadPage";
 
 import { LoginPage } from "./features/auth/LoginPage";
 import { RequireEntraUser } from "./features/auth/RequireEntraUser";
+import { SupportLayout } from "./layouts/SupportLayout";
+import { CustomerLayout } from "./layouts/CustomerLayout";
+import { AdminLayout } from "./layouts/AdminLayout";
 
 import { CreateSupportLinkPage } from "./features/support/CreateSupportLinkPage";
 import { SupportHomePage } from "./features/support/SupportHomePage";
@@ -19,10 +22,6 @@ import { SupportLinksPage } from "./features/support/SupportLinksPage";
 import { SupportUploadPage } from "./features/support/SupportUploadPage";
 
 import { CustomerUpload } from "./features/uploader/CustomerUpload";
-
-import { AdminLayout } from "./layouts/AdminLayout";
-import { CustomerLayout } from "./layouts/CustomerLayout";
-import { SupportLayout } from "./layouts/SupportLayout";
 
 export default function App() {
   return (
@@ -77,7 +76,9 @@ export default function App() {
           path="/admin"
           element={
             <RequireEntraUser>
-              <AdminLayout />
+              <RequireEntraUser>
+                <AdminLayout />
+              </RequireEntraUser>
             </RequireEntraUser>
           }
         >

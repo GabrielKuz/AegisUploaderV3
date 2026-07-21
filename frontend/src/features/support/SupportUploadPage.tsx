@@ -474,17 +474,10 @@ export function SupportUploadPage() {
                                         className="data-table-sort-button"
                                         type="button"
                                         onClick={() =>
-                                            handleSort(
-                                                "expiration_date",
-                                            )
-                                        }
+                                            handleSort("expiration_date")}
                                     >
                                         Expires{" "}
-                                        {getSortIcon(
-                                            "expiration_date",
-                                            sortKey,
-                                            sortDirection,
-                                        )}
+                                        {getSortIcon("expiration_date", sortKey, sortDirection)}
                                     </button>
                                 </th>
                             </tr>

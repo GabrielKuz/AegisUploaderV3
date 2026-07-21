@@ -87,3 +87,6 @@ venv/
 
 # VS Code
 .vscode/
+
+# Secret files
+backend/modules/UFO.py

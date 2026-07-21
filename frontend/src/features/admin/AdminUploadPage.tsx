@@ -4,7 +4,10 @@ import {
   useMemo,
   useState,
 } from "react";
-import { Link } from "react-router-dom";
+import {
+  Link,
+  useParams,
+} from "react-router-dom";
 
 import "../../components/DataTablePage.css";
 import {
@@ -19,7 +22,6 @@ import {
 } from "../../utils/sorting";
 import { useApiAccessToken } from "../auth/useApiAccessToken";
 
-const FILES_ENDPOINT = "/api/files/";
 const REQUEST_DEDUPE_WINDOW_MS = 1_000;
 
 type Upload = {
@@ -47,15 +49,13 @@ type UploadRequestEntry = {
 };
 
 type UploadListResponse =
-  | Upload[]
+  Upload[]
   | {
     files?: Upload[];
     uploads?: Upload[];
   };
 
-function parseUploadResponse(
-  payload: UploadListResponse,
-): Upload[] {
+function parseUploadResponse(payload: UploadListResponse): Upload[] {
   if (Array.isArray(payload)) {
     return payload;
   }
@@ -68,9 +68,7 @@ function parseUploadResponse(
     return payload.uploads;
   }
 
-  throw new Error(
-    "The files endpoint returned an unexpected response.",
-  );
+  throw new Error("The files endpoint returned an unexpected response.");
 }
 
 type UploadStatusDisplay = {
@@ -78,45 +76,23 @@ type UploadStatusDisplay = {
   className: string;
 };
 
-const DATE_KEYS = new Set<SortKey>([
-  "date_uploaded",
-  "expiration_date",
-]);
+const DATE_KEYS = new Set<SortKey>(["date_uploaded", "expiration_date"]);
 
-const ADMIN_UPLOADS_CACHE_KEY =
-  "admin-uploads";
-
-const uploadRequestCache =
-  new Map<string, UploadRequestEntry>();
+const uploadRequestCache = new Map<string, UploadRequestEntry>();
 
 // Returns the endpoint used to extend one upload's retention.
-function getExtendEndpoint(
-  uploadId: string,
-): string {
+function getExtendEndpoint(uploadId: string): string {
   return `/api/upload/extend/${encodeURIComponent(uploadId)}`;
 }
-/**
- * Returns endpoint to mark upload for deletion.
- * This implementation assumes DELETE /api/uploads/{upload_id}
- * performs the backend's soft-delete or deletion-marking action.
- */
-function getDeleteEndpoint(
-  uploadId: string,
-): string {
+// Returns endpoint used to mark ine uploaed file for deletion.
+function getDeleteEndpoint(uploadId: string): string {
   return `/api/uploads/${encodeURIComponent(uploadId)}/mark_for_deletion`;
 }
 
-/**
- * Extracts a readable API error without displaying an entire
- * JSON object to the user.
-*/
-async function getResponseMessage(
-  response: Response,
-  fallbackMessage: string,
-): Promise<string> {
+// Extracts a readable API error without displaying an entire JSON object to the user.
+async function getResponseMessage(response: Response, fallbackMessage: string): Promise<string> {
   try {
-    const contentType =
-      response.headers.get("content-type") ?? "";
+    const contentType = response.headers.get("content-type") ?? "";
 
     if (contentType.includes("application/json")) {
       const body = (await response.json()) as {
@@ -147,8 +123,12 @@ async function getResponseMessage(
  * Requests uploaded files visible to administrator.
  * Short-lived cache prevents React Strict Mode's development effect cycle from issuing same request twice.
 */
-function requestUploads(accessToken: string, forceRefresh = false): Promise<Upload[]> {
-  const existingRequest = uploadRequestCache.get(ADMIN_UPLOADS_CACHE_KEY);
+function requestUploads(uuid: string, accessToken: string, forceRefresh = false): Promise<Upload[]> {
+
+
+  const requestKey = `admin-uploads-${uuid}`;
+
+  const existingRequest = uploadRequestCache.get(requestKey);
 
   const existingRequestIsCurrent = existingRequest !== undefined && Date.now() - existingRequest.createdAt < REQUEST_DEDUPE_WINDOW_MS;
 
@@ -157,22 +137,26 @@ function requestUploads(accessToken: string, forceRefresh = false): Promise<Uplo
   }
 
   if (forceRefresh) {
-    uploadRequestCache.delete(ADMIN_UPLOADS_CACHE_KEY);
+    uploadRequestCache.delete(
+      requestKey,
+    );
   }
 
-  const request = fetch(FILES_ENDPOINT, {
-    headers: {
-      Authorization: `Bearer ${accessToken}`
+  const endpoint = `/api/links/${encodeURIComponent(uuid)}/files`;
+
+  const request = fetch(
+    endpoint,
+    {
+      headers: { Authorization: `Bearer ${accessToken}` },
     },
-  },
   ).then(async (response) => {
     if (!response.ok) {
-      const message = await getResponseMessage(response, `Failed to load uploaded files. Status: ${response.status}`);
-      throw new Error(message);
+      throw new Error(await getResponseMessage(response, `Failed to load uploaded files. Status: ${response.status}`));
     }
 
     const payload = (await response.json()) as UploadListResponse;
-    return parseUploadResponse(payload);
+
+    return parseUploadResponse(payload,);
   });
 
   const entry: UploadRequestEntry = {
@@ -180,20 +164,17 @@ function requestUploads(accessToken: string, forceRefresh = false): Promise<Uplo
     promise: request,
   };
 
-  uploadRequestCache.set(ADMIN_UPLOADS_CACHE_KEY, entry);
+  uploadRequestCache.set(requestKey, entry);
 
   const removeRequest = (): void => {
     window.setTimeout(() => {
-      if (uploadRequestCache.get(ADMIN_UPLOADS_CACHE_KEY) === entry) {
-        uploadRequestCache.delete(ADMIN_UPLOADS_CACHE_KEY);
+      if (uploadRequestCache.get(requestKey) === entry) {
+        uploadRequestCache.delete(requestKey);
       }
     }, REQUEST_DEDUPE_WINDOW_MS);
   };
 
-  request.then(
-    removeRequest,
-    removeRequest,
-  );
+  request.then(removeRequest, removeRequest,);
 
   return request;
 }
@@ -284,6 +265,9 @@ function getSortValue(upload: Upload, key: SortKey): string | number {
 }
 
 export function AdminUploadPage() {
+
+  const { uuid } = useParams<{ uuid: string }>();
+
   const getAccessToken = useApiAccessToken();
 
   const [uploads, setUploads] = useState<Upload[]>([]);
@@ -302,28 +286,36 @@ export function AdminUploadPage() {
 
   const [deletingUploadId, setDeletingUploadId] = useState<string | null>(null);
 
-  const loadUploads = useCallback(async (forceRefresh = false): Promise<void> => {
-    setError(null);
-    setIsLoading(true);
+  const loadUploads = useCallback(
+    async (forceRefresh = false): Promise<void> => {
+      setError(null);
+      setIsLoading(true);
 
-    try {
-      const accessToken = await getAccessToken();
-
-      if (!accessToken) {
+      if (!uuid) {
         setUploads([]);
-        setError("Please sign in before viewing uploaded files.");
+        setError("No upload link was selected.");
+        setIsLoading(false);
         return;
       }
 
-      const data = await requestUploads(accessToken, forceRefresh);
-      setUploads(data);
-    } catch (requestError) {
-      setUploads([]);
-      setError(requestError instanceof Error ? requestError.message : "Something went wrong while loading uploaded files.");
-    } finally {
-      setIsLoading(false);
-    }
-  }, [getAccessToken]);
+      try {
+        const accessToken = await getAccessToken();
+
+        if (!accessToken) {
+          setUploads([]);
+          setError("Please sign in before viewing uploaded files.");
+          return;
+        }
+
+        const data = await requestUploads(uuid, accessToken, forceRefresh);
+        setUploads(data);
+      } catch (requestError) {
+        setUploads([]);
+        setError(requestError instanceof Error ? requestError.message : "Something went wrong while loading uploaded files.");
+      } finally {
+        setIsLoading(false);
+      }
+    }, [getAccessToken, uuid]);
 
   useEffect(() => {
     void loadUploads();
@@ -407,8 +399,11 @@ export function AdminUploadPage() {
     }
   }
 
-  async function deleteUpload(upload: Upload): Promise<void> {
-    const confirmed = window.confirm(`Mark "${upload.blob_name}" for deletion?`,
+  async function deleteUpload(
+    upload: Upload,
+  ): Promise<void> {
+    const confirmed = window.confirm(
+      `Mark "${upload.blob_name}" for deletion?`,
     );
 
     if (!confirmed) {
@@ -422,12 +417,11 @@ export function AdminUploadPage() {
       const accessToken = await getAccessToken();
 
       if (!accessToken) {
-        throw new Error("Please sign in before deleting an uploaded file.");
+        throw new Error("Please sign in before marking an uploaded file for deletion.");
       }
 
-      const response = await fetch(
-        getDeleteEndpoint(upload.upload_id), {
-        method: "PATCH",
+      const response = await fetch(getDeleteEndpoint(upload.upload_id), {
+        method: "POST",
         headers: {
           Authorization: `Bearer ${accessToken}`,
         },
@@ -438,8 +432,15 @@ export function AdminUploadPage() {
       }
 
       setActionMessage(`"${upload.blob_name}" was marked for deletion.`);
+
       await loadUploads(true);
 
+      setUploads((currentUploads) => currentUploads.map((currentUpload) => currentUpload.upload_id === upload.upload_id ? {
+        ...currentUpload,
+        marked_for_deletion: true,
+      }
+        : currentUpload,
+      ));
     } catch (requestError) {
       window.alert(requestError instanceof Error ? requestError.message : "Something went wrong while marking the file for deletion.");
     } finally {
@@ -637,8 +638,7 @@ export function AdminUploadPage() {
                 <th
                   scope="col"
                   aria-sort={getAriaSort(
-                    "expiration_date",
-                    sortKey,
+                    "expiration_date", sortKey,
                     sortDirection,
                   )}
                 >
@@ -652,11 +652,7 @@ export function AdminUploadPage() {
                     }
                   >
                     Expires{" "}
-                    {getSortIcon(
-                      "expiration_date",
-                      sortKey,
-                      sortDirection,
-                    )}
+                    {getSortIcon("expiration_date", sortKey, sortDirection)}
                   </button>
                 </th>
 

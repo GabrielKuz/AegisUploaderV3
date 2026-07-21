@@ -37,8 +37,11 @@ def test_normal():
     assert 5 - 3 == 2
     assert 10 / 2 == 5
     assert 3 ** 2 == 9
+    assert 10 % 3 == 1
 
-
+def test_python_version():
+    major, minor, *_ = sys.version_info
+    assert major == 3 and minor >= 13, "Python version must be 3.13 or higher"
 
 
 def test_jwt():
@@ -48,6 +51,9 @@ def test_jwt():
     decoded_payload = jwt.decode(token, jwt_secret, algorithms=["HS256"])
     assert decoded_payload == payload
 
+def check_main_testing_var_is_false():
+    from main import testing
+    assert testing is False, "The 'testing' variable in main.py should be set to False for production."
 
 def test_NoAuthNotPresent():
     forbiddenMethod= "getCurrentUserNoAuthForTest"

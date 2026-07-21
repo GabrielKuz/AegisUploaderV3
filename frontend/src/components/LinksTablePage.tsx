@@ -52,10 +52,7 @@ type ApiErrorBody = {
     message?: unknown;
 };
 
-const DATE_KEYS = new Set<SortKey>([
-    "timestamp",
-    "expiration_date",
-]);
+const DATE_KEYS = new Set<SortKey>(["timestamp", "expiration_date"]);
 
 function getApiMessage(
     value: unknown,
@@ -128,72 +125,55 @@ async function getResponseMessage(
 export function LinksTablePage({
     createPath,
     title = "Created links",
-    description =
-    "Review generated upload links, customer case IDs, creators, and expiration dates.",
+    description = "Review generated upload links, customer case IDs, creators, and expiration dates.",
     uploadActionPathPrefix,
     showItarColumn = true,
 }: LinksTablePageProps) {
-    const getAccessToken =
-        useApiAccessToken();
+    const getAccessToken = useApiAccessToken();
 
-    const [links, setLinks] =
-        useState<SupportLink[]>([]);
-    const [sortKey, setSortKey] =
-        useState<SortKey>("timestamp");
-    const [sortDirection, setSortDirection] =
-        useState<SortDirection>("desc");
-    const [error, setError] =
-        useState<PageError | null>(null);
-    const [isLoading, setIsLoading] =
-        useState(true);
+    const [links, setLinks] = useState<SupportLink[]>([]);
+    const [sortKey, setSortKey] = useState<SortKey>("timestamp");
+    const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
+    const [error, setError] = useState<PageError | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
 
     const loadLinks = useCallback(async () => {
         setError(null);
         setIsLoading(true);
 
         try {
-            const accessToken =
-                await getAccessToken();
+            const accessToken = await getAccessToken();
 
             if (!accessToken) {
                 setLinks([]);
                 setError({
                     status: 401,
-                    message:
-                        "Please sign in before viewing upload links.",
+                    message: "Please sign in before viewing upload links.",
                 });
                 return;
             }
 
-            const response = await fetch(
-                "/api/links/",
-                {
-                    headers: {
-                        Authorization: `Bearer ${accessToken}`,
-                    },
+            const response = await fetch("/api/links/", {
+                headers: {
+                    Authorization: `Bearer ${accessToken}`,
                 },
-            );
+            });
 
             if (!response.ok) {
                 setLinks([]);
                 setError({
                     status: response.status,
-                    message:
-                        await getResponseMessage(response),
+                    message: await getResponseMessage(response),
                 });
                 return;
             }
 
-            const data =
-                (await response.json()) as SupportLink[];
+            const data = (await response.json()) as SupportLink[];
 
             setLinks(data);
         } catch {
             setLinks([]);
-            setError({
-                message:
-                    "Something went wrong while loading upload links.",
-            });
+            setError({ message: "Something went wrong while loading upload links." });
         } finally {
             setIsLoading(false);
         }
@@ -205,21 +185,12 @@ export function LinksTablePage({
 
     function handleSort(key: SortKey): void {
         if (key === sortKey) {
-            setSortDirection(
-                (currentDirection) =>
-                    currentDirection === "asc"
-                        ? "desc"
-                        : "asc",
-            );
+            setSortDirection((currentDirection) => currentDirection === "asc" ? "desc" : "asc");
             return;
         }
 
         setSortKey(key);
-        setSortDirection(
-            DATE_KEYS.has(key)
-                ? "desc"
-                : "asc",
-        );
+        setSortDirection(DATE_KEYS.has(key) ? "desc" : "asc");
     }
 
     const sortedLinks = useMemo(() => {
@@ -228,44 +199,21 @@ export function LinksTablePage({
             const bValue = b[sortKey];
 
             if (DATE_KEYS.has(sortKey)) {
-                const comparison =
-                    new Date(String(aValue)).getTime() -
-                    new Date(String(bValue)).getTime();
-
-                return applySortDirection(
-                    comparison,
-                    sortDirection,
-                );
+                const comparison = new Date(String(aValue)).getTime() - new Date(String(bValue)).getTime();
+                return applySortDirection(comparison, sortDirection);
             }
 
-            if (
-                typeof aValue === "boolean" &&
-                typeof bValue === "boolean"
-            ) {
-                return applySortDirection(
-                    Number(aValue) - Number(bValue),
-                    sortDirection,
-                );
+            if (typeof aValue === "boolean" && typeof bValue === "boolean") {
+                return applySortDirection(Number(aValue) - Number(bValue), sortDirection);
             }
 
-            const comparison =
-                String(aValue ?? "").localeCompare(
-                    String(bValue ?? ""),
-                );
+            const comparison = String(aValue ?? "").localeCompare(String(bValue ?? ""));
 
-            return applySortDirection(
-                comparison,
-                sortDirection,
-            );
+            return applySortDirection(comparison, sortDirection);
         });
-    }, [
-        links,
-        sortDirection,
-        sortKey,
-    ]);
+    }, [links, sortDirection, sortKey]);
 
-    const showActions =
-        Boolean(uploadActionPathPrefix);
+    const showActions = Boolean(uploadActionPathPrefix);
 
     return (
         <section

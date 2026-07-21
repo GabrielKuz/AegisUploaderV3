@@ -8,12 +8,12 @@ const ADMIN_NAV_ITEMS = [
   },
   {
     to: "/admin/links",
-    label: "Links",
+    label: "View Links",
     end: true,
   },
   {
     to: "/admin/links/new",
-    label: "Create link",
+    label: "Create Link",
     end: true,
   },
 ] as const;

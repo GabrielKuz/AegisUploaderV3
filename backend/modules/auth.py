@@ -1,17 +1,22 @@
-from typing import Annotated
 import os
 import warnings
+
 from dotenv import load_dotenv
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, HTTPBearer, HTTPAuthorizationCredentials
 from jwt.exceptions import InvalidTokenError
 from jwt import PyJWKClient, decode
 from pydantic import BaseModel, Field
-from warnings import deprecated
 import requests
+from typing import Annotated
+from warnings import deprecated
+
+#========================================================================================
+# Entra ID SSO Authentication Setup
+#========================================================================================
 
 load_dotenv()
-#All from entraid sso
+#All from Entra ID SSO
 TENANT_ID = os.getenv("TENANT_ID")
 CLIENT_ID = os.getenv("CLIENT_ID") 
 if os.getenv("TESTING", "false") == "true":
@@ -32,12 +37,20 @@ else:
 
 scheme = HTTPBearer()
 
+#========================================================================================
+# Token classes
+#========================================================================================
+
 class Token(BaseModel): # structure of a token response from entra
     access_token: str = Field(..., description="The access token issued by Entra ID")
     token_type: str = Field(..., description="The type of the token, typically 'Bearer'")
 
 class TokenData(BaseModel): # data contained in the token once decoded
     username: str | None  = Field(None, description="The username extracted from the token")
+
+#========================================================================================
+# User classes and functions
+#========================================================================================
 
 class User(BaseModel): # structure of a user object
     username: str = Field(..., description="The username of the user")
@@ -76,7 +89,7 @@ async def getCurrentUser(credentials: Annotated[HTTPAuthorizationCredentials, De
     except Exception as e: # catch all
         raise credentialsException
     
-    return User(username=tokenData.username, disabled=False, roles=roles) # TODO: check users status from db later
+    return User(username=tokenData.username, disabled=False, roles=roles)
 
 async def getCurrentActiveUser(current_user: Annotated[User, Depends(getCurrentUser)]): # get the current active user from the token and check if they are disabled
     if current_user.disabled:
@@ -92,6 +105,10 @@ async def getCurrentUserNoAuthForTest(): # for testing purposes only, returns a 
     return User(username="testuser", disabled=False)
 
 getCurrentUserNoAuthForTest.__doc__ = "use getCurrentActiveUser instead. This is insecure and only intended for testing"
+
+#========================================================================================
+# Role functions
+#========================================================================================
 
 def requireRole(role: str):
     async def checker(current_user: Annotated[User, Depends(getCurrentActiveUser)]):

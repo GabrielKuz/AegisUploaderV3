@@ -9,7 +9,6 @@ events {
 }
 
 http {
-
   include /etc/nginx/mime.types;
   default_type application/octet-stream; #sane mime fallback type
 
@@ -79,7 +78,7 @@ http {
 
     ssl_prefer_server_ciphers off;
 
-    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always; # Add once stable
+    # add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always; # Add once stable
 
     root /usr/share/nginx/html;
     index index.html;
@@ -138,12 +137,13 @@ http {
 
     # api docs. disable in prod from main.py and change this to serve 404
     location /api/openapi.json {
-      # return 404;
+      #return 404;
+      
       proxy_pass http://backend:8000/openapi.json;
     }
 
     location /api/docs {
-      # return 404;
+      #return 404;
 
       proxy_pass http://backend:8000/docs;
 
@@ -170,7 +170,7 @@ http {
 
       limit_req zone=api_limit burst=20 nodelay;
 
-      proxy_pass http://backend:8000/;
+      proxy_pass http://backend:8000;
 
       proxy_http_version 1.1;
 
@@ -208,6 +208,12 @@ http {
     location = /favicon.svg {
       access_log off;
       log_not_found off;
+    }
+
+    location = /health {
+      access_log off;
+      add_header Content-Type text/plain;
+      return 200 "healthy\n";
     }
 
     # React spa routing and fallback to index.html for non-api routes
