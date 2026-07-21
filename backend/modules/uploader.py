@@ -12,9 +12,8 @@ from pathlib import Path
 from typing import Annotated, Literal
 
 from sqlalchemy import text
-from sqlalchemy import or_
-from modules.StorageProvider import StorageProvider, AzureFileStorageProvider, LocalStorageProvider
-from modules import usFileStorageProvider, euFileStorageProvider, itarFileStorageProvider, STORAGE_ROOT
+from modules.StorageProvider import StorageProvider, LocalStorageProvider
+from modules import usFileStorageProvider, euFileStorageProvider, itarFileStorageProvider
 from fastapi import APIRouter, Depends, Header, HTTPException
 from fastapi import Query
 from modules.uploadSchemas import StartUploadResponse, UploadChunkResponse, UploadStatusResponse, CompleteUploadResponse, UploadedFileInfo, MarkForDeletionResponse, ExtendExpirationResponse
@@ -23,7 +22,7 @@ from modules import Session
 from fastapi import Request
 from pathvalidate import sanitize_filename, validate_filename
 from modules.auth import User, requireRoles
-from modules.models import Base, StorageRegion, UploadChunk, UploadRecord, LinkRecord, UploadSession
+from modules.models import StorageRegion, UploadChunk, UploadRecord, LinkRecord, UploadSession
 
 router = APIRouter()
 
