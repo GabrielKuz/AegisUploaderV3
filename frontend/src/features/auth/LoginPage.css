@@ -37,7 +37,7 @@
   color: #ffffff;
   background: #000000;
   border-top: 4px solid var(--theme-accent);
-  border-bottom: 1px solid var(--theme-border-strong);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.22);
 }
 
 .login-header-brand {
@@ -87,6 +87,43 @@
   align-items: center;
   gap: 16px;
   flex: 0 0 auto;
+}
+
+.support-link {
+  align-items: center;
+  background: transparent;
+  border: 2px solid var(--gray);
+  border-radius: var(--radius-md);
+  box-shadow: var(--theme-control-shadow);
+  color: var(--white);
+  cursor: pointer;
+  font: inherit;
+  display: inline-flex;
+  font-size: 14px;
+  font-weight: 600;
+  justify-content: center;
+  min-height: 40px;
+  padding: 0 14px;
+  text-decoration: none;
+  transition:
+    background-color var(--transition-fast),
+    border-color var(--transition-fast),
+    color var(--transition-fast) transform var(--transition-fast);
+}
+
+.support-link:hover {
+  color: var(--theme-mode);
+  border-color: var(--theme-mode);
+  transform: translateY(-1px);
+}
+
+.support-link:active {
+  transform: translateY(0);
+}
+
+.support-link:focus-visible {
+  outline: 3px solid var(--theme-focus-ring);
+  outline-offset: 3px;
 }
 
 /* ==========================================================================
@@ -316,9 +353,7 @@
   max-height: 100%;
   align-self: center;
   justify-self: center;
-
   padding: clamp(22px, 3vw, 42px);
-
   border: 1px solid var(--theme-card-border);
   border-radius: 18px;
   background:
@@ -328,7 +363,6 @@
     0 24px 80px rgba(0, 0, 0, 0.3),
     0 0 40px rgba(55, 179, 216, 0.05);
   backdrop-filter: blur(20px);
-
   transition:
     color 180ms ease,
     border-color 180ms ease,
@@ -383,8 +417,9 @@
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
-  justify-self: center;
+  justify-content: center;
   column-gap: clamp(8px, 1.4vw, 14px);
+  margin: auto;
   color: var(--theme-button-text);
   background: var(--theme-button-bg);
   border: 2px solid var(--theme-button-border);
@@ -426,7 +461,7 @@
   overflow: hidden;
   color: var(--theme-button-text);
   font-family: var(--font-microsoft);
-  font-size: clamp(14px, 1.1vw, 16px);
+  font-size: clamp(14px, 1.1vw, 17px);
   font-weight: 500;
   letter-spacing: -0.02em;
   text-align: center;
@@ -631,6 +666,8 @@
   .login-header-actions {
     gap: 10px;
   }
+
+
 
   .support-link {
     min-height: 40px;

@@ -6,10 +6,9 @@ import {
     useState,
     type ChangeEvent,
     type DragEvent,
-} from "react";
+} from 'react';
 import { sha256 } from "@noble/hashes/sha2.js";
 import { bytesToHex } from "@noble/hashes/utils.js";
-
 import { useCustomerUpload } from "./CustomerUploadContext";
 import {
     deleteUploadSession,
@@ -624,6 +623,9 @@ export function CustomerUpload() {
     const resumedUuidRef =
         useRef<string | null>(null);
 
+    const dragDepthRef =
+        useRef(0);
+
     const [selectedFiles, setSelectedFiles] =
         useState<SelectedFile[]>([]);
 
@@ -708,6 +710,42 @@ export function CustomerUpload() {
                         preview,
                     );
                 },
+            );
+        };
+    }, []);
+
+    useEffect(() => {
+        function preventUnhandledFileDrop(
+            event: globalThis.DragEvent,
+        ): void {
+            if (
+                Array.from(
+                    event.dataTransfer?.types ?? [],
+                ).includes("Files")
+            ) {
+                event.preventDefault();
+            }
+        }
+
+        window.addEventListener(
+            "dragover",
+            preventUnhandledFileDrop,
+        );
+
+        window.addEventListener(
+            "drop",
+            preventUnhandledFileDrop,
+        );
+
+        return () => {
+            window.removeEventListener(
+                "dragover",
+                preventUnhandledFileDrop,
+            );
+
+            window.removeEventListener(
+                "drop",
+                preventUnhandledFileDrop,
             );
         };
     }, []);
@@ -1132,58 +1170,99 @@ export function CustomerUpload() {
         }
     }
 
-    function handleDragOver(
-        event:
-            DragEvent<HTMLDivElement>,
+    function containsFiles(
+        event: DragEvent<HTMLDivElement>,
+    ): boolean {
+        return Array.from(
+            event.dataTransfer.types,
+        ).includes("Files");
+    }
+
+    function handleDragEnter(
+        event: DragEvent<HTMLDivElement>,
     ): void {
         event.preventDefault();
+        event.stopPropagation();
 
-        if (!isBusy) {
+        if (
+            isBusy ||
+            !containsFiles(event)
+        ) {
+            return;
+        }
+
+        dragDepthRef.current += 1;
+        event.dataTransfer.dropEffect = "copy";
+
+        setDragActive(true);
+    }
+
+    function handleDragOver(
+        event: DragEvent<HTMLDivElement>,
+    ): void {
+        event.preventDefault();
+        event.stopPropagation();
+
+        if (
+            isBusy ||
+            !containsFiles(event)
+        ) {
+            event.dataTransfer.dropEffect = "none";
+            return;
+        }
+
+        event.dataTransfer.dropEffect = "copy";
+
+        if (!dragActive) {
             setDragActive(true);
         }
     }
 
     function handleDragLeave(
-        event:
-            DragEvent<HTMLDivElement>,
+        event: DragEvent<HTMLDivElement>,
     ): void {
         event.preventDefault();
+        event.stopPropagation();
 
-        const relatedTarget =
-            event.relatedTarget as
-            | Node
-            | null;
+        dragDepthRef.current = Math.max(
+            0,
+            dragDepthRef.current - 1,
+        );
 
         if (
-            relatedTarget &&
-            event.currentTarget.contains(
-                relatedTarget,
-            )
+            dragDepthRef.current === 0
         ) {
-            return;
+            setDragActive(false);
         }
-
-        setDragActive(false);
     }
 
     function handleDrop(
-        event:
-            DragEvent<HTMLDivElement>,
+        event: DragEvent<HTMLDivElement>,
     ): void {
         event.preventDefault();
+        event.stopPropagation();
+
+        dragDepthRef.current = 0;
         setDragActive(false);
 
+        if (isBusy) {
+            return;
+        }
+
+        const droppedFiles =
+            Array.from(
+                event.dataTransfer.files,
+            );
+
         if (
-            isBusy ||
-            event.dataTransfer.files
-                .length === 0
+            droppedFiles.length === 0
         ) {
             return;
         }
 
-        addFiles(
-            event.dataTransfer.files,
-        );
+        addFiles(droppedFiles);
+
+        event.dataTransfer.clearData();
     }
 
     async function uploadFiles():
@@ -1235,11 +1314,7 @@ export function CustomerUpload() {
                 </h1>
 
                 <p className="upload-note">
-                    This link is temporary and will
-                    stop working after the assigned
-                    expiration time. Please upload
-                    your files before the link
-                    expires.
+                    This link is temporary and will stop working after the assigned expiration time. Please upload your files before the link expires.
                 </p>
 
                 <div
@@ -1248,17 +1323,22 @@ export function CustomerUpload() {
                             ? "upload-box drag-active"
                             : "upload-box"
                     }
+                    aria-busy={isBusy}
+                    onDragEnter={
+                        handleDragEnter
+                    }
                     onDragLeave={
                         handleDragLeave
                     }
                     onDragOver={
                         handleDragOver
                     }
-                    onDrop={handleDrop}
+                    onDrop={
+                        handleDrop
+                    }
                 >
                     <p>
-                        Choose files or drag and
-                        drop them here.
+                        Select or drag and drop file(s) here
                     </p>
 
                     <button

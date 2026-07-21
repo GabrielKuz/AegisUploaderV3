@@ -1,20 +1,10 @@
 import { useEffect } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useMsal } from "@azure/msal-react";
-import {
-  useLocation,
-  useNavigate,
-} from "react-router-dom";
 
 import { ThemeToggle } from "../../theme/ThemeToggle";
-import {
-  isDevAuthEnabled,
-  isEntraConfigured,
-  loginRequest,
-} from "./authConfig";
-import {
-  signInDevUser,
-  type DevUser,
-} from "./devAuth";
+import { isEntraConfigured, loginRequest } from "./authConfig";
+import { signInDevUser } from "./devAuth";
 import {
   clearPostLoginRedirect,
   getActiveAccount,
@@ -36,7 +26,7 @@ type SecurityItem = {
 
 const DEFAULT_DESTINATION = "/support";
 
-const SECURITY_ITEMS: SecurityItem[] = [
+const securityItems: SecurityItem[] = [
   {
     number: "01",
     title: "Single Sign-On",
@@ -57,9 +47,7 @@ const SECURITY_ITEMS: SecurityItem[] = [
   },
 ];
 
-function getSafeDestination(
-  state: unknown,
-): string {
+function getSafeDestination(state: unknown): string {
   if (
     typeof state !== "object" ||
     state === null ||
@@ -68,107 +56,57 @@ function getSafeDestination(
     return DEFAULT_DESTINATION;
   }
 
-  const { from } =
-    state as LoginLocationState;
+  const { from } = state as LoginLocationState;
 
-  const isSafeInternalPath =
+  const isValidInternalPath =
     typeof from === "string" &&
     from.startsWith("/") &&
     !from.startsWith("//");
 
-  return isSafeInternalPath
-    ? from
-    : DEFAULT_DESTINATION;
-}
-
-/**
- * Chooses the development role that corresponds to the requested
- * destination.
- */
-function getDevRole(
-  destination: string,
-): DevUser["role"] {
-  if (
-    destination.startsWith("/admin")
-  ) {
-    return "admin";
-  }
-
-  return "support";
+  return isValidInternalPath ? from : DEFAULT_DESTINATION;
 }
 
 export function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { instance } = useMsal();
+  const { accounts, instance } = useMsal();
+  const account = getActiveAccount(instance);
 
-  const account =
-    getActiveAccount(instance);
-
-  /**
-   * Sends an already authenticated Entra user to the originally
-   * requested protected page.
-   */
   useEffect(() => {
-    if (
-      !isEntraConfigured ||
-      !account
-    ) {
+    if (!instance.getActiveAccount() && accounts[0]) {
+      instance.setActiveAccount(accounts[0]);
+    }
+  }, [accounts, instance]);
+
+  useEffect(() => {
+    if (!account) {
       return;
     }
 
-    const fallbackDestination =
-      getSafeDestination(
-        location.state,
-      );
-
-    const destination =
-      getPostLoginRedirect(
-        fallbackDestination,
-      );
+    const destination = getPostLoginRedirect(
+      getSafeDestination(location.state),
+    );
 
     clearPostLoginRedirect();
+    navigate(destination, { replace: true });
+  }, [account, location.state, navigate]);
 
-    navigate(destination, {
-      replace: true,
-    });
-  }, [
-    account,
-    location.state,
-    navigate,
-  ]);
-
-  function handleSsoLogin(): void {
-    const destination =
-      getSafeDestination(
-        location.state,
-      );
-
-    if (isDevAuthEnabled) {
-      signInDevUser(
-        getDevRole(destination),
-      );
-
-      navigate(destination, {
-        replace: true,
-      });
-
-      return;
-    }
+  const handleSsoLogin = () => {
+    const destination = getSafeDestination(location.state);
 
     if (!isEntraConfigured) {
-      console.error(
-        "Microsoft Entra authentication is not configured.",
-      );
+      const role = destination.startsWith("/upload/")
+        ? "customer"
+        : "support";
+
+      signInDevUser(role);
+      navigate(destination, { replace: true });
       return;
     }
 
     setPostLoginRedirect(destination);
-
-    void instance.loginRedirect(
-      loginRequest,
-    );
-  }
+    void instance.loginRedirect(loginRequest);
+  };
 
   return (
     <main className="login-page">
@@ -180,10 +118,7 @@ export function LoginPage() {
             alt="Aegis Software"
           />
 
-          <div
-            className="login-header-divider"
-            aria-hidden="true"
-          />
+          <div className="login-header-divider" aria-hidden="true" />
 
           <div className="login-header-title">
             <span className="login-product-name">
@@ -199,10 +134,7 @@ export function LoginPage() {
         <div className="login-header-actions">
           <ThemeToggle />
 
-          <a
-            className="support-link"
-            href="mailto:helpdesk@AISCorp.com"
-          >
+          <a className="support-link" href="mailto:helpdesk@AISCorp.com">
             Help &amp; Support
           </a>
         </div>
@@ -212,15 +144,9 @@ export function LoginPage() {
         className="brand-side"
         aria-labelledby="portal-heading"
       >
-        <div
-          className="brand-grid"
-          aria-hidden="true"
-        />
+        <div className="brand-grid" aria-hidden="true" />
 
-        <div
-          className="brand-shapes"
-          aria-hidden="true"
-        >
+        <div className="brand-shapes" aria-hidden="true">
           <span className="shape shape-one" />
           <span className="shape shape-two" />
           <span className="shape shape-three" />
@@ -230,15 +156,12 @@ export function LoginPage() {
         <div className="brand-message">
           <h1 id="portal-heading">
             Secure access for{" "}
-            <span>
-              controlled customer data.
-            </span>
+            <span>controlled customer data.</span>
           </h1>
 
           <p className="brand-description">
-            A protected portal for transferring controlled
-            files with clear access control, expiration,
-            and audit visibility.
+            A protected portal for transferring controlled files with
+            clear access control, expiration, and audit visibility.
           </p>
         </div>
 
@@ -246,15 +169,9 @@ export function LoginPage() {
           className="security-list"
           aria-label="Security highlights"
         >
-          {SECURITY_ITEMS.map((item) => (
-            <article
-              className="security-item"
-              key={item.number}
-            >
-              <span
-                className="security-number"
-                aria-hidden="true"
-              >
+          {securityItems.map((item) => (
+            <article className="security-item" key={item.number}>
+              <span className="security-number" aria-hidden="true">
                 {item.number}
               </span>
 
@@ -284,8 +201,8 @@ export function LoginPage() {
           </h2>
 
           <p className="auth-copy">
-            Continue with your company Single Sign-On account
-            to access secure customer upload tools.
+            Continue with your company Single Sign-On account to access
+            secure customer upload tools.
           </p>
 
           <button
@@ -304,19 +221,15 @@ export function LoginPage() {
               Continue with Microsoft Entra ID
             </span>
 
-            <span
-              className="sso-button-arrow"
-              aria-hidden="true"
-            >
+            <span className="sso-button-arrow" aria-hidden="true">
               ↗
             </span>
           </button>
 
           <div className="access-note">
             <span>Need access?</span>
-
-            <a href="mailto:admin@aegissoftware.com">
-              Contact your administrator
+            <a href="mailto:helpdesk@AISCorp.com">
+              Contact the help desk
             </a>
           </div>
         </section>
@@ -327,17 +240,9 @@ export function LoginPage() {
           </span>
 
           <nav aria-label="Legal links">
-            <a href="https://www.aiscorp.com/privacy-policy/">
-              Privacy Policy
-            </a>
-
-            <span aria-hidden="true">
-              /
-            </span>
-
-            <a href="https://www.aiscorp.com/support-addendum/">
-              Terms of Use
-            </a>
+            <a href="https://www.aiscorp.com/privacy-policy/">Privacy Policy</a>
+            <span aria-hidden="true">/</span>
+            <a href="https://www.aiscorp.com/support-addendum/">Terms of Use</a>
           </nav>
         </footer>
       </section>

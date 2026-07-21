@@ -91,13 +91,13 @@
 
 .link-action-content {
     margin-top: 42px;
-    max-width: 420px;
+    max-width: auto;
 }
 
 .link-action-content h2 {
     color: var(--theme-text);
     font-family: var(--font-heading);
-    font-size: clamp(27px, 2.4vw, 34px);
+    font-size: clamp(27px, 2.4vw, 36px);
     font-weight: 400;
     letter-spacing: -0.055em;
     line-height: 1.14;
@@ -106,7 +106,7 @@
 
 .link-action-content p {
     color: var(--theme-text-secondary);
-    font-size: 16px;
+    font-size: clamp(14px, 2vw, 18px);
     line-height: 1.65;
     margin: 0;
 }
@@ -170,12 +170,10 @@
     }
 
     .link-action-content h2 {
-        font-size: 28px;
         margin-bottom: 12px;
     }
 
     .link-action-content p {
-        font-size: 14px;
         line-height: 1.5;
     }
 
@@ -207,14 +205,6 @@
 
     .link-action-content {
         margin-top: 30px;
-    }
-
-    .link-action-content h2 {
-        font-size: 27px;
-    }
-
-    .link-action-content p {
-        font-size: 15px;
     }
 
     .link-action-dots {

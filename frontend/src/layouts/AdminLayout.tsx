@@ -16,10 +16,6 @@ const ADMIN_NAV_ITEMS = [
     label: "Create link",
     end: true,
   },
-  {
-    to: "/admin/uploads",
-    label: "Uploads",
-  },
 ] as const;
 
 export function AdminLayout() {

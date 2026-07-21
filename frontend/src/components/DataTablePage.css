@@ -21,9 +21,6 @@
     margin-bottom: 40px;
 }
 
-.data-page-heading {
-    max-width: 760px;
-}
 
 .data-page-heading h1 {
     color: var(--theme-text);
@@ -37,10 +34,10 @@
 
 .data-page-description {
     color: var(--theme-accent);
-    font-size: 16px;
+    font-size: clamp(18px, 1rem + 1vw, 20px);
     line-height: 1.6;
     margin: 12px 0 0;
-    max-width: 725px;
+
     font-style: italic;
     font-weight: 400;
 }
@@ -50,7 +47,7 @@
     background: var(--theme-button-bg);
     border: 2px solid var(--theme-button-border);
     border-radius: var(--radius-md);
-    color: var(--theme-text);
+    color: var(--theme-button-text);
     display: inline-flex;
     flex: 0 0 auto;
     font-size: 16px;
@@ -69,7 +66,7 @@
 .data-page-action:hover {
     background: var(--theme-button-bg-hover);
     border-color: var(--theme-button-border-hover);
-    color: var(--theme-button-text);
+    color: var(--theme-button-text-hover);
     transform: translateY(-1px);
 }
 
@@ -202,7 +199,7 @@
 .data-table-action-link:hover {
     background: var(--theme-button-bg-hover);
     border-color: var(--theme-button-border-hover);
-    color: var(--theme-button-text);
+    color: var(--theme-button-text-hover);
     transform: translateY(-1px);
 }
 
@@ -369,10 +366,6 @@
 @media (max-width: 480px) {
     .data-page-heading h1 {
         font-size: 42px;
-    }
-
-    .data-page-description {
-        font-size: 15px;
     }
 }
 

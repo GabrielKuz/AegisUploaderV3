@@ -1,35 +1,30 @@
 .theme-toggle {
-    min-height: 40px;
-    padding: 0 14px;
-
-    display: inline-flex;
     align-items: center;
-    justify-content: center;
-    gap: 8px;
-
-    color: var(--white);
     background: transparent;
-    border: 1px solid var(--gray);
+    border: 2px solid var(--gray);
     border-radius: var(--radius-md);
-
+    box-shadow: var(--theme-control-shadow);
+    color: var(--white);
+    cursor: pointer;
+    display: inline-flex;
     font: inherit;
     font-size: 14px;
     font-weight: 600;
+    gap: 8px;
+    justify-content: center;
+    min-height: 40px;
+    padding: 0 14px;
     text-decoration: none;
-
-    cursor: pointer;
-    box-shadow: var(--theme-control-shadow);
-
     transition:
-        color var(--transition-fast),
         background-color var(--transition-fast),
         border-color var(--transition-fast),
+        color var(--transition-fast),
         transform var(--transition-fast);
 }
 
 .theme-toggle:hover {
-    color: var(--theme-mode);
     border-color: var(--theme-mode);
+    color: var(--theme-mode);
     transform: translateY(-1px);
 }
 

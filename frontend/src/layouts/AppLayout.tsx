@@ -1,14 +1,19 @@
 import type { ReactNode } from "react";
-import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useMsal } from "@azure/msal-react";
 import {
-    isDevAuthEnabled,
-    isEntraConfigured,
-} from "../features/auth/authConfig";
-import { getDevUser, signOutDevUser } from "../features/auth/devAuth";
-import { getActiveAccount } from "../features/auth/entraAuth";
+    NavLink,
+    Outlet,
+    useNavigate,
+} from "react-router-dom";
 
+import { isEntraConfigured } from "../features/auth/authConfig";
+import {
+    getDevUser,
+    signOutDevUser,
+} from "../features/auth/devAuth";
+import { getActiveAccount } from "../features/auth/entraAuth";
 import { ThemeToggle } from "../theme/ThemeToggle";
+
 import "./AppLayout.css";
 
 type AppNavItem = {
@@ -39,7 +44,8 @@ function getNavLinkClassName({
 }
 
 /**
- * Shared application shell for the support, admin, and customer portals.
+ * Shared application shell for the support, admin,
+ * and customer portals.
  */
 export function AppLayout({
     productName,
@@ -58,9 +64,9 @@ export function AppLayout({
         ? getActiveAccount(instance)
         : null;
 
-    const devUser = isDevAuthEnabled
-        ? getDevUser()
-        : null;
+    const devUser = isEntraConfigured
+        ? null
+        : getDevUser();
 
     const showSidebar =
         navItems.length > 0 ||
@@ -79,21 +85,32 @@ export function AppLayout({
         ? "app-layout"
         : "app-layout app-layout--no-sidebar";
 
-    async function handleSignOut(): Promise<void> {
-        signOutDevUser();
-
+    async function handleSignOut():
+        Promise<void> {
         if (!isEntraConfigured) {
-            navigate("/", { replace: true });
+            signOutDevUser();
+
+            navigate("/", {
+                replace: true,
+            });
+
             return;
         }
 
-        if (account && !instance.getActiveAccount()) {
-            instance.setActiveAccount(account);
+        if (
+            account &&
+            !instance.getActiveAccount()
+        ) {
+            instance.setActiveAccount(
+                account,
+            );
         }
 
         await instance.logoutRedirect({
-            account: account ?? undefined,
-            postLogoutRedirectUri: window.location.origin,
+            account:
+                account ?? undefined,
+            postLogoutRedirectUri:
+                window.location.origin,
         });
     }
 
@@ -144,9 +161,11 @@ export function AppLayout({
                         <button
                             className="app-sign-out"
                             type="button"
-                            onClick={handleSignOut}
+                            onClick={() =>
+                                void handleSignOut()
+                            }
                         >
-                            Sign out
+                            Sign Out
                         </button>
                     )}
                 </div>
@@ -155,20 +174,32 @@ export function AppLayout({
             {showSidebar && (
                 <aside
                     className="app-sidebar"
-                    aria-label={sidebarContent ? navLabel : undefined}
+                    aria-label={
+                        sidebarContent
+                            ? navLabel
+                            : undefined
+                    }
                 >
                     {sidebarContent ?? (
                         <nav aria-label={navLabel}>
-                            {navItems.map((item) => (
-                                <NavLink
-                                    key={item.to}
-                                    to={item.to}
-                                    end={item.end}
-                                    className={getNavLinkClassName}
-                                >
-                                    {item.label}
-                                </NavLink>
-                            ))}
+                            {navItems.map(
+                                (item) => (
+                                    <NavLink
+                                        key={
+                                            item.to
+                                        }
+                                        to={item.to}
+                                        end={item.end}
+                                        className={
+                                            getNavLinkClassName
+                                        }
+                                    >
+                                        {
+                                            item.label
+                                        }
+                                    </NavLink>
+                                ),
+                            )}
                         </nav>
                     )}
                 </aside>

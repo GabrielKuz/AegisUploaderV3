@@ -30,7 +30,7 @@
 
 .portal-home-description {
     color: var(--theme-accent);
-    font-size: 17px;
+    font-size: clamp(18px, 1rem + 1vw, 20px);
     font-style: italic;
     font-weight: 400;
     line-height: 1.65;
@@ -60,7 +60,6 @@
     }
 
     .portal-home-description {
-        font-size: 15px;
         line-height: 1.5;
         margin-top: 12px;
     }
@@ -74,11 +73,5 @@
 
     .portal-home-actions {
         grid-template-columns: 1fr;
-    }
-}
-
-@media (max-width: 480px) {
-    .portal-home-description {
-        font-size: 15px;
     }
 }

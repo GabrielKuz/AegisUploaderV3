@@ -287,7 +287,7 @@ export function LinksTablePage({
                     to={createPath}
                     className="data-page-action"
                 >
-                    Create link
+                    Create Link
                 </Link>
             </header>
 
@@ -336,7 +336,7 @@ export function LinksTablePage({
                                 void loadLinks()
                             }
                         >
-                            Try again
+                            Try Again
                         </button>
                     </div>
                 </div>
@@ -565,7 +565,7 @@ export function LinksTablePage({
                                                         className="data-table-action-link"
                                                         to={`${uploadActionPathPrefix}/${supportLink.uuid}`}
                                                     >
-                                                        View uploads
+                                                        View Uploads
                                                     </Link>
                                                 </td>
                                             )}

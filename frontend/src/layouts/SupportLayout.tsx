@@ -8,12 +8,12 @@ const SUPPORT_NAV_ITEMS = [
   },
   {
     to: "/support/links",
-    label: "Links",
+    label: "View Links",
     end: true,
   },
   {
     to: "/support/links/new",
-    label: "Create link",
+    label: "Create Link",
     end: true,
   },
 ] as const;

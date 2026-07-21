@@ -1,9 +1,10 @@
-import { useCallback } from "react";
-import { useMsal } from "@azure/msal-react";
 import {
-    isDevAuthEnabled,
-    isEntraConfigured,
-} from "./authConfig";
+    useCallback,
+    useEffect,
+} from "react";
+import { useMsal } from "@azure/msal-react";
+
+import { isEntraConfigured } from "./authConfig";
 import { getDevToken } from "./devAuth";
 import {
     getActiveAccount,
@@ -11,27 +12,55 @@ import {
 } from "./entraAuth";
 
 /**
- * Returns correct API token for current authentication mode.
- *
- * LoginPage responsible for signing users in. This hook only
- * acquires token for existing Entra or development session.
+ * Returns API token for current authenticated session.
+ * Route protection remains responsibility of RequireEntraUser.
+ * This hook only provides tokens to API-calling components.
  */
 export function useApiAccessToken():
     () => Promise<string | null> {
-    const { instance } = useMsal();
+    const {
+        accounts,
+        instance,
+    } = useMsal();
+
+    useEffect(() => {
+        if (
+            !instance.getActiveAccount() &&
+            accounts[0]
+        ) {
+            instance.setActiveAccount(
+                accounts[0],
+            );
+        }
+    }, [
+        accounts,
+        instance,
+    ]);
 
     return useCallback(async () => {
-        if (isDevAuthEnabled) {
+        if (!isEntraConfigured) {
             return getDevToken();
         }
 
-        if (
-            !isEntraConfigured ||
-            !getActiveAccount(instance)
-        ) {
+        const account =
+            getActiveAccount(instance) ??
+            accounts[0] ??
+            null;
+
+        if (!account) {
             return null;
         }
 
-        return getApiAccessToken(instance);
-    }, [instance]);
+        if (!instance.getActiveAccount()) {
+            instance.setActiveAccount(account);
+        }
+
+        return getApiAccessToken(
+            instance,
+            account,
+        );
+    }, [
+        accounts,
+        instance,
+    ]);
 }

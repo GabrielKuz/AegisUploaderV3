@@ -4,6 +4,7 @@ import {
     useMemo,
     useState,
 } from "react";
+
 import {
     Link,
     useParams,
@@ -20,103 +21,221 @@ import {
     type SortDirection,
 } from "../../utils/sorting";
 import { useApiAccessToken } from "../auth/useApiAccessToken";
-
 import "../../components/DataTablePage.css";
+
+const REQUEST_DEDUPE_WINDOW_MS = 1_000;
 
 type Upload = {
     upload_id: string;
-    filename: string;
+    blob_name: string;
     size: number;
-    content_type: string;
+    expiration_date: string;
+    upload_complete: boolean;
     date_uploaded: string;
 };
 
 type SortKey =
-    | "filename"
+    | "blob_name"
     | "size"
-    | "content_type"
+    | "expiration_date"
+    | "upload_complete"
     | "date_uploaded";
+
+type UploadRequestEntry = {
+    createdAt: number;
+    promise: Promise<Upload[]>;
+};
 
 const DATE_KEYS = new Set<SortKey>([
     "date_uploaded",
+    "expiration_date",
 ]);
 
+const uploadRequestCache =
+    new Map<string, UploadRequestEntry>();
+
+/**
+ * Extracts a readable API error message without displaying
+ * an entire serialized JSON response.
+ */
+async function getResponseMessage(
+    response: Response,
+): Promise<string> {
+    const fallback =
+        `Failed to load uploaded files. Status: ${response.status}`;
+
+    try {
+        const contentType =
+            response.headers.get("content-type") ?? "";
+
+        if (
+            contentType.includes("application/json")
+        ) {
+            const body =
+                (await response.json()) as {
+                    detail?: unknown;
+                    message?: unknown;
+                };
+
+            if (
+                typeof body.detail === "string" &&
+                body.detail.trim()
+            ) {
+                return body.detail.trim();
+            }
+
+            if (
+                typeof body.message === "string" &&
+                body.message.trim()
+            ) {
+                return body.message.trim();
+            }
+
+            return fallback;
+        }
+
+        const text =
+            await response.text();
+
+        return text.trim() || fallback;
+    } catch {
+        return fallback;
+    }
+}
+
+/**
+ * Requests uploaded files while deduplicating React Strict Mode's
+ * repeated development effect cycle.
+ */
+function requestUploads(
+    uuid: string,
+    accessToken: string,
+    forceRefresh = false,
+): Promise<Upload[]> {
+    const existingRequest =
+        uploadRequestCache.get(uuid);
+
+    const existingRequestIsCurrent =
+        existingRequest &&
+        Date.now() - existingRequest.createdAt <
+        REQUEST_DEDUPE_WINDOW_MS;
+
+    if (
+        !forceRefresh &&
+        existingRequestIsCurrent
+    ) {
+        return existingRequest.promise;
+    }
+
+    if (forceRefresh) {
+        uploadRequestCache.delete(uuid);
+    }
+
+    const request = fetch(
+        `/api/links/${uuid}/files`,
+        {
+            headers: {
+                Authorization:
+                    `Bearer ${accessToken}`,
+            },
+        },
+    ).then(async (response) => {
+        if (!response.ok) {
+            throw new Error(await getResponseMessage(response));
+        }
+
+        return (
+            await response.json()
+        ) as Upload[];
+    });
+
+    const entry: UploadRequestEntry = {
+        createdAt: Date.now(),
+        promise: request,
+    };
+
+    uploadRequestCache.set(uuid, entry);
+
+    const removeRequest = (): void => {
+        window.setTimeout(() => {
+            if (
+                uploadRequestCache.get(uuid) ===
+                entry
+            ) {
+                uploadRequestCache.delete(uuid);
+            }
+        }, REQUEST_DEDUPE_WINDOW_MS);
+    };
+
+    request.then(
+        removeRequest,
+        removeRequest,
+    );
+
+    return request;
+}
+
+/**
+ * Returns the display label for the upload's current state.
+ * The current API only exposes complete or incomplete state.
+ */
+function getUploadStatusLabel(
+    uploadComplete: boolean,
+): string {
+    return uploadComplete
+        ? "Complete"
+        : "In progress";
+}
+
 export function SupportUploadPage() {
-    const { uuid } =
-        useParams<{ uuid: string }>();
+    const { uuid } = useParams<{ uuid: string }>();
 
-    const getAccessToken =
-        useApiAccessToken();
+    const getAccessToken = useApiAccessToken();
 
-    const [uploads, setUploads] =
-        useState<Upload[]>([]);
-    const [sortKey, setSortKey] =
-        useState<SortKey>("date_uploaded");
-    const [sortDirection, setSortDirection] =
-        useState<SortDirection>("desc");
-    const [error, setError] =
-        useState<string | null>(null);
-    const [isLoading, setIsLoading] =
-        useState(true);
+    const [uploads, setUploads] = useState<Upload[]>([]);
 
-    const loadUploads = useCallback(async () => {
-        setError(null);
-        setIsLoading(true);
+    const [sortKey, setSortKey] = useState<SortKey>("date_uploaded");
 
-        if (!uuid) {
-            setUploads([]);
-            setError(
-                "No upload link was selected.",
-            );
-            setIsLoading(false);
-            return;
-        }
+    const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
 
-        try {
-            const accessToken =
-                await getAccessToken();
+    const [error, setError] = useState<string | null>(null);
 
-            if (!accessToken) {
+    const [isLoading, setIsLoading] = useState(true);
+
+    // Create a request to extend uuid
+
+    const loadUploads = useCallback(
+        async (forceRefresh = false): Promise<void> => {
+            setError(null);
+            setIsLoading(true);
+
+            if (!uuid) {
                 setUploads([]);
-                setError(
-                    "Please sign in before viewing uploads.",
-                );
+                setError("No upload link was selected.");
+                setIsLoading(false);
                 return;
             }
 
-            const response = await fetch(
-                `/api/links/${uuid}/files`,
-                {
-                    headers: {
-                        Authorization: `Bearer ${accessToken}`,
-                    },
-                },
-            );
+            try {
+                const accessToken = await getAccessToken();
 
-            if (!response.ok) {
+                if (!accessToken) {
+                    setUploads([]);
+                    setError("Please sign in before viewing uploaded files.");
+                    return;
+                }
+
+                const data = await requestUploads(uuid, accessToken, forceRefresh);
+
+                setUploads(data);
+            } catch (requestError) {
                 setUploads([]);
-                setError(
-                    "Failed to load uploaded files.",
-                );
-                return;
+                setError(requestError instanceof Error ? requestError.message : "Something went wrong while loading uploaded files.");
+            } finally {
+                setIsLoading(false);
             }
-
-            const data =
-                (await response.json()) as Upload[];
-
-            setUploads(data);
-        } catch {
-            setUploads([]);
-            setError(
-                "Something went wrong while loading uploaded files.",
-            );
-        } finally {
-            setIsLoading(false);
-        }
-    }, [
-        getAccessToken,
-        uuid,
-    ]);
+        }, [getAccessToken, uuid],
+    );
 
     useEffect(() => {
         void loadUploads();
@@ -124,21 +243,13 @@ export function SupportUploadPage() {
 
     function handleSort(key: SortKey): void {
         if (key === sortKey) {
-            setSortDirection(
-                (currentDirection) =>
-                    currentDirection === "asc"
-                        ? "desc"
-                        : "asc",
-            );
+            setSortDirection((currentDirection) => currentDirection === "asc" ? "desc" : "asc");
             return;
         }
 
         setSortKey(key);
-        setSortDirection(
-            DATE_KEYS.has(key)
-                ? "desc"
-                : "asc",
-        );
+
+        setSortDirection(DATE_KEYS.has(key) ? "desc" : "asc");
     }
 
     const sortedUploads = useMemo(() => {
@@ -147,41 +258,26 @@ export function SupportUploadPage() {
             const bValue = b[sortKey];
 
             if (DATE_KEYS.has(sortKey)) {
-                const comparison =
-                    new Date(String(aValue)).getTime() -
-                    new Date(String(bValue)).getTime();
-
-                return applySortDirection(
-                    comparison,
-                    sortDirection,
-                );
+                const comparison = new Date(String(aValue)).getTime() - new Date(String(bValue)).getTime();
+                return applySortDirection(comparison, sortDirection);
             }
 
-            if (
-                typeof aValue === "number" &&
-                typeof bValue === "number"
-            ) {
-                return applySortDirection(
-                    aValue - bValue,
-                    sortDirection,
-                );
+            if (typeof aValue === "number" && typeof bValue === "number") {
+                return applySortDirection(aValue - bValue, sortDirection);
             }
 
-            const comparison =
-                String(aValue ?? "").localeCompare(
-                    String(bValue ?? ""),
-                );
+            if (typeof aValue === "boolean" && typeof bValue === "boolean") {
+                return applySortDirection(Number(aValue) - Number(bValue), sortDirection);
+            }
 
-            return applySortDirection(
-                comparison,
-                sortDirection,
-            );
+            const comparison = String(aValue ?? "").localeCompare(String(bValue ?? ""));
+
+            return applySortDirection(comparison, sortDirection);
         });
-    }, [
-        uploads,
-        sortDirection,
-        sortKey,
-    ]);
+    }, [uploads, sortDirection, sortKey]);
+
+
+    //async function requestExtend (uploadUuid: string)
 
     return (
         <section
@@ -195,7 +291,7 @@ export function SupportUploadPage() {
                     </h1>
 
                     <p className="data-page-description">
-                        View files uploaded for this support link.
+                        View files received through this customer upload link.
                     </p>
                 </div>
 
@@ -203,7 +299,7 @@ export function SupportUploadPage() {
                     to="/support/links"
                     className="data-page-action"
                 >
-                    Back to links
+                    Back to Links
                 </Link>
             </header>
 
@@ -212,156 +308,214 @@ export function SupportUploadPage() {
                     className="data-table-message"
                     role="status"
                 >
-                    Loading uploads...
+                    Loading uploaded files...
                 </p>
             )}
 
+            {/* Add error status*/}
             {!isLoading && error && (
-                <p
-                    className="data-table-message"
+                <div
+                    className="data-error-alert"
                     role="alert"
                 >
-                    {error}
-                </p>
+                    <div
+                        className="data-error-alert-icon"
+                        aria-hidden="true"
+                    >
+                        !
+                    </div>
+
+                    <div className="data-error-alert-content">
+                        <div className="data-error-alert-heading">
+                            <span>
+                                Unable to load files
+                            </span>
+                        </div>
+
+                        <p className="data-error-alert-message">
+                            {error}
+                        </p>
+
+                        <button
+                            className="data-error-retry-button"
+                            type="button"
+                            onClick={() =>
+                                void loadUploads(true)
+                            }
+                        >
+                            Try Again
+                        </button>
+                    </div>
+                </div>
             )}
 
             {!isLoading &&
                 !error &&
                 sortedUploads.length === 0 && (
                     <p className="data-table-message">
-                        No uploads found for this link.
+                        No uploaded file records found.
                     </p>
                 )}
 
-            {!isLoading &&
-                !error &&
-                sortedUploads.length > 0 && (
-                    <div className="data-table-wrapper">
-                        <table className="data-table">
-                            <thead>
-                                <tr>
-                                    <th
-                                        scope="col"
-                                        aria-sort={getAriaSort(
-                                            "filename",
+            {!isLoading && !error && sortedUploads.length > 0 && (
+                <div className="data-table-wrapper">
+                    <table className="data-table">
+                        <thead>
+                            <tr>
+                                <th
+                                    scope="col"
+                                    aria-sort={getAriaSort(
+                                        "blob_name",
+                                        sortKey,
+                                        sortDirection,
+                                    )}
+                                >
+                                    <button
+                                        className="data-table-sort-button"
+                                        type="button"
+                                        onClick={() =>
+                                            handleSort("blob_name")
+                                        }
+                                    >
+                                        File{" "}
+                                        {getSortIcon(
+                                            "blob_name",
                                             sortKey,
                                             sortDirection,
                                         )}
-                                    >
-                                        <button
-                                            className="data-table-sort-button"
-                                            type="button"
-                                            onClick={() =>
-                                                handleSort("filename")
-                                            }
-                                        >
-                                            File{" "}
-                                            {getSortIcon(
-                                                "filename",
-                                                sortKey,
-                                                sortDirection,
-                                            )}
-                                        </button>
-                                    </th>
+                                    </button>
+                                </th>
 
-                                    <th
-                                        scope="col"
-                                        aria-sort={getAriaSort(
+                                <th
+                                    scope="col"
+                                    aria-sort={getAriaSort(
+                                        "size",
+                                        sortKey,
+                                        sortDirection,
+                                    )}
+                                >
+                                    <button
+                                        className="data-table-sort-button"
+                                        type="button"
+                                        onClick={() =>
+                                            handleSort("size")
+                                        }
+                                    >
+                                        Size{" "}
+                                        {getSortIcon(
                                             "size",
                                             sortKey,
                                             sortDirection,
                                         )}
-                                    >
-                                        <button
-                                            className="data-table-sort-button"
-                                            type="button"
-                                            onClick={() =>
-                                                handleSort("size")
-                                            }
-                                        >
-                                            Size{" "}
-                                            {getSortIcon(
-                                                "size",
-                                                sortKey,
-                                                sortDirection,
-                                            )}
-                                        </button>
-                                    </th>
+                                    </button>
+                                </th>
 
-                                    <th
-                                        scope="col"
-                                        aria-sort={getAriaSort(
-                                            "content_type",
+                                <th
+                                    scope="col"
+                                    aria-sort={getAriaSort(
+                                        "upload_complete",
+                                        sortKey,
+                                        sortDirection,
+                                    )}
+                                >
+                                    <button
+                                        className="data-table-sort-button"
+                                        type="button"
+                                        onClick={() =>
+                                            handleSort(
+                                                "upload_complete",
+                                            )
+                                        }
+                                    >
+                                        Status{" "}
+                                        {getSortIcon(
+                                            "upload_complete",
                                             sortKey,
                                             sortDirection,
                                         )}
-                                    >
-                                        <button
-                                            className="data-table-sort-button"
-                                            type="button"
-                                            onClick={() =>
-                                                handleSort("content_type")
-                                            }
-                                        >
-                                            Type{" "}
-                                            {getSortIcon(
-                                                "content_type",
-                                                sortKey,
-                                                sortDirection,
-                                            )}
-                                        </button>
-                                    </th>
+                                    </button>
+                                </th>
 
-                                    <th
-                                        scope="col"
-                                        aria-sort={getAriaSort(
+                                <th
+                                    scope="col"
+                                    aria-sort={getAriaSort(
+                                        "date_uploaded",
+                                        sortKey,
+                                        sortDirection,
+                                    )}
+                                >
+                                    <button
+                                        className="data-table-sort-button"
+                                        type="button"
+                                        onClick={() =>
+                                            handleSort(
+                                                "date_uploaded",
+                                            )
+                                        }
+                                    >
+                                        Uploaded{" "}
+                                        {getSortIcon(
                                             "date_uploaded",
                                             sortKey,
                                             sortDirection,
                                         )}
+                                    </button>
+                                </th>
+
+                                <th
+                                    scope="col"
+                                    aria-sort={getAriaSort(
+                                        "expiration_date",
+                                        sortKey,
+                                        sortDirection,
+                                    )}
+                                >
+                                    <button
+                                        className="data-table-sort-button"
+                                        type="button"
+                                        onClick={() =>
+                                            handleSort(
+                                                "expiration_date",
+                                            )
+                                        }
                                     >
-                                        <button
-                                            className="data-table-sort-button"
-                                            type="button"
-                                            onClick={() =>
-                                                handleSort("date_uploaded")
+                                        Expires{" "}
+                                        {getSortIcon(
+                                            "expiration_date",
+                                            sortKey,
+                                            sortDirection,
+                                        )}
+                                    </button>
+                                </th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            {sortedUploads.map((upload) => (
+                                <tr key={upload.blob_name}>
+                                    <td>{upload.blob_name}</td>
+                                    <td>{formatBytes(upload.size)}</td>
+
+                                    <td>
+                                        <span
+                                            className={upload.upload_complete
+                                                ? "data-table-badge data-table-badge--complete"
+                                                : "data-table-badge data-table-badge--progress"
                                             }
                                         >
-                                            Uploaded{" "}
-                                            {getSortIcon(
-                                                "date_uploaded",
-                                                sortKey,
-                                                sortDirection,
-                                            )}
-                                        </button>
-                                    </th>
+                                            {getUploadStatusLabel(upload.upload_complete)}
+                                        </span>
+                                    </td>
+
+                                    <td> {formatDate(upload.date_uploaded)} </td>
+
+                                    <td>{formatDate(upload.expiration_date)} </td>
                                 </tr>
-                            </thead>
-
-                            <tbody>
-                                {sortedUploads.map((upload) => (
-                                    <tr key={upload.upload_id}>
-                                        <td>{upload.filename}</td>
-
-                                        <td>
-                                            {formatBytes(upload.size)}
-                                        </td>
-
-                                        <td>
-                                            {upload.content_type || "—"}
-                                        </td>
-
-                                        <td>
-                                            {formatDate(
-                                                upload.date_uploaded,
-                                            )}
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                )}
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            )}
         </section>
     );
 }

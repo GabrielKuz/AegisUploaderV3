@@ -1,19 +1,10 @@
 import { PublicClientApplication } from "@azure/msal-browser";
 
-const DEFAULT_CLIENT_ID = "00000000-0000-0000-0000-000000000000";
-
 const tenantId = import.meta.env.VITE_AZURE_TENANT_ID ?? "common";
-
-const clientId = import.meta.env.VITE_AZURE_CLIENT_ID ?? DEFAULT_CLIENT_ID;
-
-export const isEntraConfigured = Boolean(
-  import.meta.env.VITE_AZURE_TENANT_ID &&
-  import.meta.env.VITE_AZURE_CLIENT_ID,
+const clientId = import.meta.env.VITE_AZURE_CLIENT_ID ?? "00000000-0000-0000-0000-000000000000";
+const isEntraConfigured = Boolean(
+  import.meta.env.VITE_AZURE_TENANT_ID && import.meta.env.VITE_AZURE_CLIENT_ID,
 );
-
-export const isDevAuthEnabled =
-  import.meta.env.DEV &&
-  !isEntraConfigured;
 
 const apiScope =
   import.meta.env.VITE_AZURE_API_SCOPE ??
@@ -21,12 +12,12 @@ const apiScope =
 
 export const msalConfig = {
   auth: {
-    authority: `https://login.microsoftonline.com/${tenantId}`,
     clientId,
+    authority: `https://login.microsoftonline.com/${tenantId}`,
     redirectUri: window.location.origin,
   },
   cache: {
-    cacheLocation: "sessionStorage",
+    cacheLocation: "localStorage", 
     storeAuthStateInCookie: false,
   },
 };
@@ -39,26 +30,25 @@ export const apiRequest = {
   scopes: [apiScope],
 };
 
-export const msalInstance =
-  new PublicClientApplication(msalConfig);
+export { isEntraConfigured };
 
-/**
- * Initializes MSAL, processes login redirect, and establishes
- * active account used throughout application.
- */
-export async function initializeMsalInstance():
-  Promise<void> {
+export const msalInstance = new PublicClientApplication(msalConfig);
+
+export async function initializeMsalInstance(): Promise<void> {
   await msalInstance.initialize();
 
   const redirectResult = await msalInstance.handleRedirectPromise();
 
-  const account =
-    redirectResult?.account ??
+  if (redirectResult?.account) {
+    msalInstance.setActiveAccount(redirectResult.account);
+  }
+
+  const activeAccount =
     msalInstance.getActiveAccount() ??
     msalInstance.getAllAccounts()[0] ??
     null;
 
-  if (account) {
-    msalInstance.setActiveAccount(account);
+  if (activeAccount) {
+    msalInstance.setActiveAccount(activeAccount);
   }
 }

@@ -11,8 +11,7 @@ import { AdminLinksPage } from "./features/admin/AdminLinksPage";
 import { AdminUploadPage } from "./features/admin/AdminUploadPage";
 
 import { LoginPage } from "./features/auth/LoginPage";
-import { RequireAdminUser } from "./features/auth/RequireAdminUser";
-import { RequireAuthenticatedUser } from "./features/auth/RequireAuthenticatedUser";
+import { RequireEntraUser } from "./features/auth/RequireEntraUser";
 
 import { CreateSupportLinkPage } from "./features/support/CreateSupportLinkPage";
 import { SupportHomePage } from "./features/support/SupportHomePage";
@@ -34,20 +33,23 @@ export default function App() {
           element={<LoginPage />}
         />
 
-        {/* Customer-facing secure upload link. */}
+        {/* Public customer-facing upload link. */}
         <Route
           path="/upload/:uuid"
           element={<CustomerLayout />}
         >
-          <Route index element={<CustomerUpload />} />
+          <Route
+            index
+            element={<CustomerUpload />}
+          />
         </Route>
 
         <Route
           path="/support"
           element={
-            <RequireAuthenticatedUser>
+            <RequireEntraUser>
               <SupportLayout />
-            </RequireAuthenticatedUser>
+            </RequireEntraUser>
           }
         >
           <Route
@@ -74,9 +76,9 @@ export default function App() {
         <Route
           path="/admin"
           element={
-            <RequireAdminUser>
+            <RequireEntraUser>
               <AdminLayout />
-            </RequireAdminUser>
+            </RequireEntraUser>
           }
         >
           <Route
@@ -95,7 +97,7 @@ export default function App() {
           />
 
           <Route
-            path="uploads"
+            path="view-uploads/:uuid"
             element={<AdminUploadPage />}
           />
         </Route>

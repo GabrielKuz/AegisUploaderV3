@@ -27,7 +27,7 @@
 .app-header {
   align-items: center;
   background: #000000;
-  border-bottom: 1px solid var(--theme-border-strong);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.22);
   border-top: 4px solid var(--theme-accent);
   color: var(--white);
   display: flex;
@@ -73,7 +73,7 @@
 }
 
 .app-section-name {
-  color: var(--theme-accent);
+  color: var(--theme-accent-hover);
   font-family: var(--font-mono);
   font-size: 11px;
   letter-spacing: 0.08em;
@@ -116,15 +116,19 @@
 .app-sign-out {
   align-items: center;
   background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.32);
+  border: 2px solid var(--gray);
   border-radius: var(--radius-md);
+  box-shadow: var(--theme-control-shadow);
   color: var(--white);
+  cursor: pointer;
+  font: inherit;
   display: inline-flex;
-  font-size: 13px;
-  font-weight: 700;
+  font-size: 14px;
+  font-weight: 600;
   justify-content: center;
   min-height: 40px;
   padding: 0 14px;
+  text-decoration: none;
   transition:
     background-color var(--transition-fast),
     border-color var(--transition-fast),
@@ -133,9 +137,8 @@
 }
 
 .app-sign-out:hover {
-  background: var(--theme-accent);
-  border-color: var(--theme-accent);
-  color: var(--white);
+  border-color: var(--theme-mode);
+  color: var(--theme-mode);
   transform: translateY(-1px);
 }
 
@@ -174,7 +177,8 @@
   border-left: 3px solid transparent;
   color: rgba(255, 255, 255, 0.7);
   display: flex;
-  font-size: 14px;
+  font: var(--font-mono);
+  font-size: clamp(14px, 2vw, 18px);
   font-weight: 600;
   min-height: 46px;
   overflow-wrap: anywhere;
@@ -193,8 +197,8 @@
 
 .app-nav-link--active {
   background: var(--theme-accent-soft);
-  border-left-color: var(--theme-accent);
-  color: var(--theme-accent);
+  border-left-color: var(--theme-accent-hover);
+  color: var(--theme-accent-hover);
 }
 
 /* ==========================================================================

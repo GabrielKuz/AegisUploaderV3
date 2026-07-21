@@ -32,7 +32,7 @@
   font-size: 17px;
   line-height: 1.65;
   margin: 0;
-  max-width: 680px;
+
   font-style: italic;
   font-weight: 400;
 }
@@ -71,7 +71,9 @@
 
 .upload-box p {
   color: var(--theme-text);
-  font-size: 16px;
+  font-size: clamp(16px, 1vw, 18px);
+  font-family: var(--font-body);
+  font-weight: 500;
   margin: 0;
 }
 

@@ -34,8 +34,8 @@
      TYPOGRAPHY
      ----------------------------------------------------------------------- */
 
-   --font-heading: "Open Sans", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-   --font-body: "Open Sans", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+   --font-heading: "Epilogue", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+   --font-body: "Epilogue", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
    --font-mono: "Geist Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
    --font-microsoft: "Open Sans", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 
@@ -68,7 +68,7 @@
      ----------------------------------------------------------------------- */
 
    --theme-page: #f5f3f2;
-   --theme-surface: #faf9f8;
+   --theme-surface: white;
    --theme-surface-secondary: #f0edec;
    --theme-surface-hover: #ebe7e6;
 
@@ -105,7 +105,7 @@
      ----------------------------------------------------------------------- */
 
    --theme-card: var(--white);
-   --theme-card-border: #ddd8d7;
+   --theme-card-border: #917d7955;
    --theme-card-shadow: 0 1px 2px rgba(39, 35, 36, 0.04), 0 12px 32px rgba(39, 35, 36, 0.07);
    --theme-card-shadow-hover: 0 2px 4px rgba(39, 35, 36, 0.05), 0 16px 36px rgba(39, 35, 36, 0.09);
 
@@ -168,7 +168,8 @@
    --theme-button-bg: var(--white);
    --theme-button-bg-hover: rgba(169, 43, 38, 0.1);
    --theme-button-bg-active: rgba(169, 43, 38, 0.16);
-   --theme-button-text: var(--aegis-red-deep);
+   --theme-button-text: rgb(77, 73, 73);
+   --theme-button-text-hover: rgba(169, 43, 38, 1);
    --theme-button-border: rgba(169, 43, 38, 0.18);
    --theme-button-border-hover: rgba(169, 43, 38, 0.34);
    --theme-button-shadow: 0 4px 12px rgba(63, 35, 30, 0.07);
@@ -288,6 +289,7 @@
    --theme-button-bg-hover: var(--aegis-blue);
    --theme-button-bg-active: #0f2f44;
    --theme-button-text: var(--white);
+   --theme-button-text-hover: rgba(120, 197, 232);
    --theme-button-border: rgba(120, 197, 232, 0.3);
    --theme-button-border-hover: rgba(120, 197, 232, 0.58);
    --theme-button-shadow: 0 10px 28px rgba(0, 0, 0, 0.32);
