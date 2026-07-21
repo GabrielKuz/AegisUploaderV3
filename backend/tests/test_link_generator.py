@@ -30,7 +30,9 @@ def test_generate_links_returns_link_and_uuid(monkeypatch):
         case_id="AIS-1234",
     )
     monkeypatch.setattr("modules.LinkGenerator.caseIDExists", lambda case_id: True)
-    monkeypatch.setattr("modules.LinkGenerator.get_caseITARstatus", lambda case_id: False)  
+    monkeypatch.setattr("modules.LinkGenerator.get_caseITARstatus", lambda case_id: False) 
+    monkeypatch.setattr("modules.LinkGenerator.get_caseCompany", lambda case_id: "Test Company")
+    monkeypatch.setattr("modules.LinkGenerator.get_caseStatus", lambda case_id: "Open")
 
     result = generate_links(link_request, current_user)
 
@@ -45,6 +47,8 @@ def test_create_link_endpoint_returns_generated_link(monkeypatch):
         "case_id": "AIS-1234",
     }
     monkeypatch.setattr("modules.LinkGenerator.caseIDExists", lambda case_id: True)
+    monkeypatch.setattr("modules.LinkGenerator.get_caseCompany", lambda case_id: "Test Company")
+    monkeypatch.setattr("modules.LinkGenerator.get_caseStatus", lambda case_id: "Open")
     monkeypatch.setattr("modules.LinkGenerator.get_caseITARstatus", lambda case_id: False)  
     
     response = client.post("/links/create/", json=payload)
