@@ -25,7 +25,7 @@ This application provides a secure mechanism for customers to upload files assoc
 - Microsoft Entra authentication
 - Azure File Storage integration
 - Automatic ITAR data routing
-- REST API with Swagger documentation
+- REST API with Swagger/OpenAPI documentation
 ---
 ## Tech Stack
 
