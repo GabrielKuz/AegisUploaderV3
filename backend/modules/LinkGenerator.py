@@ -158,6 +158,11 @@ def get_all_links(current_user: User):
             stmt = select(LinkRecord)
             records = session.scalars(stmt).all()
             return [_serialize_link_record(r) for r in records]
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="User does not have permission to access this resource"
+        )
     
 def get_all_files_for_link(uuid_str: str, current_user: User):
     """
