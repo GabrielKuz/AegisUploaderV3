@@ -99,6 +99,9 @@ class LinkRecord(Base): # "LinkDB".links table
     creator = Column(String) # From entra token
     expiration_date = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc) + AppConstants.LINK_EXPIRATION_TIME)# 48 hours from creation
     expired = Column(Boolean)
+    customer = Column(String, nullable=True) # Company
+    status = Column(String, nullable=True) # Status from Hubspot
+
 
 
 #=======================================================================================================

@@ -1,3 +1,5 @@
+from warnings import deprecated
+
 from fastapi import HTTPException, status
 from fastapi.responses import FileResponse
 from modules import Session
@@ -9,6 +11,7 @@ from pathlib import Path
 session = Session()
 
 # If user is authenticated and authorized, return file
+@deprecated("This function is deprecated")
 def downloadData(upload_id: str, currentUser: User) -> FileResponse:
     unauthenticated = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -71,6 +74,6 @@ def downloadData(upload_id: str, currentUser: User) -> FileResponse:
     logAccess(upload_id, currentUser) # log for auditting purposes
     return FileResponse(path, filename=upload.original_filename or path.name, media_type=upload.content_type or "application/octet-stream")
 
-
+@deprecated("This function is deprecated")
 def logAccess(upload_id: str, currentUser: User): #TODO: replace once on azure
     print(f"User {currentUser.username} accessed upload {upload_id}")

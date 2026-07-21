@@ -59,85 +59,11 @@ services:
       - no-new-privileges:true
 
     depends_on:
-      azurite-us:
-        condition: service_healthy
-      azurite-eu:
-        condition: service_healthy
-      azurite-itar:
-        condition: service_healthy
       postgres:
         condition: service_healthy
       otel-collector: # no health check
         condition: service_started
 
-  azurite-us: # remove for prod
-    image: mcr.microsoft.com/azure-storage/azurite
-    container_name: azurite-us
-    ports:
-      - "10000:10000"
-      - "10001:10001"
-      - "10002:10002"
-    volumes:
-      - ./azurite_data/us:/data
-    command: >
-      azurite
-      --blobHost 0.0.0.0
-      --queueHost 0.0.0.0
-      --tableHost 0.0.0.0
-      --location /data
-      --skipApiVersionCheck
-    healthcheck:
-      test: ["CMD", "nc", "-z", "127.0.0.1", "10000"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-    restart: unless-stopped
-
-  azurite-eu: # remove for prod
-    image: mcr.microsoft.com/azure-storage/azurite
-    container_name: azurite-eu
-    ports:
-      - "10010:10000"
-      - "10011:10001"
-      - "10012:10002"
-    volumes:
-      - ./azurite_data/eu:/data
-    command: >
-      azurite
-      --blobHost 0.0.0.0
-      --queueHost 0.0.0.0
-      --tableHost 0.0.0.0
-      --location /data
-      --skipApiVersionCheck
-    healthcheck:
-      test: ["CMD", "nc", "-z", "127.0.0.1", "10000"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-    restart: unless-stopped
-
-  azurite-itar: # remove for prod
-    image: mcr.microsoft.com/azure-storage/azurite
-    container_name: azurite-itar
-    ports:
-      - "10020:10000"
-      - "10021:10001"
-      - "10022:10002"
-    volumes:
-      - ./azurite_data/itar:/data
-    command: >
-      azurite
-      --blobHost 0.0.0.0
-      --queueHost 0.0.0.0
-      --tableHost 0.0.0.0
-      --location /data
-      --skipApiVersionCheck
-    healthcheck:
-      test: ["CMD", "nc", "-z", "127.0.0.1", "10000"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-    restart: unless-stopped
 
   otel-collector:
     image: otel/opentelemetry-collector:latest
