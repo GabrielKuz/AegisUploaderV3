@@ -13,7 +13,8 @@ from pathlib import Path
 from typing import Annotated, Literal
 import logging
 
-from sqlalchemy import text
+from sqlalchemy import text, cast
+from sqlalchemy.dialects.postgresql import JSONB
 from modules.StorageProvider import StorageProvider, LocalStorageProvider
 from modules import usFileStorageProvider, euFileStorageProvider, itarFileStorageProvider
 from fastapi import APIRouter, Depends, Header, HTTPException

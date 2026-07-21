@@ -1,19 +1,19 @@
-import AppConstants
-import os
-import uuid
-
-from datetime import datetime, timedelta, timezone
-from sqlalchemy import create_engine, select, update
-from typing import Dict
-from modules.HubSpotIntegration import get_caseITARstatus, caseIDExists, get_caseCompany, get_caseStatus
-from modules.auth import User
-from modules.HubSpotIntegration import get_caseITARstatus, caseIDExists
-from modules.models import LinkRecord, UploadRecord, update_other_from_self, update_similar_between_LinkDB_and_UploadDB
+import asyncio
 from pydantic import BaseModel, Field
-from sqlalchemy import create_engine, select, update
-from typing import Dict
+from fastapi import HTTPException, status
+from urllib import response
+from fastapi.testclient import TestClient
+import AppConstants
+from modules.HubSpotIntegration import caseIDExists, get_caseCompany, get_caseITARstatus, get_caseStatus
+from modules import Session
 from Utils import IsCaseID
-from warnings import warn, deprecated
+from sqlalchemy import select
+from modules.models import UploadRecord, LinkRecord, update_similar_between_LinkDB_and_UploadDB
+from typing import Dict
+import uuid
+from datetime import datetime, timezone
+from modules.auth import User
+import os
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 if DATABASE_URL is None:
