@@ -148,12 +148,12 @@ def get_all_links(current_user: User):
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="User not authenticated"
         )
-    if current_user.role is "User":
+    if "User" in current_user.roles:
         with Session() as session:
             stmt = select(LinkRecord).where(LinkRecord.creator == current_user.username)
             records = session.scalars(stmt).all()
             return [_serialize_link_record(r) for r in records]
-    elif current_user.role is "Admin": # Admin can see all links
+    elif "Admin" in current_user.roles: # Admin can see all links
         with Session() as session:
             stmt = select(LinkRecord)
             records = session.scalars(stmt).all()
