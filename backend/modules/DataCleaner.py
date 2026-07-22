@@ -80,7 +80,7 @@ def _deleteExpiredUploadSessions(): # Delete sessions where upload is completete
 
         session.commit()
 
-def _deleteExpiredUploads(storage: StorageProvider):
+async def _deleteExpiredUploads(storage: StorageProvider):
     with Session() as session:
         uploads = session.scalars(
             select(UploadRecord)
@@ -90,7 +90,7 @@ def _deleteExpiredUploads(storage: StorageProvider):
         for upload in uploads:
             try:
                 if upload.blob_name:
-                    storage.delete_file(f"{upload.case_id}/{upload.blob_name}")
+                    await storage.delete_file(f"{upload.case_id}/{upload.blob_name}")
 
                 session.delete(upload)
 
@@ -122,7 +122,7 @@ def _deleteExpiredLinks():
 
         session.commit()
 
-def _deleteOrphanedUploads(storage: StorageProvider): # Find uploads not in db where the file exists in storage and delete them if the case id their under has no record in the db
+async def _deleteOrphanedUploads(storage: StorageProvider): # Find uploads not in db where the file exists in storage and delete them if the case id their under has no record in the db
     with Session() as session:
         db_uploads = set(
             session.execute(
@@ -130,16 +130,16 @@ def _deleteOrphanedUploads(storage: StorageProvider): # Find uploads not in db w
             ).all()
         )
 
-        for upload in storage.ls("./"):
+        for upload in await storage.ls("./"):
             case_id, blob_name = upload.split("/", 1)
             if (case_id, blob_name) not in db_uploads:
                 try:
-                    storage.delete_file(upload)
+                    await storage.delete_file(upload)
                     logger.info(f"Deleted orphaned upload: {upload}")
                 except Exception as e:
                     logger.error(f"Failed to delete orphaned upload {upload}: {e}")
 
-def _deleteEmptyCaseDirs(storage: StorageProvider): # Find case directories in storage that have no uploads in the db and delete them
+async def _deleteEmptyCaseDirs(storage: StorageProvider): # Find case directories in storage that have no uploads in the db and delete them
     with Session() as session:
         existing_case_ids = set(
             session.scalars(
@@ -147,7 +147,7 @@ def _deleteEmptyCaseDirs(storage: StorageProvider): # Find case directories in s
             ).all()
         )
 
-        case_dirs = {path.split("/", 1)[0] for path in storage.ls("./")}
+        case_dirs = {path.split("/", 1)[0] for path in await storage.ls("./")}
         
         for case_dir in case_dirs:
             if not Utils.IsCaseID(case_dir):
@@ -155,7 +155,7 @@ def _deleteEmptyCaseDirs(storage: StorageProvider): # Find case directories in s
 
             if case_dir not in existing_case_ids:
                 try:
-                    storage.delete_case_directory(case_dir)
+                    await storage.delete_case_directory(case_dir)
                     logger.info(f"Deleted empty case directory: {case_dir}")
                 except Exception as e:
                     logger.error(f"Failed to delete empty case directory {case_dir}: {e}")
@@ -179,7 +179,7 @@ def _deleteOldUploadChunks():
 
         session.commit()
 
-def expireAndDeleteOldData():
+async def expireAndDeleteOldData():
     try:
         logger.info("Starting cleanup job")
 
