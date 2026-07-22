@@ -241,7 +241,7 @@ async def start_upload(
             hash_algorithm="blake3",
             received_ranges=[],
             received_size=0,
-            chunk_size=32 * 1024 * 1024,  # 32 MiB
+            chunk_size=4*1024*1024,  # 32 MiB
             completed=False,
             itar_status=itar_status,
             storage_region=storage_region,
@@ -284,7 +284,7 @@ async def start_upload(
     
     return {
         "uploadToken": upload_token, # Token to identify session
-        "chunkSize": 32 * 1024 * 1024,  # 32 MiB  # Tell client the chunk size to use for uploads, maybe set up negotiation later for different sizes
+        "chunkSize": 4*1024*1024,  # 32 MiB  # Tell client the chunk size to use for uploads, maybe set up negotiation later for different sizes
     }
 
 @router.post("/uploadfile/{link_uuid}/{upload_token}", response_model=UploadChunkResponse) # Even if link is expired, allow the upload to continue if it was started before expiration
@@ -307,7 +307,7 @@ async def upload_file_chunk(
     if not chunk_hash:
         raise HTTPException(status_code=400, detail="X-Chunk-Hash header required")
 
-    if chunk_size is None or chunk_size <= 0 or received_size != chunk_size or chunk_size > 32 * 1024 * 1024: # Handle invalid chunk sizes, including the final chunk which can be smaller than the chunk size
+    if chunk_size is None or chunk_size <= 0 or received_size != chunk_size or chunk_size > 4*1024*1024: # Handle invalid chunk sizes, including the final chunk which can be smaller than the chunk size
         raise HTTPException(status_code=400, detail="X-Chunk-Size invalid or missing, must be > 0 and <= 32 MiB and match Content-Length")
 
     upload_session = ( # GRab the session using the token and link uuid
@@ -387,7 +387,7 @@ async def upload_file_chunk(
 
     async def buffered_stream():
         while True:
-            chunk = chunk_buffer.read(32 * 1024 * 1024) # read 32 MiB chunks 
+            chunk = chunk_buffer.read(4*1024*1024) # read 32 MiB chunks 
 
             if not chunk: # Stop when out of chunks
                 break
