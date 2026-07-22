@@ -20,7 +20,7 @@ type PreparedChunk = {
     hash?: string;
 };
 
-const FILE_CHUNK_SIZE = 32 * 1024 * 1024;
+const FILE_CHUNK_SIZE = 4*1024*1024;
 const HASH_CONCURRENCY = 4;
 const UPLOAD_CONCURRENCY = 6;
 const RETRY_ATTEMPTS = 4;
