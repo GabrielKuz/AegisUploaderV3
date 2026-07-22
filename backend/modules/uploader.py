@@ -757,12 +757,12 @@ async def sendCompletetionEmail(upload_record: UploadRecord):
     if not link_entry:
         logger.warning(f"Unable to send completion email. Link {upload_record.link_uuid} not found.")
         return
-
-    async with EmailClient.from_connection_string(ACS_CONNECTION_STRING) as client:
-        message = {
-            "content": {
-                "subject": f"File Upload Complete - {upload_record.case_id}",
-                "plainText": f"""A file has been successfully uploaded through Uploader V3.
+    try:
+        async with EmailClient.from_connection_string(ACS_CONNECTION_STRING) as client:
+            message = {
+                "content": {
+                    "subject": f"File Upload Complete - {upload_record.case_id}",
+                    "plainText": f"""A file has been successfully uploaded through Uploader V3.
 
 Case ID: {upload_record.case_id}
 File Name: {upload_record.blob_name}
@@ -827,9 +827,11 @@ The uploaded file is now available for review at {viewURL}.
             "senderAddress": os.getenv("ACS_SENDER_ADDRESS", "DoNotReply@aiscorp.com")
         }
 
-        try:
-            response = await client.begin_send(message)
-            await response.result()
-            logger.info(f"Completion email sent successfully to {link_entry.creator}.")
-        except Exception as e:
-            logger.warning(f"Error occurred while sending completion email: {e}")
+            try:
+                response = await client.begin_send(message)
+                await response.result()
+                logger.info(f"Completion email sent successfully to {link_entry.creator}.")
+            except Exception as e:
+                logger.warning(f"Error occurred while sending completion email: {e}")
+    except Exception as e:
+        logger.warning(f"Error occurred while preparing to send completion email: {e}")
