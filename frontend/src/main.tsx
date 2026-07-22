@@ -3,7 +3,10 @@ import ReactDOM from "react-dom/client";
 import { MsalProvider } from "@azure/msal-react";
 
 import App from "./App";
-import { initializeMsalInstance, msalInstance } from "./features/auth/authConfig";
+import {
+  initializeMsalInstance,
+  msalInstance,
+} from "./features/auth/authConfig";
 import { ThemeProvider } from "./theme/ThemeContext";
 
 import "./styles/fonts.css";

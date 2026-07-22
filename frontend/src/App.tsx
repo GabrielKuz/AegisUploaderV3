@@ -1,9 +1,4 @@
-import {
-  BrowserRouter,
-  Navigate,
-  Route,
-  Routes,
-} from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 
 import { AdminCreateLink } from "./features/admin/AdminCreateLink";
 import { AdminHome } from "./features/admin/AdminHome";
@@ -27,20 +22,11 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route
-          path="/"
-          element={<Login />}
-        />
+        <Route path="/" element={<Login />} />
 
         {/* Public customer-facing upload link. */}
-        <Route
-          path="/upload/:uuid"
-          element={<CustomerLayout />}
-        >
-          <Route
-            index
-            element={<CustomerUpload />}
-          />
+        <Route path="/uploads/:uuid" element={<CustomerLayout />}>
+          <Route index element={<CustomerUpload />} />
         </Route>
 
         <Route
@@ -51,67 +37,33 @@ export default function App() {
             </RequireEntraUser>
           }
         >
-          <Route
-            index
-            element={<SupportHome />}
-          />
+          <Route index element={<SupportHome />} />
 
-          <Route
-            path="links"
-            element={<SupportViewLinks />}
-          />
+          <Route path="links" element={<SupportViewLinks />} />
 
-          <Route
-            path="links/new"
-            element={<SupportCreateLink />}
-          />
+          <Route path="links/new" element={<SupportCreateLink />} />
 
-          <Route
-            path="view-uploads/:uuid"
-            element={<SupportUpload />}
-          />
+          <Route path="view-uploads/:uuid" element={<SupportUpload />} />
         </Route>
 
         <Route
           path="/admin"
           element={
             <RequireEntraUser>
-              <RequireEntraUser>
-                <AdminLayout />
-              </RequireEntraUser>
+              <AdminLayout />
             </RequireEntraUser>
           }
         >
-          <Route
-            index
-            element={<AdminHome />}
-          />
+          <Route index element={<AdminHome />} />
 
-          <Route
-            path="links"
-            element={<AdminViewLinks />}
-          />
+          <Route path="links" element={<AdminViewLinks />} />
 
-          <Route
-            path="links/new"
-            element={<AdminCreateLink />}
-          />
+          <Route path="links/new" element={<AdminCreateLink />} />
 
-          <Route
-            path="view-uploads/:uuid"
-            element={<AdminUpload />}
-          />
+          <Route path="view-uploads/:uuid" element={<AdminUpload />} />
         </Route>
 
-        <Route
-          path="*"
-          element={
-            <Navigate
-              to="/"
-              replace
-            />
-          }
-        />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
   );

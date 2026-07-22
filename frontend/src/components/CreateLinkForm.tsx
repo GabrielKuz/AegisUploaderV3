@@ -1,187 +1,161 @@
-import {
-    useState,
-    type FormEvent,
-} from "react";
+import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
-
 import { useApiAccessToken } from "../features/auth/useApiAccessToken";
-
+import {
+  getUnexpectedError,
+  readApiError,
+  type UserFacingError,
+} from "../utils/apiErrors";
+import { ApiErrorAlert } from "./ApiErrorAlert";
 import "./CreateLinkForm.css";
 
 type CreateLinkFormProps = {
-    cancelPath: string;
-    successPath: string;
+  cancelPath: string;
+  successPath: string;
 };
 
 // Creates temporary customer upload link for support case.
 export function CreateLinkForm({
-    cancelPath,
-    successPath,
+  cancelPath,
+  successPath,
 }: CreateLinkFormProps) {
-    const navigate = useNavigate();
-    const getAccessToken = useApiAccessToken();
+  const navigate = useNavigate();
 
-    const [caseId, setCaseId] = useState("");
-    const [error, setError] =
-        useState<string | null>(null);
-    const [isSubmitting, setIsSubmitting] =
-        useState(false);
+  const getAccessToken = useApiAccessToken();
 
-    async function handleSubmit(
-        event: FormEvent<HTMLFormElement>,
-    ): Promise<void> {
-        event.preventDefault();
+  const [caseId, setCaseId] = useState("");
 
-        const trimmedCaseId = caseId.trim();
+  const [error, setError] = useState<UserFacingError | null>(null);
 
-        if (!trimmedCaseId) {
-            setError("Case ID is required.");
-            return;
-        }
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-        setError(null);
-        setIsSubmitting(true);
+  async function handleSubmit(
+    event: FormEvent<HTMLFormElement>,
+  ): Promise<void> {
+    event.preventDefault();
+    const trimmedCaseId = caseId.trim();
 
-        try {
-            const accessToken = await getAccessToken();
+    if (!trimmedCaseId) {
+      setError({
+        title: "Case ID required",
+        message: "Enter the customer case ID before creating an upload link.",
+      });
 
-            if (!accessToken) {
-                setError(
-                    "Please sign in before creating an upload link.",
-                );
-                return;
-            }
-
-            const response = await fetch(
-                "/api/links/create/",
-                {
-                    method: "POST",
-                    headers: {
-                        Authorization: `Bearer ${accessToken}`,
-                        "Content-Type": "application/json",
-                    },
-                    body: JSON.stringify({
-                        case_id: trimmedCaseId,
-
-                        // Remove when the backend no longer requires this field.
-                        itar: false,
-                    }),
-                },
-            );
-
-            if (!response.ok) {
-                const message = await response.text();
-
-                setError(
-                    message.trim() ||
-                    `Failed to create the upload link. Status: ${response.status}`
-                );
-                return;
-            }
-
-            navigate(successPath);
-        } catch {
-            setError(
-                "Something went wrong while creating the upload link.",
-            );
-        } finally {
-            setIsSubmitting(false);
-        }
+      return;
     }
 
-    return (
-        <section
-            className="create-link-page"
-            aria-labelledby="create-link-heading"
-        >
-            <header className="create-link-header">
-                <h1 id="create-link-heading">
-                    Create a new upload link
-                </h1>
+    setError(null);
+    setIsSubmitting(true);
 
-                <p className="create-link-description">
-                    Enter the customer case ID to create a secure
-                    temporary upload link.
-                </p>
-            </header>
+    try {
+      const accessToken = await getAccessToken();
 
-            <div className="create-link-shell">
-                <form
-                    className="create-link-form"
-                    onSubmit={handleSubmit}
-                    noValidate
-                >
-                    {error && (
-                        <div
-                            id="create-link-error"
-                            className="create-link-error"
-                            role="alert"
-                        >
-                            {error}
-                        </div>
-                    )}
+      if (!accessToken) {
+        setError({
+          status: 401,
+          title: "Sign-in required",
+          message:
+            "Your session could not be verified. Sign in again before creating an upload link.",
+        });
 
-                    <div className="create-link-field">
-                        <label htmlFor="case-id">
-                            Case ID
-                        </label>
+        return;
+      }
 
-                        <input
-                            id="case-id"
-                            name="caseId"
-                            type="text"
-                            value={caseId}
-                            placeholder="Example: AIS-12345"
-                            autoComplete="off"
-                            aria-describedby={
-                                error
-                                    ? "create-link-error"
-                                    : undefined
-                            }
-                            disabled={isSubmitting}
-                            onChange={(event) => {
-                                setCaseId(event.target.value);
+      const response = await fetch("/api/links/create/", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          case_id: trimmedCaseId,
+        }),
+      });
 
-                                if (error) {
-                                    setError(null);
-                                }
-                            }}
-                            required
-                        />
-                    </div>
+      if (!response.ok) {
+        setError(await readApiError(response, "create the upload link"));
+        return;
+      }
 
-                    <div className="create-link-actions">
-                        <button
-                            className="create-link-cancel"
-                            type="button"
-                            disabled={isSubmitting}
-                            onClick={() => navigate(cancelPath)}
-                        >
-                            Cancel
-                        </button>
+      navigate(successPath);
+    } catch (requestError) {
+      setError(getUnexpectedError(requestError, "create the upload link"));
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
 
-                        <button
-                            className="create-link-submit"
-                            type="submit"
-                            disabled={isSubmitting}
-                        >
-                            {isSubmitting
-                                ? "Creating..."
-                                : "Create link"}
-                        </button>
-                    </div>
-                </form>
+  return (
+    <section className="create-link-page" aria-labelledby="create-link-heading">
+      <header className="create-link-header">
+        <h1 id="create-link-heading">Create a new upload link</h1>
 
-                <aside className="create-link-info">
-                    <h2>What happens next?</h2>
+        <p className="create-link-description">
+          Enter the customer case ID to create a secure temporary upload link.
+        </p>
+      </header>
 
-                    <p>
-                        A temporary upload link will be created for
-                        this case. Share it with the customer so they
-                        can submit files securely.
-                    </p>
-                </aside>
+      <div className="create-link-shell">
+        <form className="create-link-form" onSubmit={handleSubmit} noValidate>
+          {error && (
+            <div id="create-link-error">
+              <ApiErrorAlert error={error} />
             </div>
-        </section>
-    );
+          )}
+
+          <div className="create-link-field">
+            <label htmlFor="case-id">Case ID</label>
+
+            <input
+              id="case-id"
+              name="caseId"
+              type="text"
+              value={caseId}
+              placeholder="Example: AIS-12345"
+              autoComplete="off"
+              aria-invalid={Boolean(error)}
+              aria-describedby={error ? "create-link-error" : undefined}
+              disabled={isSubmitting}
+              onChange={(event) => {
+                setCaseId(event.target.value);
+
+                if (error) {
+                  setError(null);
+                }
+              }}
+              required
+            />
+          </div>
+
+          <div className="create-link-actions">
+            <button
+              className="create-link-cancel"
+              type="button"
+              disabled={isSubmitting}
+              onClick={() => navigate(cancelPath)}
+            >
+              Cancel
+            </button>
+
+            <button
+              className="create-link-submit"
+              type="submit"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? "Creating..." : "Create"}
+            </button>
+          </div>
+        </form>
+
+        <aside className="create-link-info">
+          <h2>What happens next?</h2>
+
+          <p>
+            A temporary upload link will be created for this case. Share it with
+            the customer so they can submit files securely.
+          </p>
+        </aside>
+      </div>
+    </section>
+  );
 }

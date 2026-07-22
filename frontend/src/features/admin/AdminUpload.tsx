@@ -1,19 +1,14 @@
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
-import {
-  Link,
-  useParams,
-} from "react-router-dom";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Link, useParams } from "react-router-dom";
 
 import "../../components/DataTable.css";
+import { ApiErrorAlert } from "../../components/ApiErrorAlert";
+import { formatBytes, formatDate } from "../../utils/formatters";
 import {
-  formatBytes,
-  formatDate,
-} from "../../utils/formatters";
+  getUnexpectedError,
+  readApiError,
+  type UserFacingError,
+} from "../../utils/apiErrors";
 import {
   applySortDirection,
   getAriaSort,
@@ -29,9 +24,9 @@ type Upload = {
   filename: string;
   blob_name: string;
   size: number;
-  expiration_date: string;
+  expiration_date?: string | null;
   date_uploaded: string;
-  upload_complete?: boolean;
+  upload_complete: boolean;
   status?: string | null;
   marked_for_deletion?: boolean;
 };
@@ -43,18 +38,40 @@ type SortKey =
   | "expiration_date"
   | "date_uploaded";
 
+type SortValue = string | number | null | undefined;
+
 type UploadRequestEntry = {
   createdAt: number;
   promise: Promise<Upload[]>;
 };
 
 type UploadListResponse =
-  Upload[]
+  | Upload[]
   | {
-    files?: Upload[];
-    uploads?: Upload[];
-  };
+      files?: Upload[];
+      uploads?: Upload[];
+    };
 
+type UploadStatusDisplay = {
+  label: string;
+  className: string;
+};
+
+// Carries a structured, user-facing API error through a rejected promise.
+class ApiRequestError extends Error {
+  readonly userFacingError: UserFacingError;
+  constructor(userFacingError: UserFacingError) {
+    super(userFacingError.message);
+    this.name = "ApiRequestError";
+    this.userFacingError = userFacingError;
+  }
+}
+
+const DATE_KEYS = new Set<SortKey>(["date_uploaded", "expiration_date"]);
+
+const uploadRequestCache = new Map<string, UploadRequestEntry>();
+
+// Normalizes possible list response formats.
 function parseUploadResponse(payload: UploadListResponse): Upload[] {
   if (Array.isArray(payload)) {
     return payload;
@@ -68,95 +85,84 @@ function parseUploadResponse(payload: UploadListResponse): Upload[] {
     return payload.uploads;
   }
 
-  throw new Error("The files endpoint returned an unexpected response.");
+  throw new Error("The files endpoint returned an unexpected response format.");
 }
 
-type UploadStatusDisplay = {
-  label: string;
-  className: string;
-};
+// Returns endpoint used to extend one upload's retention.
+function getExtendEndpoint(uploadId: string, additionalDays: number): string {
+  const encodedUploadId = encodeURIComponent(uploadId);
 
-const DATE_KEYS = new Set<SortKey>(["date_uploaded", "expiration_date"]);
+  const encodedDays = encodeURIComponent(additionalDays.toString());
 
-const uploadRequestCache = new Map<string, UploadRequestEntry>();
-
-// Returns the endpoint used to extend one upload's retention.
-function getExtendEndpoint(uploadId: string): string {
-  return `/api/upload/extend/${encodeURIComponent(uploadId)}`;
+  return (
+    `/api/uploads/${encodedUploadId}` +
+    `/extend_expiration?additional_days=${encodedDays}`
+  );
 }
-// Returns endpoint used to mark ine uploaed file for deletion.
+
+// Returns endpoint used to mark one upload for deletion.
 function getDeleteEndpoint(uploadId: string): string {
-  return `/api/uploads/${encodeURIComponent(uploadId)}/mark_for_deletion`;
+  return (
+    `/api/uploads/` + `${encodeURIComponent(uploadId)}` + "/mark_for_deletion"
+  );
 }
 
-// Extracts a readable API error without displaying an entire JSON object to the user.
-async function getResponseMessage(response: Response, fallbackMessage: string): Promise<string> {
-  try {
-    const contentType = response.headers.get("content-type") ?? "";
-
-    if (contentType.includes("application/json")) {
-      const body = (await response.json()) as {
-        detail?: unknown;
-        message?: unknown;
-      };
-
-      if (typeof body.detail === "string" && body.detail.trim()) {
-        return body.detail.trim();
-      }
-
-      if (typeof body.message === "string" && body.message.trim()) {
-        return body.message.trim();
-      }
-
-      return fallbackMessage;
-    }
-
-    const text = await response.text();
-
-    return (text.trim() || fallbackMessage);
-  } catch {
-    return fallbackMessage;
+// Safely formats optional API date.
+function formatOptionalDate(value: string | null | undefined): string {
+  if (!value) {
+    return "—";
   }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "—";
+  }
+
+  return formatDate(value);
 }
 
-/**
- * Requests uploaded files visible to administrator.
- * Short-lived cache prevents React Strict Mode's development effect cycle from issuing same request twice.
-*/
-function requestUploads(uuid: string, accessToken: string, forceRefresh = false): Promise<Upload[]> {
-
-
+/*
+ * Requests uploaded files associated with one link.
+ * The short-lived cache prevents React Strict Mode from issuing duplicate development requests.
+ */
+function requestUploads(
+  uuid: string,
+  accessToken: string,
+  forceRefresh = false,
+): Promise<Upload[]> {
   const requestKey = `admin-uploads-${uuid}`;
 
   const existingRequest = uploadRequestCache.get(requestKey);
 
-  const existingRequestIsCurrent = existingRequest !== undefined && Date.now() - existingRequest.createdAt < REQUEST_DEDUPE_WINDOW_MS;
+  const existingRequestIsCurrent =
+    existingRequest !== undefined &&
+    Date.now() - existingRequest.createdAt < REQUEST_DEDUPE_WINDOW_MS;
 
   if (!forceRefresh && existingRequestIsCurrent) {
     return existingRequest.promise;
   }
 
   if (forceRefresh) {
-    uploadRequestCache.delete(
-      requestKey,
-    );
+    uploadRequestCache.delete(requestKey);
   }
 
   const endpoint = `/api/links/${encodeURIComponent(uuid)}/files`;
 
-  const request = fetch(
-    endpoint,
-    {
-      headers: { Authorization: `Bearer ${accessToken}` },
+  const request = fetch(endpoint, {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
     },
-  ).then(async (response) => {
+  }).then(async (response) => {
     if (!response.ok) {
-      throw new Error(await getResponseMessage(response, `Failed to load uploaded files. Status: ${response.status}`));
+      throw new ApiRequestError(
+        await readApiError(response, "load the uploaded files"),
+      );
     }
 
     const payload = (await response.json()) as UploadListResponse;
 
-    return parseUploadResponse(payload,);
+    return parseUploadResponse(payload);
   });
 
   const entry: UploadRequestEntry = {
@@ -174,23 +180,20 @@ function requestUploads(uuid: string, accessToken: string, forceRefresh = false)
     }, REQUEST_DEDUPE_WINDOW_MS);
   };
 
-  request.then(removeRequest, removeRequest,);
+  request.then(removeRequest, removeRequest);
 
   return request;
 }
 
-/**
- * Converts backend status values into consistent table labels.
- *
- * The status field is preferred when present. upload_complete
- * remains supported for compatibility with the current API.
- */
-function getUploadStatus(
-  upload: Upload,
-): UploadStatusDisplay {
+// Converts backend upload states into consistent table labels.
+function getUploadStatus(upload: Upload): UploadStatusDisplay {
   const rawStatus = upload.status?.trim().toLowerCase().replace(/[_-]+/g, " ");
 
-  if (upload.marked_for_deletion || rawStatus === "pending deletion" || rawStatus === "marked for deletion") {
+  if (
+    upload.marked_for_deletion ||
+    rawStatus === "pending deletion" ||
+    rawStatus === "marked for deletion"
+  ) {
     return {
       label: "Pending deletion",
       className: "data-table-badge data-table-badge--danger",
@@ -235,29 +238,22 @@ function getUploadStatus(
       };
 
     default:
-      if (upload.upload_complete === true) {
-        return {
-          label: "Complete",
-          className: "data-table-badge data-table-badge--complete",
-        };
-      }
-
-      if (upload.upload_complete === false) {
-        return {
-          label: "In progress",
-          className: "data-table-badge data-table-badge--progress",
-        };
-      }
-
-      return {
-        label: "Unknown",
-        className: "data-table-badge",
-      };
+      return upload.upload_complete
+        ? {
+            label: "Complete",
+            className: "data-table-badge data-table-badge--complete",
+          }
+        : {
+            label: "In progress",
+            className: "data-table-badge data-table-badge--progress",
+          };
   }
 }
 
-//Returns value used to sort one upload by selected column.
-function getSortValue(upload: Upload, key: SortKey): string | number {
+/**
+ * Returns the value used when sorting a table column.
+ */
+function getSortValue(upload: Upload, key: SortKey): SortValue {
   if (key === "status") {
     return getUploadStatus(upload).label;
   }
@@ -265,8 +261,9 @@ function getSortValue(upload: Upload, key: SortKey): string | number {
 }
 
 export function AdminUpload() {
-
-  const { uuid } = useParams<{ uuid: string }>();
+  const { uuid } = useParams<{
+    uuid: string;
+  }>();
 
   const getAccessToken = useApiAccessToken();
 
@@ -274,15 +271,19 @@ export function AdminUpload() {
 
   const [sortKey, setSortKey] = useState<SortKey>("date_uploaded");
 
-  const [sortDirection, setSortDirection,] = useState<SortDirection>("desc");
+  const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
 
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<UserFacingError | null>(null);
+
+  const [actionError, setActionError] = useState<UserFacingError | null>(null);
 
   const [actionMessage, setActionMessage] = useState<string | null>(null);
 
   const [isLoading, setIsLoading] = useState(true);
 
-  const [extendingUploadId, setExtendingUploadId] = useState<string | null>(null);
+  const [extendingUploadId, setExtendingUploadId] = useState<string | null>(
+    null,
+  );
 
   const [deletingUploadId, setDeletingUploadId] = useState<string | null>(null);
 
@@ -293,7 +294,13 @@ export function AdminUpload() {
 
       if (!uuid) {
         setUploads([]);
-        setError("No upload link was selected.");
+
+        setError({
+          title: "Upload link not selected",
+          message:
+            "The page URL does not contain an upload-link ID. Return to the links table and select View uploads again.",
+        });
+
         setIsLoading(false);
         return;
       }
@@ -303,19 +310,35 @@ export function AdminUpload() {
 
         if (!accessToken) {
           setUploads([]);
-          setError("Please sign in before viewing uploaded files.");
+
+          setError({
+            status: 401,
+            title: "Sign-in required",
+            message:
+              "Your session could not be verified. Sign in again before viewing uploaded files.",
+          });
+
           return;
         }
 
         const data = await requestUploads(uuid, accessToken, forceRefresh);
+
         setUploads(data);
       } catch (requestError) {
         setUploads([]);
-        setError(requestError instanceof Error ? requestError.message : "Something went wrong while loading uploaded files.");
+
+        if (requestError instanceof ApiRequestError) {
+          setError(requestError.userFacingError);
+          return;
+        }
+
+        setError(getUnexpectedError(requestError, "load the uploaded files"));
       } finally {
         setIsLoading(false);
       }
-    }, [getAccessToken, uuid]);
+    },
+    [getAccessToken, uuid],
+  );
 
   useEffect(() => {
     void loadUploads();
@@ -323,30 +346,42 @@ export function AdminUpload() {
 
   function handleSort(key: SortKey): void {
     if (key === sortKey) {
-      setSortDirection((currentDirection) => currentDirection === "asc" ? "desc" : "asc");
+      setSortDirection((currentDirection) =>
+        currentDirection === "asc" ? "desc" : "asc",
+      );
       return;
     }
 
     setSortKey(key);
+
     setSortDirection(DATE_KEYS.has(key) ? "desc" : "asc");
   }
 
   const sortedUploads = useMemo(() => {
     return [...uploads].sort((firstUpload, secondUpload) => {
       const firstValue = getSortValue(firstUpload, sortKey);
+
       const secondValue = getSortValue(secondUpload, sortKey);
 
       if (DATE_KEYS.has(sortKey)) {
-        const comparison = new Date(String(firstValue)).getTime() - new Date(String(secondValue)).getTime();
+        const firstTime = firstValue
+          ? new Date(String(firstValue)).getTime()
+          : 0;
 
-        return applySortDirection(comparison, sortDirection);
+        const secondTime = secondValue
+          ? new Date(String(secondValue)).getTime()
+          : 0;
+
+        return applySortDirection(firstTime - secondTime, sortDirection);
       }
 
       if (typeof firstValue === "number" && typeof secondValue === "number") {
         return applySortDirection(firstValue - secondValue, sortDirection);
       }
 
-      const comparison = String(firstValue ?? "").localeCompare(String(secondValue ?? ""));
+      const comparison = String(firstValue ?? "").localeCompare(
+        String(secondValue ?? ""),
+      );
 
       return applySortDirection(comparison, sortDirection);
     });
@@ -362,10 +397,16 @@ export function AdminUpload() {
     const days = Number(input.trim());
 
     if (!Number.isInteger(days) || days <= 0) {
-      window.alert("Please enter a positive whole number.");
+      setActionMessage(null);
+      setActionError({
+        title: "Invalid extension period",
+        message: "Enter a positive whole number of days, such as 7 or 30.",
+      });
+
       return;
     }
 
+    setActionError(null);
     setActionMessage(null);
     setExtendingUploadId(uploadId);
 
@@ -373,35 +414,46 @@ export function AdminUpload() {
       const accessToken = await getAccessToken();
 
       if (!accessToken) {
-        throw new Error("Please sign in before extending upload retention.");
+        setActionError({
+          status: 401,
+          title: "Sign-in required",
+          message:
+            "Your session could not be verified. Sign in again before extending the file retention period.",
+        });
+
+        return;
       }
 
-      const response = await fetch(getExtendEndpoint(uploadId), {
-        method: "PATCH",
+      const response = await fetch(getExtendEndpoint(uploadId, days), {
+        method: "POST",
         headers: {
           Authorization: `Bearer ${accessToken}`,
-          "Content-Type": "application/json",
         },
-        body: JSON.stringify({ uuid: uploadId, days }),
       });
 
       if (!response.ok) {
-        throw new Error(await getResponseMessage(response, `Failed to extend upload retention. Status: ${response.status}`));
+        setActionError(
+          await readApiError(response, "extend the file retention period"),
+        );
+
+        return;
       }
 
-      setActionMessage(`Retention was extended by ${days} ${days === 1 ? "day" : "days"}.`);
-      await loadUploads(true);
+      setActionMessage(
+        `Retention was extended by ${days} ${days === 1 ? "day" : "days"}.`,
+      );
 
+      await loadUploads(true);
     } catch (requestError) {
-      window.alert(requestError instanceof Error ? requestError.message : "Something went wrong while extending upload retention.");
+      setActionError(
+        getUnexpectedError(requestError, "extend the file retention period"),
+      );
     } finally {
       setExtendingUploadId(null);
     }
   }
 
-  async function deleteUpload(
-    upload: Upload,
-  ): Promise<void> {
+  async function deleteUpload(upload: Upload): Promise<void> {
     const confirmed = window.confirm(
       `Mark "${upload.blob_name}" for deletion?`,
     );
@@ -410,14 +462,23 @@ export function AdminUpload() {
       return;
     }
 
+    setActionError(null);
     setActionMessage(null);
+
     setDeletingUploadId(upload.upload_id);
 
     try {
       const accessToken = await getAccessToken();
 
       if (!accessToken) {
-        throw new Error("Please sign in before marking an uploaded file for deletion.");
+        setActionError({
+          status: 401,
+          title: "Sign-in required",
+          message:
+            "Your session could not be verified. Sign in again before marking this file for deletion.",
+        });
+
+        return;
       }
 
       const response = await fetch(getDeleteEndpoint(upload.upload_id), {
@@ -428,111 +489,76 @@ export function AdminUpload() {
       });
 
       if (!response.ok) {
-        throw new Error(await getResponseMessage(response, `Failed to mark the file for deletion. Status: ${response.status}`));
+        setActionError(
+          await readApiError(response, "mark the file for deletion"),
+        );
+
+        return;
       }
 
       setActionMessage(`"${upload.blob_name}" was marked for deletion.`);
 
       await loadUploads(true);
 
-      setUploads((currentUploads) => currentUploads.map((currentUpload) => currentUpload.upload_id === upload.upload_id ? {
-        ...currentUpload,
-        marked_for_deletion: true,
-      }
-        : currentUpload,
-      ));
+      setUploads((currentUploads) =>
+        currentUploads.map((currentUpload) =>
+          currentUpload.upload_id === upload.upload_id
+            ? {
+                ...currentUpload,
+                marked_for_deletion: true,
+              }
+            : currentUpload,
+        ),
+      );
     } catch (requestError) {
-      window.alert(requestError instanceof Error ? requestError.message : "Something went wrong while marking the file for deletion.");
+      setActionError(
+        getUnexpectedError(requestError, "mark the file for deletion"),
+      );
     } finally {
       setDeletingUploadId(null);
     }
   }
 
   return (
-    <section
-      className="data-page"
-      aria-labelledby="upload-management-heading"
-    >
+    <section className="data-page" aria-labelledby="upload-management-heading">
       <header className="data-page-header">
         <div className="data-page-heading">
-          <h1 id="upload-management-heading">
-            Upload management
-          </h1>
+          <h1 id="upload-management-heading">Upload management</h1>
 
           <p className="data-page-description">
-            View files received through customer upload links, extend retention, or mark files for deletion.
+            View files received through this customer upload link, extend
+            retention, or mark files for deletion.
           </p>
         </div>
 
-        <Link
-          to="/admin/links"
-          className="data-page-action"
-        >
-          Back to Links
+        <Link to="/admin/links" className="data-page-action">
+          Back to links
         </Link>
       </header>
 
       {actionMessage && (
-        <p
-          className="data-table-message"
-          role="status"
-        >
+        <p className="data-table-message" role="status">
           {actionMessage}
         </p>
       )}
 
+      {actionError && <ApiErrorAlert error={actionError} />}
+
       {isLoading && (
-        <p
-          className="data-table-message"
-          role="status"
-        >
+        <p className="data-table-message" role="status">
           Loading uploaded files...
         </p>
       )}
 
       {!isLoading && error && (
-        <div
-          className="data-error-alert"
-          role="alert"
-        >
-          <div
-            className="data-error-alert-icon"
-            aria-hidden="true"
-          >
-            !
-          </div>
-
-          <div className="data-error-alert-content">
-            <div className="data-error-alert-heading">
-              <span>
-                Unable to load files
-              </span>
-            </div>
-
-            <p className="data-error-alert-message">
-              {error}
-            </p>
-
-            <button
-              className="data-error-retry-button"
-              type="button"
-              onClick={() =>
-                void loadUploads(true)
-              }
-            >
-              Try Again
-            </button>
-          </div>
-        </div>
+        <ApiErrorAlert error={error} onRetry={() => void loadUploads(true)} />
       )}
 
-      {!isLoading &&
-        !error &&
-        sortedUploads.length === 0 && (
-          <p className="data-table-message">
-            No uploaded file records found.
-          </p>
-        )}
+      {!isLoading && !error && sortedUploads.length === 0 && (
+        <p className="data-table-message">
+          No uploaded file records were found for this link.
+        </p>
+      )}
 
       {!isLoading && !error && sortedUploads.length > 0 && (
         <div className="data-table-wrapper">
@@ -541,71 +567,40 @@ export function AdminUpload() {
               <tr>
                 <th
                   scope="col"
-                  aria-sort={getAriaSort(
-                    "blob_name",
-                    sortKey,
-                    sortDirection,
-                  )}
+                  aria-sort={getAriaSort("blob_name", sortKey, sortDirection)}
                 >
                   <button
                     className="data-table-sort-button"
                     type="button"
-                    onClick={() =>
-                      handleSort("blob_name")
-                    }
+                    onClick={() => handleSort("blob_name")}
                   >
-                    File{" "}
-                    {getSortIcon("blob_name", sortKey, sortDirection)}
+                    File {getSortIcon("blob_name", sortKey, sortDirection)}
                   </button>
                 </th>
 
                 <th
                   scope="col"
-                  aria-sort={getAriaSort(
-                    "size",
-                    sortKey,
-                    sortDirection,
-                  )}
+                  aria-sort={getAriaSort("size", sortKey, sortDirection)}
                 >
                   <button
                     className="data-table-sort-button"
                     type="button"
-                    onClick={() =>
-                      handleSort("size")
-                    }
+                    onClick={() => handleSort("size")}
                   >
-                    Size{" "}
-                    {getSortIcon(
-                      "size",
-                      sortKey,
-                      sortDirection,
-                    )}
+                    Size {getSortIcon("size", sortKey, sortDirection)}
                   </button>
                 </th>
 
                 <th
                   scope="col"
-                  aria-sort={getAriaSort(
-                    "status",
-                    sortKey,
-                    sortDirection,
-                  )}
+                  aria-sort={getAriaSort("status", sortKey, sortDirection)}
                 >
                   <button
                     className="data-table-sort-button"
                     type="button"
-                    onClick={() =>
-                      handleSort(
-                        "status",
-                      )
-                    }
+                    onClick={() => handleSort("status")}
                   >
-                    Status{" "}
-                    {getSortIcon(
-                      "status",
-                      sortKey,
-                      sortDirection,
-                    )}
+                    Status {getSortIcon("status", sortKey, sortDirection)}
                   </button>
                 </th>
 
@@ -620,102 +615,89 @@ export function AdminUpload() {
                   <button
                     className="data-table-sort-button"
                     type="button"
-                    onClick={() =>
-                      handleSort(
-                        "date_uploaded",
-                      )
-                    }
+                    onClick={() => handleSort("date_uploaded")}
                   >
                     Uploaded{" "}
-                    {getSortIcon(
-                      "date_uploaded",
-                      sortKey,
-                      sortDirection,
-                    )}
+                    {getSortIcon("date_uploaded", sortKey, sortDirection)}
                   </button>
                 </th>
 
                 <th
                   scope="col"
                   aria-sort={getAriaSort(
-                    "expiration_date", sortKey,
+                    "expiration_date",
+                    sortKey,
                     sortDirection,
                   )}
                 >
                   <button
                     className="data-table-sort-button"
                     type="button"
-                    onClick={() =>
-                      handleSort(
-                        "expiration_date",
-                      )
-                    }
+                    onClick={() => handleSort("expiration_date")}
                   >
                     Expires{" "}
                     {getSortIcon("expiration_date", sortKey, sortDirection)}
                   </button>
                 </th>
 
-                <th scope="col">
-                  Actions
-                </th>
+                <th scope="col">Actions</th>
               </tr>
             </thead>
 
             <tbody>
-              {sortedUploads.map(
-                (upload) => {
-                  const status = getUploadStatus(upload);
+              {sortedUploads.map((upload) => {
+                const status = getUploadStatus(upload);
 
-                  const isExtending = extendingUploadId === upload.upload_id;
+                const isExtending = extendingUploadId === upload.upload_id;
 
-                  const isDeleting = deletingUploadId === upload.upload_id;
+                const isDeleting = deletingUploadId === upload.upload_id;
 
-                  const isRowBusy = isExtending || isDeleting;
+                const isRowBusy = isExtending || isDeleting;
 
-                  return (
-                    <tr key={upload.upload_id}>
-                      <td>{upload.blob_name}</td>
-                      <td>{formatBytes(upload.size)}
-                      </td>
+                const deletionRequested = status.label === "Pending deletion";
 
-                      <td>
-                        <span className={status.className}>{status.label}</span>
-                      </td>
+                return (
+                  <tr key={upload.upload_id}>
+                    <td>{upload.blob_name}</td>
 
-                      <td>
-                        {formatDate(upload.date_uploaded)}
-                      </td>
+                    <td>{formatBytes(upload.size)}</td>
 
-                      <td>
-                        {formatDate(upload.expiration_date)}
-                      </td>
+                    <td>
+                      <span className={status.className}>{status.label}</span>
+                    </td>
 
-                      <td>
-                        <div className="data-table-actions">
-                          <button
-                            className="data-table-action-button"
-                            type="button"
-                            disabled={isRowBusy}
-                            onClick={() => void extendUpload(upload.upload_id)}
-                          >
-                            {isExtending ? "Extending..." : "Extend"}
-                          </button>
+                    <td>{formatDate(upload.date_uploaded)}</td>
 
-                          <button
-                            className="data-table-action-button data-table-action-button--danger"
-                            type="button"
-                            disabled={isRowBusy}
-                            onClick={() => void deleteUpload(upload)}
-                          >
-                            {isDeleting ? "Deleting..." : "Delete file"}
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                },
-              )}
+                    <td>{formatOptionalDate(upload.expiration_date)}</td>
+
+                    <td>
+                      <div className="data-table-actions">
+                        <button
+                          className="data-table-action-button"
+                          type="button"
+                          disabled={isRowBusy || deletionRequested}
+                          onClick={() => void extendUpload(upload.upload_id)}
+                        >
+                          {isExtending ? "Extending..." : "Extend"}
+                        </button>
+
+                        <button
+                          className="data-table-action-button data-table-action-button--danger"
+                          type="button"
+                          disabled={isRowBusy || deletionRequested}
+                          onClick={() => void deleteUpload(upload)}
+                        >
+                          {isDeleting
+                            ? "Marking..."
+                            : deletionRequested
+                              ? "Deletion requested"
+                              : "Delete"}
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

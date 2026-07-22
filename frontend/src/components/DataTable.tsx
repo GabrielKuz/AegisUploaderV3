@@ -1,529 +1,361 @@
-import {
-    useCallback,
-    useEffect,
-    useMemo,
-    useState,
-} from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 
 import { useApiAccessToken } from "../features/auth/useApiAccessToken";
+import { ApiErrorAlert } from "./ApiErrorAlert";
 import { formatDate } from "../utils/formatters";
 import {
-    applySortDirection,
-    getAriaSort,
-    getSortIcon,
-    type SortDirection,
+  getUnexpectedError,
+  readApiError,
+  type UserFacingError,
+} from "../utils/apiErrors";
+import {
+  applySortDirection,
+  getAriaSort,
+  getSortIcon,
+  type SortDirection,
 } from "../utils/sorting";
 
 import "./DataTable.css";
 
 type SupportLink = {
-    uuid: string;
-    case_id: string;
-    itar: boolean;
-    creator: string;
-    timestamp: string;
-    expiration_date: string;
+  uuid: string;
+  case_id: string;
+  itar: boolean;
+  creator: string;
+  timestamp: string;
+  expiration_date: string;
 };
 
 type SortKey =
-    | "uuid"
-    | "case_id"
-    | "itar"
-    | "creator"
-    | "timestamp"
-    | "expiration_date";
+  | "uuid"
+  | "case_id"
+  | "itar"
+  | "creator"
+  | "timestamp"
+  | "expiration_date";
 
 type DataTableProps = {
-    createPath: string;
-    title?: string;
-    description?: string;
-    uploadActionPathPrefix?: string;
-    showItarColumn?: boolean;
-};
-
-type PageError = {
-    status?: number;
-    message: string;
-};
-
-type ApiErrorBody = {
-    detail?: unknown;
-    message?: unknown;
+  createPath: string;
+  title?: string;
+  description?: string;
+  uploadActionPathPrefix?: string;
+  showItarColumn?: boolean;
 };
 
 const DATE_KEYS = new Set<SortKey>(["timestamp", "expiration_date"]);
 
-function getApiMessage(
-    value: unknown,
-): string | null {
-    if (
-        typeof value === "string" &&
-        value.trim()
-    ) {
-        return value.trim();
-    }
+/**
+ * Confirms that the links endpoint returned an array.
+ */
+function parseLinksResponse(payload: unknown): SupportLink[] {
+  if (!Array.isArray(payload)) {
+    throw new Error(
+      "The links service returned an unexpected response format.",
+    );
+  }
 
-    if (!Array.isArray(value)) {
-        return null;
-    }
-
-    const messages = value
-        .map((item) => {
-            if (
-                typeof item === "object" &&
-                item !== null &&
-                "msg" in item &&
-                typeof item.msg === "string"
-            ) {
-                return item.msg;
-            }
-
-            return null;
-        })
-        .filter(
-            (message): message is string =>
-                Boolean(message),
-        );
-
-    return messages.length > 0
-        ? messages.join(" ")
-        : null;
-}
-
-async function getResponseMessage(
-    response: Response,
-): Promise<string> {
-    const fallback =
-        `Failed to load upload links. Status: ${response.status}`;
-
-    try {
-        const contentType =
-            response.headers.get("content-type") ?? "";
-
-        if (
-            contentType.includes("application/json")
-        ) {
-            const body =
-                (await response.json()) as ApiErrorBody;
-
-            return (
-                getApiMessage(body.detail) ??
-                getApiMessage(body.message) ??
-                fallback
-            );
-        }
-
-        const text = await response.text();
-
-        return text.trim() || fallback;
-    } catch {
-        return fallback;
-    }
+  return payload as SupportLink[];
 }
 
 export function DataTable({
-    createPath,
-    title = "Created links",
-    description = "Review generated upload links, customer case IDs, creators, and expiration dates.",
-    uploadActionPathPrefix,
-    showItarColumn = true,
+  createPath,
+  title = "Created links",
+  description = "Review generated upload links, customer case IDs, creators, and expiration dates.",
+  uploadActionPathPrefix,
+  showItarColumn = true,
 }: DataTableProps) {
-    const getAccessToken = useApiAccessToken();
+  const getAccessToken = useApiAccessToken();
 
-    const [links, setLinks] = useState<SupportLink[]>([]);
-    const [sortKey, setSortKey] = useState<SortKey>("timestamp");
-    const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
-    const [error, setError] = useState<PageError | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
+  const [links, setLinks] = useState<SupportLink[]>([]);
 
-    const loadLinks = useCallback(async () => {
-        setError(null);
-        setIsLoading(true);
+  const [sortKey, setSortKey] = useState<SortKey>("timestamp");
 
-        try {
-            const accessToken = await getAccessToken();
+  const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
 
-            if (!accessToken) {
-                setLinks([]);
-                setError({
-                    status: 401,
-                    message: "Please sign in before viewing upload links.",
-                });
-                return;
-            }
+  const [error, setError] = useState<UserFacingError | null>(null);
 
-            const response = await fetch("/api/links/", {
-                headers: {
-                    Authorization: `Bearer ${accessToken}`,
-                },
-            });
+  const [isLoading, setIsLoading] = useState(true);
 
-            if (!response.ok) {
-                setLinks([]);
-                setError({
-                    status: response.status,
-                    message: await getResponseMessage(response),
-                });
-                return;
-            }
+  const loadLinks = useCallback(async (): Promise<void> => {
+    setError(null);
+    setIsLoading(true);
 
-            const data = (await response.json()) as SupportLink[];
+    try {
+      const accessToken = await getAccessToken();
 
-            setLinks(data);
-        } catch {
-            setLinks([]);
-            setError({ message: "Something went wrong while loading upload links." });
-        } finally {
-            setIsLoading(false);
-        }
-    }, [getAccessToken]);
+      if (!accessToken) {
+        setLinks([]);
 
-    useEffect(() => {
-        void loadLinks();
-    }, [loadLinks]);
+        setError({
+          status: 401,
+          title: "Sign-in required",
+          message:
+            "Your session could not be verified. Sign in again before viewing upload links.",
+        });
 
-    function handleSort(key: SortKey): void {
-        if (key === sortKey) {
-            setSortDirection((currentDirection) => currentDirection === "asc" ? "desc" : "asc");
-            return;
-        }
+        return;
+      }
 
-        setSortKey(key);
-        setSortDirection(DATE_KEYS.has(key) ? "desc" : "asc");
+      const response = await fetch("/api/links/", {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+
+      /*
+       * Defensively handle an empty response, even though
+       * the links endpoint should normally return an array.
+       */
+      if (response.status === 204) {
+        setLinks([]);
+        return;
+      }
+
+      if (!response.ok) {
+        setLinks([]);
+
+        setError(await readApiError(response, "load the upload links"));
+
+        return;
+      }
+
+      const payload: unknown = await response.json();
+
+      const data = parseLinksResponse(payload);
+
+      setLinks(data);
+    } catch (requestError) {
+      setLinks([]);
+
+      setError(getUnexpectedError(requestError, "load the upload links"));
+    } finally {
+      setIsLoading(false);
+    }
+  }, [getAccessToken]);
+
+  useEffect(() => {
+    void loadLinks();
+  }, [loadLinks]);
+
+  function handleSort(key: SortKey): void {
+    if (key === sortKey) {
+      setSortDirection((currentDirection) =>
+        currentDirection === "asc" ? "desc" : "asc",
+      );
+
+      return;
     }
 
-    const sortedLinks = useMemo(() => {
-        return [...links].sort((a, b) => {
-            const aValue = a[sortKey];
-            const bValue = b[sortKey];
+    setSortKey(key);
 
-            if (DATE_KEYS.has(sortKey)) {
-                const comparison = new Date(String(aValue)).getTime() - new Date(String(bValue)).getTime();
-                return applySortDirection(comparison, sortDirection);
-            }
+    setSortDirection(DATE_KEYS.has(key) ? "desc" : "asc");
+  }
 
-            if (typeof aValue === "boolean" && typeof bValue === "boolean") {
-                return applySortDirection(Number(aValue) - Number(bValue), sortDirection);
-            }
+  const sortedLinks = useMemo(() => {
+    return [...links].sort((firstLink, secondLink) => {
+      const firstValue = firstLink[sortKey];
 
-            const comparison = String(aValue ?? "").localeCompare(String(bValue ?? ""));
+      const secondValue = secondLink[sortKey];
 
-            return applySortDirection(comparison, sortDirection);
-        });
-    }, [links, sortDirection, sortKey]);
+      if (DATE_KEYS.has(sortKey)) {
+        const firstTime = new Date(String(firstValue)).getTime();
 
-    const showActions = Boolean(uploadActionPathPrefix);
+        const secondTime = new Date(String(secondValue)).getTime();
 
-    return (
-        <section
-            className="data-page"
-            aria-labelledby="links-page-heading"
-        >
-            <header className="data-page-header">
-                <div className="data-page-heading">
-                    <h1 id="links-page-heading">
-                        {title}
-                    </h1>
+        return applySortDirection(firstTime - secondTime, sortDirection);
+      }
 
-                    <p className="data-page-description">
-                        {description}
-                    </p>
-                </div>
+      if (typeof firstValue === "boolean" && typeof secondValue === "boolean") {
+        return applySortDirection(
+          Number(firstValue) - Number(secondValue),
+          sortDirection,
+        );
+      }
 
-                <Link
-                    to={createPath}
-                    className="data-page-action"
+      const comparison = String(firstValue ?? "").localeCompare(
+        String(secondValue ?? ""),
+      );
+
+      return applySortDirection(comparison, sortDirection);
+    });
+  }, [links, sortDirection, sortKey]);
+
+  const showActions = Boolean(uploadActionPathPrefix);
+
+  return (
+    <section className="data-page" aria-labelledby="links-page-heading">
+      <header className="data-page-header">
+        <div className="data-page-heading">
+          <h1 id="links-page-heading">{title}</h1>
+
+          <p className="data-page-description">{description}</p>
+        </div>
+
+        <Link to={createPath} className="data-page-action">
+          Create link
+        </Link>
+      </header>
+
+      {isLoading && (
+        <p className="data-table-message" role="status">
+          Loading upload links...
+        </p>
+      )}
+
+      {!isLoading && error && (
+        <ApiErrorAlert error={error} onRetry={() => void loadLinks()} />
+      )}
+
+      {!isLoading && !error && sortedLinks.length === 0 && (
+        <p className="data-table-message">
+          No upload links have been created yet.
+        </p>
+      )}
+
+      {!isLoading && !error && sortedLinks.length > 0 && (
+        <div className="data-table-wrapper">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th
+                  scope="col"
+                  aria-sort={getAriaSort("uuid", sortKey, sortDirection)}
                 >
-                    Create Link
-                </Link>
-            </header>
+                  <button
+                    className="data-table-sort-button"
+                    type="button"
+                    onClick={() => handleSort("uuid")}
+                  >
+                    Upload link {getSortIcon("uuid", sortKey, sortDirection)}
+                  </button>
+                </th>
 
-            {isLoading && (
-                <p
-                    className="data-table-message"
-                    role="status"
+                <th
+                  scope="col"
+                  aria-sort={getAriaSort("case_id", sortKey, sortDirection)}
                 >
-                    Loading links...
-                </p>
-            )}
+                  <button
+                    className="data-table-sort-button"
+                    type="button"
+                    onClick={() => handleSort("case_id")}
+                  >
+                    Case ID {getSortIcon("case_id", sortKey, sortDirection)}
+                  </button>
+                </th>
 
-            {!isLoading && error && (
-                <div
-                    className="data-error-alert"
-                    role="alert"
-                >
-                    <div
-                        className="data-error-alert-icon"
-                        aria-hidden="true"
+                {showItarColumn && (
+                  <th
+                    scope="col"
+                    aria-sort={getAriaSort("itar", sortKey, sortDirection)}
+                  >
+                    <button
+                      className="data-table-sort-button"
+                      type="button"
+                      onClick={() => handleSort("itar")}
                     >
-                        !
-                    </div>
-
-                    <div className="data-error-alert-content">
-                        <div className="data-error-alert-heading">
-                            {error.status && (
-                                <span className="data-error-alert-status">
-                                    {error.status}
-                                </span>
-                            )}
-
-                            <span>
-                                Unable to load links
-                            </span>
-                        </div>
-
-                        <p className="data-error-alert-message">
-                            {error.message}
-                        </p>
-
-                        <button
-                            className="data-error-retry-button"
-                            type="button"
-                            onClick={() =>
-                                void loadLinks()
-                            }
-                        >
-                            Try Again
-                        </button>
-                    </div>
-                </div>
-            )}
-
-            {!isLoading &&
-                !error &&
-                sortedLinks.length === 0 && (
-                    <p className="data-table-message">
-                        No upload links have been created yet.
-                    </p>
+                      ITAR {getSortIcon("itar", sortKey, sortDirection)}
+                    </button>
+                  </th>
                 )}
 
-            {!isLoading &&
-                !error &&
-                sortedLinks.length > 0 && (
-                    <div className="data-table-wrapper">
-                        <table className="data-table">
-                            <thead>
-                                <tr>
-                                    <th
-                                        scope="col"
-                                        aria-sort={getAriaSort(
-                                            "uuid",
-                                            sortKey,
-                                            sortDirection,
-                                        )}
-                                    >
-                                        <button
-                                            className="data-table-sort-button"
-                                            type="button"
-                                            onClick={() =>
-                                                handleSort("uuid")
-                                            }
-                                        >
-                                            Upload link{" "}
-                                            {getSortIcon(
-                                                "uuid",
-                                                sortKey,
-                                                sortDirection,
-                                            )}
-                                        </button>
-                                    </th>
+                <th
+                  scope="col"
+                  aria-sort={getAriaSort("creator", sortKey, sortDirection)}
+                >
+                  <button
+                    className="data-table-sort-button"
+                    type="button"
+                    onClick={() => handleSort("creator")}
+                  >
+                    Creator {getSortIcon("creator", sortKey, sortDirection)}
+                  </button>
+                </th>
 
-                                    <th
-                                        scope="col"
-                                        aria-sort={getAriaSort(
-                                            "case_id",
-                                            sortKey,
-                                            sortDirection,
-                                        )}
-                                    >
-                                        <button
-                                            className="data-table-sort-button"
-                                            type="button"
-                                            onClick={() =>
-                                                handleSort("case_id")
-                                            }
-                                        >
-                                            Case ID{" "}
-                                            {getSortIcon(
-                                                "case_id",
-                                                sortKey,
-                                                sortDirection,
-                                            )}
-                                        </button>
-                                    </th>
+                <th
+                  scope="col"
+                  aria-sort={getAriaSort("timestamp", sortKey, sortDirection)}
+                >
+                  <button
+                    className="data-table-sort-button"
+                    type="button"
+                    onClick={() => handleSort("timestamp")}
+                  >
+                    Created {getSortIcon("timestamp", sortKey, sortDirection)}
+                  </button>
+                </th>
 
-                                    {showItarColumn && (
-                                        <th
-                                            scope="col"
-                                            aria-sort={getAriaSort(
-                                                "itar",
-                                                sortKey,
-                                                sortDirection,
-                                            )}
-                                        >
-                                            <button
-                                                className="data-table-sort-button"
-                                                type="button"
-                                                onClick={() =>
-                                                    handleSort("itar")
-                                                }
-                                            >
-                                                ITAR{" "}
-                                                {getSortIcon(
-                                                    "itar",
-                                                    sortKey,
-                                                    sortDirection,
-                                                )}
-                                            </button>
-                                        </th>
-                                    )}
+                <th
+                  scope="col"
+                  aria-sort={getAriaSort(
+                    "expiration_date",
+                    sortKey,
+                    sortDirection,
+                  )}
+                >
+                  <button
+                    className="data-table-sort-button"
+                    type="button"
+                    onClick={() => handleSort("expiration_date")}
+                  >
+                    Expires{" "}
+                    {getSortIcon("expiration_date", sortKey, sortDirection)}
+                  </button>
+                </th>
 
-                                    <th
-                                        scope="col"
-                                        aria-sort={getAriaSort(
-                                            "creator",
-                                            sortKey,
-                                            sortDirection,
-                                        )}
-                                    >
-                                        <button
-                                            className="data-table-sort-button"
-                                            type="button"
-                                            onClick={() =>
-                                                handleSort("creator")
-                                            }
-                                        >
-                                            Creator{" "}
-                                            {getSortIcon(
-                                                "creator",
-                                                sortKey,
-                                                sortDirection,
-                                            )}
-                                        </button>
-                                    </th>
+                {showActions && <th scope="col">Actions</th>}
+              </tr>
+            </thead>
 
-                                    <th
-                                        scope="col"
-                                        aria-sort={getAriaSort(
-                                            "timestamp",
-                                            sortKey,
-                                            sortDirection,
-                                        )}
-                                    >
-                                        <button
-                                            className="data-table-sort-button"
-                                            type="button"
-                                            onClick={() =>
-                                                handleSort("timestamp")
-                                            }
-                                        >
-                                            Created{" "}
-                                            {getSortIcon(
-                                                "timestamp",
-                                                sortKey,
-                                                sortDirection,
-                                            )}
-                                        </button>
-                                    </th>
+            <tbody>
+              {sortedLinks.map((supportLink) => (
+                <tr key={supportLink.uuid}>
+                  <td>
+                    <Link
+                      className="data-table-primary-link"
+                      to={`/uploads/${supportLink.uuid}`}
+                    >
+                      /uploads/
+                      {supportLink.uuid}
+                    </Link>
+                  </td>
 
-                                    <th
-                                        scope="col"
-                                        aria-sort={getAriaSort(
-                                            "expiration_date",
-                                            sortKey,
-                                            sortDirection,
-                                        )}
-                                    >
-                                        <button
-                                            className="data-table-sort-button"
-                                            type="button"
-                                            onClick={() =>
-                                                handleSort(
-                                                    "expiration_date",
-                                                )
-                                            }
-                                        >
-                                            Expires{" "}
-                                            {getSortIcon(
-                                                "expiration_date",
-                                                sortKey,
-                                                sortDirection,
-                                            )}
-                                        </button>
-                                    </th>
+                  <td>{supportLink.case_id}</td>
 
-                                    {showActions && (
-                                        <th scope="col">
-                                            Actions
-                                        </th>
-                                    )}
-                                </tr>
-                            </thead>
+                  {showItarColumn && (
+                    <td>
+                      {supportLink.itar ? (
+                        <span className="data-table-badge data-table-badge--danger">
+                          ITAR
+                        </span>
+                      ) : (
+                        "No"
+                      )}
+                    </td>
+                  )}
 
-                            <tbody>
-                                {sortedLinks.map(
-                                    (supportLink) => (
-                                        <tr key={supportLink.uuid}>
-                                            <td>
-                                                <Link
-                                                    className="data-table-primary-link"
-                                                    to={`/upload/${supportLink.uuid}`}
-                                                >
-                                                    /upload/{supportLink.uuid}
-                                                </Link>
+                  <td>{supportLink.creator}</td>
 
-                                            </td>
+                  <td>{formatDate(supportLink.timestamp)}</td>
 
-                                            <td>
-                                                {supportLink.case_id}
-                                            </td>
+                  <td>{formatDate(supportLink.expiration_date)}</td>
 
-                                            {showItarColumn && (
-                                                <td>
-                                                    {supportLink.itar ? (
-                                                        <span className="data-table-badge data-table-badge--danger">
-                                                            ITAR
-                                                        </span>
-                                                    ) : (
-                                                        "No"
-                                                    )}
-                                                </td>
-                                            )}
-
-                                            <td>
-                                                {supportLink.creator}
-                                            </td>
-
-                                            <td>
-                                                {formatDate(
-                                                    supportLink.timestamp,
-                                                )}
-                                            </td>
-
-                                            <td>
-                                                {formatDate(
-                                                    supportLink.expiration_date,
-                                                )}
-                                            </td>
-
-                                            {uploadActionPathPrefix && (
-                                                <td>
-                                                    <Link
-                                                        className="data-table-action-link"
-                                                        to={`${uploadActionPathPrefix}/${supportLink.uuid}`}
-                                                    >
-                                                        View Uploads
-                                                    </Link>
-                                                </td>
-                                            )}
-                                        </tr>
-                                    ),
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-                )}
-        </section>
-    );
+                  {uploadActionPathPrefix && (
+                    <td>
+                      <Link
+                        className="data-table-action-link"
+                        to={`${uploadActionPathPrefix}/${supportLink.uuid}`}
+                      >
+                        View uploads
+                      </Link>
+                    </td>
+                  )}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
+  );
 }

@@ -1,49 +1,34 @@
-export type SortDirection =
-    | "asc"
-    | "desc";
+export type SortDirection = "asc" | "desc";
 
-export type AriaSortValue =
-    | "ascending"
-    | "descending"
-    | "none";
+export type AriaSortValue = "ascending" | "descending" | "none";
 
 export function applySortDirection(
-    comparison: number,
-    sortDirection: SortDirection,
+  comparison: number,
+  sortDirection: SortDirection,
 ): number {
-    return sortDirection === "asc"
-        ? comparison
-        : -comparison;
+  return sortDirection === "asc" ? comparison : -comparison;
 }
 
-export function getAriaSort<
-    SortKey extends string,
->(
-    column: SortKey,
-    sortKey: SortKey,
-    sortDirection: SortDirection,
+export function getAriaSort<SortKey extends string>(
+  column: SortKey,
+  sortKey: SortKey,
+  sortDirection: SortDirection,
 ): AriaSortValue {
-    if (column !== sortKey) {
-        return "none";
-    }
+  if (column !== sortKey) {
+    return "none";
+  }
 
-    return sortDirection === "asc"
-        ? "ascending"
-        : "descending";
+  return sortDirection === "asc" ? "ascending" : "descending";
 }
 
-export function getSortIcon<
-    SortKey extends string,
->(
-    column: SortKey,
-    sortKey: SortKey,
-    sortDirection: SortDirection,
+export function getSortIcon<SortKey extends string>(
+  column: SortKey,
+  sortKey: SortKey,
+  sortDirection: SortDirection,
 ): string {
-    if (column !== sortKey) {
-        return "⇅";
-    }
+  if (column !== sortKey) {
+    return "⇅";
+  }
 
-    return sortDirection === "asc"
-        ? "▲"
-        : "▼";
+  return sortDirection === "asc" ? "▲" : "▼";
 }

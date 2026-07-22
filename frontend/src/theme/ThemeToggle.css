@@ -1,69 +1,68 @@
 .theme-toggle {
-    align-items: center;
-    background: transparent;
-    border: 2px solid var(--gray);
-    border-radius: var(--radius-md);
-    box-shadow: var(--theme-control-shadow);
-    color: var(--white);
-    cursor: pointer;
-    display: inline-flex;
-    font: inherit;
-    font-size: 14px;
-    font-weight: 600;
-    gap: 8px;
-    justify-content: center;
-    min-height: 40px;
-    padding: 0 14px;
-    text-decoration: none;
-    transition:
-        background-color var(--transition-fast),
-        border-color var(--transition-fast),
-        color var(--transition-fast),
-        transform var(--transition-fast);
+  align-items: center;
+  background: transparent;
+  border: 2px solid var(--gray);
+  border-radius: var(--radius-md);
+  box-shadow: var(--theme-control-shadow);
+  color: var(--white);
+  cursor: pointer;
+  display: inline-flex;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  gap: 8px;
+  justify-content: center;
+  min-height: 40px;
+  padding: 0 14px;
+  text-decoration: none;
+  transition:
+    background-color var(--transition-fast),
+    border-color var(--transition-fast),
+    color var(--transition-fast),
+    transform var(--transition-fast);
 }
 
 .theme-toggle:hover {
-    border-color: var(--theme-mode);
-    color: var(--theme-mode);
-    transform: translateY(-1px);
+  border-color: var(--theme-mode);
+  color: var(--theme-mode);
+  transform: translateY(-1px);
 }
 
 .theme-toggle:active {
-    transform: translateY(0);
+  transform: translateY(0);
 }
 
 .theme-toggle:focus-visible {
-    outline: 3px solid var(--theme-focus-ring);
-    outline-offset: 3px;
+  outline: 3px solid var(--theme-focus-ring);
+  outline-offset: 3px;
 }
 
 .theme-toggle-icon {
-    font-size: 17px;
-    line-height: 1;
+  font-size: 17px;
+  line-height: 1;
 }
 
 @media (max-width: 520px) {
-    .theme-toggle {
-        width: 42px;
-        padding: 0;
-    }
+  .theme-toggle {
+    width: 42px;
+    padding: 0;
+  }
 
-    .theme-toggle-label {
-        position: absolute;
+  .theme-toggle-label {
+    position: absolute;
 
-        width: 1px;
-        height: 1px;
-        overflow: hidden;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
 
-        clip-path: inset(50%);
-        white-space: nowrap;
-    }
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-
-    .theme-toggle:hover,
-    .theme-toggle:active {
-        transform: none;
-    }
+  .theme-toggle:hover,
+  .theme-toggle:active {
+    transform: none;
+  }
 }

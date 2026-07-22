@@ -1,11 +1,11 @@
 export type UploadSession = {
-    uuid: string;
-    uploadToken: string;
-    fileName: string;
-    fileHash: string;
-    fileSize: number;
-    chunkSize: number;
-    file: File;
+  uuid: string;
+  uploadToken: string;
+  fileName: string;
+  fileHash: string;
+  fileSize: number;
+  chunkSize: number;
+  file: File;
 };
 
 const DATABASE_NAME = "CustomerUploads";
@@ -13,155 +13,108 @@ const DATABASE_VERSION = 1;
 const UPLOAD_STORE_NAME = "uploads";
 
 function openDatabase(): Promise<IDBDatabase> {
-    return new Promise((resolve, reject) => {
-        const request = indexedDB.open(
-            DATABASE_NAME,
-            DATABASE_VERSION,
-        );
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DATABASE_NAME, DATABASE_VERSION);
 
-        request.onupgradeneeded = () => {
-            const database = request.result;
+    request.onupgradeneeded = () => {
+      const database = request.result;
 
-            if (
-                !database.objectStoreNames.contains(
-                    UPLOAD_STORE_NAME,
-                )
-            ) {
-                database.createObjectStore(
-                    UPLOAD_STORE_NAME,
-                    {
-                        keyPath: "uploadToken",
-                    },
-                );
-            }
-        };
+      if (!database.objectStoreNames.contains(UPLOAD_STORE_NAME)) {
+        database.createObjectStore(UPLOAD_STORE_NAME, {
+          keyPath: "uploadToken",
+        });
+      }
+    };
 
-        request.onsuccess = () => {
-            resolve(request.result);
-        };
+    request.onsuccess = () => {
+      resolve(request.result);
+    };
 
-        request.onerror = () => {
-            reject(
-                request.error ??
-                new Error(
-                    "Failed to open the upload database.",
-                ),
-            );
-        };
-    });
+    request.onerror = () => {
+      reject(request.error ?? new Error("Failed to open the upload database."));
+    };
+  });
 }
 
-function waitForTransaction(
-    transaction: IDBTransaction,
-): Promise<void> {
-    return new Promise((resolve, reject) => {
-        transaction.oncomplete = () => {
-            resolve();
-        };
+function waitForTransaction(transaction: IDBTransaction): Promise<void> {
+  return new Promise((resolve, reject) => {
+    transaction.oncomplete = () => {
+      resolve();
+    };
 
-        transaction.onerror = () => {
-            reject(
-                transaction.error ??
-                new Error(
-                    "The upload database transaction failed.",
-                ),
-            );
-        };
+    transaction.onerror = () => {
+      reject(
+        transaction.error ??
+          new Error("The upload database transaction failed."),
+      );
+    };
 
-        transaction.onabort = () => {
-            reject(
-                transaction.error ??
-                new Error(
-                    "The upload database transaction was aborted.",
-                ),
-            );
-        };
-    });
+    transaction.onabort = () => {
+      reject(
+        transaction.error ??
+          new Error("The upload database transaction was aborted."),
+      );
+    };
+  });
 }
 
-export async function saveUploadSession(
-    session: UploadSession,
-): Promise<void> {
-    const database = await openDatabase();
+export async function saveUploadSession(session: UploadSession): Promise<void> {
+  const database = await openDatabase();
 
-    try {
-        const transaction = database.transaction(
-            UPLOAD_STORE_NAME,
-            "readwrite",
-        );
+  try {
+    const transaction = database.transaction(UPLOAD_STORE_NAME, "readwrite");
 
-        transaction
-            .objectStore(UPLOAD_STORE_NAME)
-            .put(session);
+    transaction.objectStore(UPLOAD_STORE_NAME).put(session);
 
-        await waitForTransaction(transaction);
-    } finally {
-        database.close();
-    }
+    await waitForTransaction(transaction);
+  } finally {
+    database.close();
+  }
 }
 
 export async function getUploadSessions(
-    uuid?: string,
+  uuid?: string,
 ): Promise<UploadSession[]> {
-    const database = await openDatabase();
+  const database = await openDatabase();
 
-    try {
-        const sessions = await new Promise<
-            UploadSession[]
-        >((resolve, reject) => {
-            const request = database
-                .transaction(
-                    UPLOAD_STORE_NAME,
-                    "readonly",
-                )
-                .objectStore(UPLOAD_STORE_NAME)
-                .getAll();
+  try {
+    const sessions = await new Promise<UploadSession[]>((resolve, reject) => {
+      const request = database
+        .transaction(UPLOAD_STORE_NAME, "readonly")
+        .objectStore(UPLOAD_STORE_NAME)
+        .getAll();
 
-            request.onsuccess = () => {
-                resolve(
-                    request.result as UploadSession[],
-                );
-            };
+      request.onsuccess = () => {
+        resolve(request.result as UploadSession[]);
+      };
 
-            request.onerror = () => {
-                reject(
-                    request.error ??
-                    new Error(
-                        "Failed to read saved upload sessions.",
-                    ),
-                );
-            };
-        });
-
-        if (!uuid) {
-            return sessions;
-        }
-
-        return sessions.filter(
-            (session) => session.uuid === uuid,
+      request.onerror = () => {
+        reject(
+          request.error ?? new Error("Failed to read saved upload sessions."),
         );
-    } finally {
-        database.close();
+      };
+    });
+
+    if (!uuid) {
+      return sessions;
     }
+
+    return sessions.filter((session) => session.uuid === uuid);
+  } finally {
+    database.close();
+  }
 }
 
-export async function deleteUploadSession(
-    uploadToken: string,
-): Promise<void> {
-    const database = await openDatabase();
+export async function deleteUploadSession(uploadToken: string): Promise<void> {
+  const database = await openDatabase();
 
-    try {
-        const transaction = database.transaction(
-            UPLOAD_STORE_NAME,
-            "readwrite",
-        );
+  try {
+    const transaction = database.transaction(UPLOAD_STORE_NAME, "readwrite");
 
-        transaction
-            .objectStore(UPLOAD_STORE_NAME)
-            .delete(uploadToken);
+    transaction.objectStore(UPLOAD_STORE_NAME).delete(uploadToken);
 
-        await waitForTransaction(transaction);
-    } finally {
-        database.close();
-    }
+    await waitForTransaction(transaction);
+  } finally {
+    database.close();
+  }
 }

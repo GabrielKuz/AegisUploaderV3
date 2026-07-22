@@ -6,8 +6,7 @@
   background: var(--theme-page);
   color: var(--theme-text);
   display: grid;
-  grid-template-columns:
-    clamp(190px, 20vw, 240px) minmax(0, 1fr);
+  grid-template-columns: clamp(190px, 20vw, 240px) minmax(0, 1fr);
   grid-template-rows: 76px minmax(0, 1fr);
   height: 100vh;
   height: 100dvh;
@@ -57,6 +56,7 @@
   flex: 0 0 auto;
   height: 42px;
   width: 1px;
+  margin: 5px;
 }
 
 .app-title {
@@ -70,6 +70,7 @@
   font-size: 14px;
   font-weight: 600;
   line-height: 1.25;
+  margin-bottom: 2px;
 }
 
 .app-section-name {
@@ -79,6 +80,7 @@
   letter-spacing: 0.08em;
   line-height: 1.3;
   text-transform: uppercase;
+  margin-top: 2px;
 }
 
 .app-header-actions {
@@ -91,22 +93,23 @@
 
 .app-user-details {
   display: grid;
-  gap: 2px;
   min-width: 0;
   text-align: right;
 }
 
 .app-user-name {
   color: var(--white);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
   line-height: 1.3;
+  margin-bottom: 2px;
 }
 
 .app-user-email {
   color: rgba(255, 255, 255, 0.62);
   font-size: 11px;
   line-height: 1.3;
+  margin-top: 2px;
   max-width: 240px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -121,8 +124,8 @@
   box-shadow: var(--theme-control-shadow);
   color: var(--white);
   cursor: pointer;
-  font: inherit;
   display: inline-flex;
+  font-family: var(--font-body);
   font-size: 14px;
   font-weight: 600;
   justify-content: center;
@@ -152,10 +155,7 @@
 
 .app-sidebar {
   background:
-    linear-gradient(180deg,
-      rgba(255, 255, 255, 0.025),
-      transparent),
-    #05090b;
+    linear-gradient(180deg, rgba(255, 255, 255, 0.025), transparent), #05090b;
   border-right: 1px solid rgba(255, 255, 255, 0.12);
   color: var(--white);
   display: flex;
@@ -177,10 +177,12 @@
   border-left: 3px solid transparent;
   color: rgba(255, 255, 255, 0.7);
   display: flex;
-  font: var(--font-mono);
-  font-size: clamp(14px, 2vw, 18px);
-  font-weight: 600;
+  font-family: var(--font-body);
+  font-size: clamp(14px, 2vw, 16px);
+  font-weight: 500;
   min-height: 46px;
+  margin-top: 5px;
+  margin-bottom: 5px;
   overflow-wrap: anywhere;
   padding: 10px 14px;
   transition:
@@ -193,12 +195,14 @@
 .app-nav-link:hover {
   background: rgba(255, 255, 255, 0.06);
   color: var(--white);
+  font-weight: 600;
 }
 
 .app-nav-link--active {
   background: var(--theme-accent-soft);
   border-left-color: var(--theme-accent-hover);
   color: var(--theme-accent-hover);
+  font-weight: 600;
 }
 
 /* ==========================================================================
@@ -213,11 +217,10 @@
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding:
-    clamp(24px, 4vw, 48px) clamp(20px, 4vw, 52px);
+  padding: clamp(24px, 4vw, 48px) clamp(20px, 4vw, 52px);
 }
 
-.app-main>* {
+.app-main > * {
   max-width: 100%;
   min-width: 0;
 }
@@ -290,8 +293,7 @@
 
 @media (max-width: 900px) {
   .app-layout {
-    grid-template-columns:
-      clamp(170px, 28vw, 210px) minmax(0, 1fr);
+    grid-template-columns: clamp(170px, 28vw, 210px) minmax(0, 1fr);
   }
 
   .app-header {
@@ -312,8 +314,7 @@
   }
 
   .app-main {
-    padding:
-      clamp(20px, 3vw, 32px) clamp(16px, 3vw, 30px);
+    padding: clamp(20px, 3vw, 32px) clamp(16px, 3vw, 30px);
   }
 }
 
@@ -331,8 +332,7 @@
 
 @media (max-width: 720px) {
   .app-layout {
-    grid-template-columns:
-      clamp(150px, 38vw, 190px) minmax(0, 1fr);
+    grid-template-columns: clamp(150px, 38vw, 190px) minmax(0, 1fr);
   }
 
   .app-header {
@@ -369,8 +369,7 @@
 
 @media (max-width: 420px) {
   .app-layout {
-    grid-template-columns:
-      144px minmax(0, 1fr);
+    grid-template-columns: 144px minmax(0, 1fr);
   }
 
   .app-header {
@@ -400,7 +399,6 @@
    ========================================================================== */
 
 @media (prefers-reduced-motion: reduce) {
-
   .app-sign-out:hover,
   .app-sign-out:active {
     transform: none;

@@ -1,4 +1,7 @@
-import type { AccountInfo, IPublicClientApplication } from "@azure/msal-browser";
+import type {
+  AccountInfo,
+  IPublicClientApplication,
+} from "@azure/msal-browser";
 import { InteractionRequiredAuthError } from "@azure/msal-browser";
 
 import { apiRequest, msalInstance } from "./authConfig";
@@ -24,7 +27,9 @@ export function setPostLoginRedirect(destination: string): void {
 }
 
 export function getPostLoginRedirect(defaultDestination = "/support"): string {
-  const storedDestination = window.localStorage.getItem(POST_LOGIN_REDIRECT_KEY);
+  const storedDestination = window.localStorage.getItem(
+    POST_LOGIN_REDIRECT_KEY,
+  );
 
   if (
     storedDestination &&

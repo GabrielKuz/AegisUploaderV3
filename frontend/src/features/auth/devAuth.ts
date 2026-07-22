@@ -8,16 +8,14 @@ export type DevUser = {
 
 const DEV_USER_KEY = "aegis-dev-user";
 
-export function signInDevUser(
-  role: DevUser["role"] = "support",
-): DevUser {
+export function signInDevUser(role: DevUser["role"] = "support"): DevUser {
   const users: Record<DevUser["role"], DevUser> = {
     support: {
-    id: "dev-support-user",
-    name: "Support User",
-    email: "support.user@aegissoftware.com",
-    role: "support",
-    token: "dev-support-token",
+      id: "dev-support-user",
+      name: "Support User",
+      email: "support.user@aegissoftware.com",
+      role: "support",
+      token: "dev-support-token",
     },
     customer: {
       id: "dev-customer-user",
@@ -37,10 +35,7 @@ export function signInDevUser(
 
   const user = users[role];
 
-  window.localStorage.setItem(
-    DEV_USER_KEY,
-    JSON.stringify(user),
-  );
+  window.localStorage.setItem(DEV_USER_KEY, JSON.stringify(user));
 
   return user;
 }

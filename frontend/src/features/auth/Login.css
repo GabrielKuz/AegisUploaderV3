@@ -108,7 +108,8 @@
   transition:
     background-color var(--transition-fast),
     border-color var(--transition-fast),
-    color var(--transition-fast) transform var(--transition-fast);
+    color var(--transition-fast),
+    transform var(--transition-fast);
 }
 
 .support-link:hover {
@@ -147,13 +148,8 @@
 
   color: #ffffff;
   background:
-    radial-gradient(circle at 18% 80%,
-      rgba(239, 59, 50, 0.2),
-      transparent 28%),
-    linear-gradient(145deg,
-      #000000 0%,
-      #05090b 48%,
-      #083446 100%);
+    radial-gradient(circle at 18% 80%, rgba(239, 59, 50, 0.2), transparent 28%),
+    linear-gradient(145deg, #000000 0%, #05090b 48%, #083446 100%);
 }
 
 .brand-grid {
@@ -161,12 +157,8 @@
   inset: 0;
   opacity: 0.22;
   background-image:
-    linear-gradient(45deg,
-      rgba(255, 255, 255, 0.12) 1px,
-      transparent 1px),
-    linear-gradient(-45deg,
-      rgba(255, 255, 255, 0.08) 1px,
-      transparent 1px);
+    linear-gradient(45deg, rgba(255, 255, 255, 0.12) 1px, transparent 1px),
+    linear-gradient(-45deg, rgba(255, 255, 255, 0.08) 1px, transparent 1px);
   background-position: center;
   background-size: 120px 120px;
   pointer-events: none;
@@ -307,9 +299,7 @@
   grid-template-rows: minmax(0, 1fr) auto;
   row-gap: clamp(10px, 1.8vh, 20px);
   background:
-    linear-gradient(90deg,
-      var(--theme-panel-gradient),
-      transparent 28%),
+    linear-gradient(90deg, var(--theme-panel-gradient), transparent 28%),
     var(--theme-page);
   transition: background-color 180ms ease;
 }
@@ -320,12 +310,8 @@
   inset: 0;
   opacity: 0.42;
   background-image:
-    linear-gradient(45deg,
-      var(--theme-pattern) 1px,
-      transparent 1px),
-    linear-gradient(-45deg,
-      var(--theme-pattern-secondary) 1px,
-      transparent 1px);
+    linear-gradient(45deg, var(--theme-pattern) 1px, transparent 1px),
+    linear-gradient(-45deg, var(--theme-pattern-secondary) 1px, transparent 1px);
   background-size: 140px 140px;
   pointer-events: none;
 }
@@ -666,8 +652,6 @@
   .login-header-actions {
     gap: 10px;
   }
-
-
 
   .support-link {
     min-height: 40px;
@@ -1018,7 +1002,6 @@
    ========================================================================== */
 
 @media (prefers-reduced-motion: reduce) {
-
   .support-link:hover,
   .support-link:active,
   .sso-button:hover,
