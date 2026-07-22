@@ -20,11 +20,11 @@
 
     --portal-accent: var(--theme-accent);
     --portal-accent-hover: var(--theme-accent-hover);
-    --portal-accent-active: #85231f;
+    --portal-accent-active: #5b11e4;
     --portal-accent-soft: var(--theme-accent-soft);
 
-    --portal-accent-border: rgba(169, 43, 38, 0.34);
-    --portal-focus-ring: rgba(239, 59, 50, 0.14);
+    --portal-accent-border: rgba(35, 201, 14, 0.34);
+    --portal-focus-ring: rgba(11, 80, 47, 0.14);
 
     --current-theme: var(--portal-accent);
 
