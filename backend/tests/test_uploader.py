@@ -138,8 +138,8 @@ def upload_test_setup(monkeypatch, tmp_path):
 
     return app, storage, tmp_path, uploader
 
-
-def test_resumable_upload_flow(upload_test_setup):
+@pytest.mark.asyncio
+async def test_resumable_upload_flow(upload_test_setup):
 
     app, storage, tmp_path, uploader = upload_test_setup
 
@@ -213,8 +213,8 @@ def test_resumable_upload_flow(upload_test_setup):
     assert stored_file.exists()
     assert stored_file.read_bytes() == payload
 
-
-def test_upload_start_missing_filename(upload_test_setup):
+@pytest.mark.asyncio
+async def test_upload_start_missing_filename(upload_test_setup):
 
     app, storage, tmp_path, uploader = upload_test_setup
 
@@ -231,8 +231,8 @@ def test_upload_start_missing_filename(upload_test_setup):
     assert response.status_code == 400
     assert "x-file-name" in response.json()["detail"].lower()
 
-
-def test_upload_start_missing_hash(upload_test_setup):
+@pytest.mark.asyncio
+async def test_upload_start_missing_hash(upload_test_setup):
 
     app, storage, tmp_path, uploader = upload_test_setup
 

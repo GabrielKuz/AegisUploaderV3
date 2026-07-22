@@ -211,7 +211,7 @@ async def start_upload(
         while True: # Check if blob name already exists under the case id and if it does append _{counter} to the end until its unique to prevent overwriting old files
             if counter > 256: # Protects against a potential infinite loop or malicious attempts to create collisions. Should never be hit
                 raise HTTPException(status_code=400, detail="Unable to generate a unique filename after 256 attempts, please rename the file and try again")
-            exists_in_storage = service_client.exists(f"{link_entry.case_id}/{blob_name}") # Check if file is stored
+            exists_in_storage = await service_client.exists(f"{link_entry.case_id}/{blob_name}") # Check if file is stored
 
             exists_in_db = ( # Check for a db record with the name
                 db.query(UploadSession).filter(
@@ -259,6 +259,8 @@ async def start_upload(
         logger.warning(f"IntegrityError: A conflicting upload session already exists for link {link_entry.uuid} and blob name {blob_name}")
         db.rollback()
         raise HTTPException(status_code=409, detail="A conflicting upload session already exists.")
+    except HTTPException as e: # Handle HTTP exceptions raised during the upload session creation process
+        raise e
 
     except Exception: # General exception handling for unexpected errors during the upload session creation process
         db.rollback()

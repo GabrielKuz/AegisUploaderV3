@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+import asyncio
 from io import BufferedReader, BytesIO
 from pathlib import Path
 from typing import AsyncIterator, BinaryIO
@@ -45,7 +46,7 @@ class StorageProvider(ABC):
         pass
 
     @abstractmethod
-    def exists(self, file_path: str) -> bool:
+    async def exists(self, file_path: str) -> bool:
         pass
 
     @abstractmethod
@@ -124,7 +125,7 @@ class LocalStorageProvider(StorageProvider):
             raise FileNotFoundError(f"File '{file_path}' does not exist.") from None
         logger.debug(f"Deleted file {path}")
 
-    def exists(self, file_path: str) -> bool:
+    async def exists(self, file_path: str) -> bool: # azure is async but this is sync 
         logger.debug(f"Checking existence of file {file_path}")
         return self._resolve_path(file_path).exists()
         
@@ -321,9 +322,9 @@ class AzureFileStorageProvider(StorageProvider):
         except ResourceNotFoundError:
             raise FileNotFoundError(f"File '{file_path}' does not exist.") from None
 
-    def exists(self, file_path: str) -> bool:
+    async def exists(self, file_path: str) -> bool:
         try:
-            self._get_client(file_path).get_file_properties()
+            await self._get_client(file_path).get_file_properties()
             return True
         except ResourceNotFoundError:
             return False
