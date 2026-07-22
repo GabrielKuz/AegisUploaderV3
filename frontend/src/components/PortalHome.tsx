@@ -1,21 +1,21 @@
 import type { LinkActionCardProps } from "./LinkActionCard";
 import { LinkActionCard } from "./LinkActionCard";
 
-import "./PortalHomePage.css";
+import "./PortalHome.css";
 
-type PortalHomePageProps = {
+type PortalHomeProps = {
     headingId: string;
     title: string;
     description: string;
     actions: readonly LinkActionCardProps[];
 };
 
-export function PortalHomePage({
+export function PortalHome({
     headingId,
     title,
     description,
     actions,
-}: PortalHomePageProps) {
+}: PortalHomeProps) {
     return (
         <section
             className="portal-home"

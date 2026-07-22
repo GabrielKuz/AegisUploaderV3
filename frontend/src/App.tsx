@@ -5,23 +5,23 @@ import {
   Routes,
 } from "react-router-dom";
 
-import { AdminCreateSupportLinkPage } from "./features/admin/AdminCreateSupportLinkPage";
-import { AdminHomePage } from "./features/admin/AdminHomePage";
-import { AdminLinksPage } from "./features/admin/AdminLinksPage";
-import { AdminUploadPage } from "./features/admin/AdminUploadPage";
+import { AdminCreateLink } from "./features/admin/AdminCreateLink";
+import { AdminHome } from "./features/admin/AdminHome";
+import { AdminUpload } from "./features/admin/AdminUpload";
 
-import { LoginPage } from "./features/auth/LoginPage";
+import { Login } from "./features/auth/Login";
 import { RequireEntraUser } from "./features/auth/RequireEntraUser";
 import { SupportLayout } from "./layouts/SupportLayout";
 import { CustomerLayout } from "./layouts/CustomerLayout";
 import { AdminLayout } from "./layouts/AdminLayout";
 
-import { CreateSupportLinkPage } from "./features/support/CreateSupportLinkPage";
-import { SupportHomePage } from "./features/support/SupportHomePage";
-import { SupportLinksPage } from "./features/support/SupportLinksPage";
-import { SupportUploadPage } from "./features/support/SupportUploadPage";
+import { SupportCreateLink } from "./features/support/SupportCreateLink";
+import { SupportHome } from "./features/support/SupportHome";
+import { SupportViewLinks } from "./features/support/SupportViewLinks";
+import { SupportUpload } from "./features/support/SupportUpload";
 
-import { CustomerUpload } from "./features/uploader/CustomerUpload";
+import { CustomerUpload } from "./features/customer/CustomerUpload";
+import { AdminViewLinks } from "./features/admin/AdminViewLinks";
 
 export default function App() {
   return (
@@ -29,7 +29,7 @@ export default function App() {
       <Routes>
         <Route
           path="/"
-          element={<LoginPage />}
+          element={<Login />}
         />
 
         {/* Public customer-facing upload link. */}
@@ -53,22 +53,22 @@ export default function App() {
         >
           <Route
             index
-            element={<SupportHomePage />}
+            element={<SupportHome />}
           />
 
           <Route
             path="links"
-            element={<SupportLinksPage />}
+            element={<SupportViewLinks />}
           />
 
           <Route
             path="links/new"
-            element={<CreateSupportLinkPage />}
+            element={<SupportCreateLink />}
           />
 
           <Route
             path="view-uploads/:uuid"
-            element={<SupportUploadPage />}
+            element={<SupportUpload />}
           />
         </Route>
 
@@ -84,22 +84,22 @@ export default function App() {
         >
           <Route
             index
-            element={<AdminHomePage />}
+            element={<AdminHome />}
           />
 
           <Route
             path="links"
-            element={<AdminLinksPage />}
+            element={<AdminViewLinks />}
           />
 
           <Route
             path="links/new"
-            element={<AdminCreateSupportLinkPage />}
+            element={<AdminCreateLink />}
           />
 
           <Route
             path="view-uploads/:uuid"
-            element={<AdminUploadPage />}
+            element={<AdminUpload />}
           />
         </Route>
 

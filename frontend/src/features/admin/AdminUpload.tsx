@@ -9,7 +9,7 @@ import {
   useParams,
 } from "react-router-dom";
 
-import "../../components/DataTablePage.css";
+import "../../components/DataTable.css";
 import {
   formatBytes,
   formatDate,
@@ -264,7 +264,7 @@ function getSortValue(upload: Upload, key: SortKey): string | number {
   return upload[key];
 }
 
-export function AdminUploadPage() {
+export function AdminUpload() {
 
   const { uuid } = useParams<{ uuid: string }>();
 

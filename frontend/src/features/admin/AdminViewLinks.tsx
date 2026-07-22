@@ -1,8 +1,8 @@
-import { LinksTablePage } from "../../components/LinksTablePage";
+import { DataTable } from "../../components/DataTable";
 
-export function AdminLinksPage() {
+export function AdminViewLinks() {
     return (
-        <LinksTablePage
+        <DataTable
             createPath="/admin/links/new"
             description="Review generated upload links, customer case IDs, creators, and expiration dates."
             uploadActionPathPrefix="/admin/view-uploads"

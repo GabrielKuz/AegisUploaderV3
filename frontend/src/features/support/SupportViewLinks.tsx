@@ -1,8 +1,8 @@
-import { LinksTablePage } from "../../components/LinksTablePage";
+import { DataTable } from "../../components/DataTable";
 
-export function SupportLinksPage() {
+export function SupportViewLinks() {
   return (
-    <LinksTablePage
+    <DataTable
       createPath="/support/links/new"
       description="Review generated upload links, customer case IDs, creators, expiration dates, and uploaded files."
       uploadActionPathPrefix="/support/view-uploads"

@@ -15,7 +15,7 @@ import {
     type SortDirection,
 } from "../utils/sorting";
 
-import "./DataTablePage.css";
+import "./DataTable.css";
 
 type SupportLink = {
     uuid: string;
@@ -34,7 +34,7 @@ type SortKey =
     | "timestamp"
     | "expiration_date";
 
-type LinksTablePageProps = {
+type DataTableProps = {
     createPath: string;
     title?: string;
     description?: string;
@@ -122,13 +122,13 @@ async function getResponseMessage(
     }
 }
 
-export function LinksTablePage({
+export function DataTable({
     createPath,
     title = "Created links",
     description = "Review generated upload links, customer case IDs, creators, and expiration dates.",
     uploadActionPathPrefix,
     showItarColumn = true,
-}: LinksTablePageProps) {
+}: DataTableProps) {
     const getAccessToken = useApiAccessToken();
 
     const [links, setLinks] = useState<SupportLink[]>([]);

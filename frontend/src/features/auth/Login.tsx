@@ -12,7 +12,7 @@ import {
   setPostLoginRedirect,
 } from "./entraAuth";
 
-import "./LoginPage.css";
+import "./Login.css";
 
 type LoginLocationState = {
   from?: unknown;
@@ -66,7 +66,7 @@ function getSafeDestination(state: unknown): string {
   return isValidInternalPath ? from : DEFAULT_DESTINATION;
 }
 
-export function LoginPage() {
+export function Login() {
   const navigate = useNavigate();
   const location = useLocation();
   const { accounts, instance } = useMsal();

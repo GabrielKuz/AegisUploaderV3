@@ -3,7 +3,7 @@ import {
   LinksIcon,
   type LinkActionCardProps,
 } from "../../components/LinkActionCard";
-import { PortalHomePage } from "../../components/PortalHomePage";
+import { PortalHome } from "../../components/PortalHome";
 
 const ADMIN_ACTIONS = [
   {
@@ -26,9 +26,9 @@ const ADMIN_ACTIONS = [
   },
 ] satisfies readonly LinkActionCardProps[];
 
-export function AdminHomePage() {
+export function AdminHome() {
   return (
-    <PortalHomePage
+    <PortalHome
       headingId="admin-home-heading"
       title="Admin dashboard"
       description="Manage upload links and adjust upload retention when needed."

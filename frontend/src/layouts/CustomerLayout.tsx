@@ -4,7 +4,7 @@ import { AppLayout } from "./AppLayout";
 import {
     CustomerUploadProvider,
     useCustomerUpload,
-} from "../features/uploader/CustomerUploadContext";
+} from "../features/customer/CustomerUploadContext";
 import { formatBytes } from "../utils/formatters";
 
 /**

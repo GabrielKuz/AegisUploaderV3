@@ -6,18 +6,18 @@ import { useNavigate } from "react-router-dom";
 
 import { useApiAccessToken } from "../features/auth/useApiAccessToken";
 
-import "./CreateUploadLinkForm.css";
+import "./CreateLinkForm.css";
 
-type CreateUploadLinkFormProps = {
+type CreateLinkFormProps = {
     cancelPath: string;
     successPath: string;
 };
 
 // Creates temporary customer upload link for support case.
-export function CreateUploadLinkForm({
+export function CreateLinkForm({
     cancelPath,
     successPath,
-}: CreateUploadLinkFormProps) {
+}: CreateLinkFormProps) {
     const navigate = useNavigate();
     const getAccessToken = useApiAccessToken();
 

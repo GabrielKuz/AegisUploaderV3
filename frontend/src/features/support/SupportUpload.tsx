@@ -21,7 +21,7 @@ import {
     type SortDirection,
 } from "../../utils/sorting";
 import { useApiAccessToken } from "../auth/useApiAccessToken";
-import "../../components/DataTablePage.css";
+import "../../components/DataTable.css";
 
 const REQUEST_DEDUPE_WINDOW_MS = 1_000;
 
@@ -187,7 +187,7 @@ function getUploadStatusLabel(
         : "In progress";
 }
 
-export function SupportUploadPage() {
+export function SupportUpload() {
     const { uuid } = useParams<{ uuid: string }>();
 
     const getAccessToken = useApiAccessToken();

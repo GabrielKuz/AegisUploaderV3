@@ -3,7 +3,7 @@ import {
   LinksIcon,
   type LinkActionCardProps,
 } from "../../components/LinkActionCard";
-import { PortalHomePage } from "../../components/PortalHomePage";
+import { PortalHome } from "../../components/PortalHome";
 
 const SUPPORT_ACTIONS = [
   {
@@ -26,9 +26,9 @@ const SUPPORT_ACTIONS = [
   },
 ] satisfies readonly LinkActionCardProps[];
 
-export function SupportHomePage() {
+export function SupportHome() {
   return (
-    <PortalHomePage
+    <PortalHome
       headingId="support-home-heading"
       title="How can we help?"
       description="Create secure customer upload links and review existing link activity."
