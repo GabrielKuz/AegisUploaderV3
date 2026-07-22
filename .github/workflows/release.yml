@@ -101,6 +101,10 @@ jobs:
           file: ./nginx/DOCKERFILE
           push: true
           tags: ${{ steps.nginx-meta.outputs.tags }}
+          build-args: |
+            VITE_AZURE_TENANT_ID=${{ secrets.TENANT_ID }}
+            VITE_AZURE_CLIENT_ID=${{ secrets.CLIENT_ID }}
+            VITE_AZURE_API_SCOPE=${{ secrets.AZURE_API_SCOPE }}
           labels: ${{ steps.nginx-meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
