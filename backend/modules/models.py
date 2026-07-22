@@ -9,7 +9,9 @@ from sqlalchemy import UUID, BigInteger, Column, String, Integer, DateTime, Bool
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.mutable import MutableList
 from sqlalchemy.orm import declarative_base, Mapped, mapped_column, relationship
+import logging
 
+logger = logging.getLogger(__name__)
 Base = declarative_base()
 
 #=======================================================================================================
@@ -118,6 +120,7 @@ def update_other_from_self(home, target, session, target_field_name, home_field_
 
     value = getattr(home, home_field_name)
     setattr(target, target_field_name, value)
+    logger.debug(f"Updated {type(target).__name__}.{target_field_name} to {value} from {type(home).__name__}.{home_field_name}")
     if session is not None:
         session.add(target)
         session.flush()
@@ -135,5 +138,6 @@ def update_similar_between_LinkDB_and_UploadDB(session):
 
         for link_field, upload_field in zip(linksimilar, uploadsimilar):
             update_other_from_self(link, upload, session, upload_field, link_field)
+    logger.info(f"Synchronized fields between LinkDB and UploadDB for {len(uploads)} records.")
 
     session.commit()

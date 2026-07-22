@@ -14,7 +14,9 @@ from modules.models import LinkRecord, UploadRecord
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
 from Utils import IsUUID
+import logging
 
+logger = logging.getLogger(__name__)
 engine = create_engine(os.environ['DATABASE_URL'],)
 Session = sessionmaker(bind=engine)
 router = APIRouter()
@@ -33,6 +35,7 @@ async def request_For_Data_Deletion(link_uuid: str):
             creator = link_record.creator if link_record else "Unknown"
             company = link_record.customer if link_record else "Unknown"
             itar = link_record.itar if link_record else "Unknown"
+            logger.debug(f"Retrieved link record for UUID {link_uuid} in Datadeletion: {link_record}")
             storage_region = (session.query(UploadRecord.storage_region).filter(UploadRecord.link_uuid == link_uuid).first() if link_record else "Unknown") or "Unknown" # if theirs an uplaod sharing the uuid gets its region else Unknown
             status = link_record.status if link_record else "Unknown"
             created_at = link_record.timestamp if link_record else "Unknown"
@@ -126,12 +129,12 @@ Please review this request and take the appropriate action.
             try:
                 response = await client.begin_send(message) # can be async
                 await response.result()  # Wait for the operation to complete
-                logging.info(f"Email sent successfully.")
+                logger.info(f"Email sent successfully.")
             except Exception as e:
-                logging.warning(f"Error occurred while sending email: {e}")
+                logger.warning(f"Error occurred while sending email: {e}")
 
         return {"message": "Request for data deletion received. An email has been sent to the administrator for further action."}
 
     except Exception as e:
-        logging.error(f"Error processing deletion request for UUID {link_uuid}: {e}")
+        logger.error(f"Error processing deletion request for UUID {link_uuid}: {e}")
         raise HTTPException(status_code=400, detail="Internal Server Error")

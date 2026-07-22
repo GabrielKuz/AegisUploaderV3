@@ -28,7 +28,9 @@ from modules.auth import User, requireRoles
 from modules.models import StorageRegion, UploadChunk, UploadRecord, LinkRecord, UploadSession
 from azure.communication.email.aio import EmailClient
 from zoneinfo import ZoneInfo
+import logging
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
@@ -38,9 +40,11 @@ def get_db(): # Avoid reusing the same session across requests, which can cause 
     db = Session()
 
     try:
+        logger.debug("Yielding database session")
         yield db # Use a generator to yield the session and ensure its closed after
     finally:
         db.close()
+        logger.debug("Closed database session")
 
 def hash_bytes(data: bytes) -> str: # Blake3 hash
     return blake3(data).hexdigest()
@@ -95,6 +99,7 @@ def validate_file_hash(contents: bytes, file_hash_clientside: str | None) -> str
     normalized_client_hash = file_hash_clientside.strip().lower() # Remove whitespace and make lowercase for comparison
     computed_hash = hash_bytes(contents) # Compute the server side hash of the file contents
     if normalized_client_hash != computed_hash: # Check equivalence of the client and server hashes
+        logger.info(f"File hash mismatch: expected {normalized_client_hash}, got {computed_hash}")
         raise ValueError(f"File hash mismatch, expected client side hash - {normalized_client_hash}, but got {computed_hash}") 
 
     return computed_hash
@@ -102,9 +107,11 @@ def validate_file_hash(contents: bytes, file_hash_clientside: str | None) -> str
 
 
 def find_link_entry(link_uuid: str, db): # Query the db to find the record matching the link UUID
+    logger.debug(f"Finding link entry for UUID: {link_uuid}")
     try:
         return db.query(LinkRecord).filter(LinkRecord.uuid == link_uuid).first() # Returns only the first matching one (Their should be only one) or None 
     except psycopg.errors.InvalidTextRepresentation as e: # Catch invalid UUID with None instead of crashing
+        logger.warning(f"Invalid UUID representation: {link_uuid}. Error: {e}")
         return None
 
 # Set up all 3 azure regions
@@ -131,7 +138,6 @@ async def start_upload(
     file_hash: Annotated[str | None, Header(alias="X-File-Hash")] = None,
     file_size: Annotated[int | None, Header(alias="X-File-Size")] = None,
     userLocation: Literal["US", "EU"] = Header(default="US", alias="X-User-Location"),
-    
 ):
     #Check for required headers and validate inputs
     if not IsUUID(link_uuid):
@@ -168,6 +174,8 @@ async def start_upload(
 
     itar_status = bool(link_entry.itar) if link_entry else False # Grab ITAR status from the link entry (Link entry pulled it from HubSpot)
 
+    logger.info(f"ITAR status for link {link_entry.uuid}: {itar_status}")
+
     #Select storage provider based on itar status and user lcoation
     if itar_status: 
         service_client = itarFileStorageProvider
@@ -179,12 +187,14 @@ async def start_upload(
         service_client = usFileStorageProvider
         storage_region = StorageRegion.US
 
+    logger.debug(f"Starting upload for link {link_entry.uuid} with filename '{filename}', file size {file_size}, ITAR status {itar_status}, storage region {storage_region}")
 
     filename = sanitize_filename(filename)  # Sanitize the filename to prevent directory traversal and other issues
     path_filename = Path(filename).name # deal with dir traversal and get just the filename
     try:
         validate_filename(path_filename, min_len=1, max_len=255) # Validate the sanitized filename to ensure it meets the criteria for a valid filename
     except Exception:
+        logger.warning(f"Invalid filename after sanitization: {path_filename}")
         raise HTTPException(status_code=400, detail="Invalid filename after sanitization, check for invalid characters or length issues")
     blob_name = path_filename
 
@@ -243,8 +253,10 @@ async def start_upload(
 
         upload_token = upload_session.upload_token
         db.commit() 
-        
+        logger.info(f"Upload session created successfully for link {link_entry.uuid} with filename '{filename}'")
+
     except sqlalchemy.exc.IntegrityError: # Handle uniqueness constrant violations
+        logger.warning(f"IntegrityError: A conflicting upload session already exists for link {link_entry.uuid} and blob name {blob_name}")
         db.rollback()
         raise HTTPException(status_code=409, detail="A conflicting upload session already exists.")
 
@@ -252,12 +264,14 @@ async def start_upload(
         db.rollback()
         traceback.print_exc()
         raise HTTPException(status_code=500, detail="Failed to create upload session")
+    logger.info(f"Preparing storage for file {blob_name} with size {file_size}")
 
     try:
         await service_client.prepare_file(f"{link_entry.case_id}/{blob_name}", file_size) # Asynchronous call to allocate space for the file in the storage provider
 
     except Exception: # If file cant be prepared, delete the upload session to avoid orphaned records and raise an error
         try:
+            logger.warning(f"Failed to prepare storage for file {blob_name}. Deleting upload session {upload_session.upload_id}")
             db.delete(upload_session)
             db.commit()
         except Exception:
@@ -332,6 +346,7 @@ async def upload_file_chunk(
 
     if existing_chunk:
         if existing_chunk.hash.lower() != chunk_hash.strip().lower(): # If the chunk has already been uploaded but the hash is different, raise an error to prevent overwriting existing data with potentially corrupted data
+            logger.info(f"Chunk offset {chunk_offset} already uploaded with different content for upload session {upload_session.upload_id}")
             raise HTTPException(status_code=409, detail="Chunk offset already uploaded with different content")
 
         return UploadChunkResponse(
@@ -342,6 +357,7 @@ async def upload_file_chunk(
         )
 
     if chunk_offset + upload_session.chunk_size > upload_session.expected_size: # Handle the final chunk, which can be smaller than the chunk size, but ensure it does not exceed the expected file size
+        logger.info(f"Final chunk detected for upload session {upload_session.upload_id}")
         if chunk_offset + received_size != upload_session.expected_size: # 
             raise HTTPException(status_code=400, detail="Invalid chunk size")
 
@@ -400,6 +416,7 @@ async def upload_file_chunk(
         db.merge(chunk_record) # Merge the chunk record into the session to handle both new and existing records, ensuring that the database reflects the latest state of the upload
 
     except Exception:
+        logger.info(f"Failed to write upload chunk for upload session {upload_session.upload_id} at offset {chunk_offset}")
         traceback.print_exc()
         raise HTTPException(status_code=500, detail="Failed to write upload chunk")
 
@@ -525,6 +542,7 @@ def upload_status(
 
 @router.post("/uploadfile/{link_uuid}/{upload_token}/complete", response_model=CompleteUploadResponse) # Client's final call to complete the upload, we verify it here. It is idempotent, so if the upload fials client can uplaod more data and call again
 async def complete_upload(link_uuid: str, upload_token: str, db: Annotated[sqlalchemy.orm.Session, Depends(get_db)]):
+    logger.debug(f"Completing upload for link {link_uuid} with token {upload_token}")
     if not IsUUID(link_uuid):
         raise HTTPException(status_code=400, detail="Invalid uuid")
 
@@ -621,9 +639,12 @@ async def complete_upload(link_uuid: str, upload_token: str, db: Annotated[sqlal
     except Exception:
         db.rollback()
         traceback.print_exc() # For debugging 
+        logger.error(f"Failed to complete upload for link {link_uuid} with token {upload_token}: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail="Failed to complete upload")
     async with asyncio.TaskGroup() as tg: # Send the email in a background task so we dont block the response to the client and use task group to ensure cleanup
         tg.create_task(sendCompletetionEmail(record))
+    
+    logger.info(f"Upload completed successfully for link {link_uuid} with token {upload_token}, file hash: {server_hash}")
     
     return CompleteUploadResponse( # Confirm to the client the uplaod is complete and provide our final hash for their verification
         filename=upload_session.original_filename,
@@ -650,6 +671,10 @@ def listFiles(linkUUID: str, current_user: Annotated[User, Depends(requireRoles(
         badUUID = HTTPException(400,detail={"message": "Invalid uuid"})
         raise badUUID
     
+    #If no uploads return 204, if any one of the uploads is not authorized return 403, otherwise return the list of uploads
+    if not db.query(UploadRecord).filter(UploadRecord.link_uuid == linkUUID, UploadRecord.for_deletion.is_(False)).first(): # If no uploads for the link, return 204
+        raise HTTPException(status_code=204, detail="No uploads found for this link")
+    
     uploads = (
         db.query(UploadRecord)
         .filter(
@@ -665,6 +690,7 @@ def listFiles(linkUUID: str, current_user: Annotated[User, Depends(requireRoles(
             detail="You do not have permission to access files for this link",
             headers={"WWW-Authenticate": "Bearer"},
         )
+    logger.debug(f"User {current_user.username} accessed files for link {linkUUID}, found {len(uploads)} uploads")
 
     return [ # Return file information to allow for them to later query for the download link without exposing more sensitive information than needed
         UploadedFileInfo(
@@ -698,6 +724,7 @@ def extendFileExpiration(upload_id: str, additional_days: Annotated[int, Query(g
         upload_record.max_days_in_storage = 0
 
     upload_record.max_days_in_storage += additional_days # Add to the existing expiration days, allowing for cumulative extensions.
+    logger.info(f"Extended expiration for upload {upload_id} by {additional_days} days. New expiration: {upload_record.max_days_in_storage} days.")
     db.commit()
     return ExtendExpirationResponse(
         message=f"File expiration extended by {additional_days} days",
@@ -728,7 +755,7 @@ async def sendCompletetionEmail(upload_record: UploadRecord):
     link_entry = find_link_entry(upload_record.link_uuid, db=db)
     viewURL = f"https://{os.getenv('FRONTEND_URL')}/support/view-uploads/{upload_record.link_uuid}"
     if not link_entry:
-        logging.warning(f"Unable to send completion email. Link {upload_record.link_uuid} not found.")
+        logger.warning(f"Unable to send completion email. Link {upload_record.link_uuid} not found.")
         return
 
     async with EmailClient.from_connection_string(ACS_CONNECTION_STRING) as client:
@@ -803,6 +830,6 @@ The uploaded file is now available for review at {viewURL}.
         try:
             response = await client.begin_send(message)
             await response.result()
-            logging.info(f"Completion email sent successfully to {link_entry.creator}.")
+            logger.info(f"Completion email sent successfully to {link_entry.creator}.")
         except Exception as e:
-            logging.warning(f"Error occurred while sending completion email: {e}")
+            logger.warning(f"Error occurred while sending completion email: {e}")
