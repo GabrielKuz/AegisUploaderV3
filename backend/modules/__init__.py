@@ -14,12 +14,5 @@ if os.getenv("BUILD_TYPE", "dev") == "dev":
     itarFileStorageProvider = LocalStorageProvider(base_path=STORAGE_ROOT + "/itar")
 else:
     usFileStorageProvider = AzureFileStorageProvider(connection_string=os.getenv("AZURE_STORAGE_CONNECTION_STRING_US"), share_name=os.getenv("AZURE_SHARE_NAME"), base_path=os.getenv("AZURE_SHARE_NAME"))
-    euFileStorageProvider = AzureFileStorageProvider(connection_string=os.getenv("AZURE_STORAGE_CONNECTION_STRING_EU"), share_name=os.getenv("AZURE_SHARE_NAME"), storage_region=os.getenv("AZURE_SHARE_NAME"))
-    itarFileStorageProvider = AzureFileStorageProvider(connection_string=os.getenv("AZURE_STORAGE_CONNECTION_STRING_ITAR"), share_name=os.getenv("AZURE_SHARE_NAME"), storage_region=os.getenv("AZURE_SHARE_NAME"))
-
-"""
-   def __init__(self, connection_string: str, share_name: str, base_path: str = "",):
-        super().__init__(base_path)
-
-        self.connection_string = connection_string
-        self.share_name = share_name"""
+    euFileStorageProvider = AzureFileStorageProvider(connection_string=os.getenv("AZURE_STORAGE_CONNECTION_STRING_EU"), share_name=os.getenv("AZURE_SHARE_NAME"), base_path=os.getenv("AZURE_SHARE_NAME"))
+    itarFileStorageProvider = AzureFileStorageProvider(connection_string=os.getenv("AZURE_STORAGE_CONNECTION_STRING_ITAR"), share_name=os.getenv("AZURE_SHARE_NAME"), base_path=os.getenv("AZURE_SHARE_NAME"))
