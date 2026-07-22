@@ -24,7 +24,8 @@ def upgrade() -> None:
         'US',
         'EU',
         'ITAR',
-        name='storageregion'
+        name='storageregion',
+        create_type=False
     )
 
     storage_region_enum.create(op.get_bind(), checkfirst=True)

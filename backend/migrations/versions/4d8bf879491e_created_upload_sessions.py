@@ -21,7 +21,7 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     """Upgrade schema."""
-    op.execute('DROP TYPE IF EXISTS storageregion')
+    op.execute('DROP TYPE IF EXISTS storageregion CASCADE')
 
     op.create_table(
         'upload_sessions',
