@@ -14,7 +14,9 @@ import uuid
 from datetime import datetime, timezone
 from modules.auth import User
 import os
+import logging
 
+logger = logging.getLogger(__name__)
 DATABASE_URL = os.getenv("DATABASE_URL")
 if DATABASE_URL is None:
     raise RuntimeError("DATABASE_URL environment variable is required")
@@ -32,6 +34,7 @@ def generate_links(link_request: LinkRequest, current_user: User):
     """
     Creates a new link with a unique UUID and stores it in the database.
     """
+    logger.debug(f"Generating link for case ID: {link_request.case_id} by user: {current_user.username}")
     if not current_user or current_user.disabled: # Check user authentication
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -49,6 +52,7 @@ def generate_links(link_request: LinkRequest, current_user: User):
     uuid_str = str(uuid.uuid4()) # New uuidv4 on every link. We assume no collissions due to large space and link expiration
 
     store_link(link_request, uuid_str, current_user) # add to db
+    logger.info(f"Link generated successfully: {url + uuid_str} for case ID: {link_request.case_id}")
 
     if not url or not uuid_str:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Link or UUID not found")
@@ -80,6 +84,7 @@ def store_link(link_request: LinkRequest, uuid_str: str, current_user: User):
 
         session.add(record) # add new reccord to session
         session.commit() # commit session to db so it persists
+        logger.debug(f"Stored link record in database: {record}")
         update_similar_between_LinkDB_and_UploadDB(session)
 
 def _serialize_link_record(record: LinkRecord):
@@ -113,6 +118,7 @@ def get_link(uuid_str: str): # get a link record from the db by uuid
         record = session.scalar(stmt)# Get the first matching record (Should at most be one)
         if not record: # Not found
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Link not found")
+        logger.debug(f"Retrieved link record for UUID {uuid_str}: {record}")
 
         return { # TODO: add in authorization check and also remove some of the more sensitive data getting returned
             "uuid": record.uuid,
@@ -138,11 +144,13 @@ def get_all_links(current_user: User):
             detail="User not authenticated"
         )
     if "User" in current_user.roles:
+        logger.debug(f"User {current_user.username} retrieving their own link records")
         with Session() as session:
             stmt = select(LinkRecord).where(LinkRecord.creator == current_user.username)
             records = session.scalars(stmt).all()
             return [_serialize_link_record(r) for r in records]
     elif "Admin" in current_user.roles: # Admin can see all links
+        logger.debug(f"Admin user {current_user.username} retrieving all link records")
         with Session() as session:
             stmt = select(LinkRecord)
             records = session.scalars(stmt).all()
@@ -198,5 +206,6 @@ def get_all_files_for_link(uuid_str: str, current_user: User):
                 "content_type": r.content_type,
                 "date_uploaded": r.date_uploaded
             })
+            logger.info(f"Retrieved file record for link UUID {uuid_str}: {r.original_filename}, upload ID: {r.upload_id}")
         return result
     

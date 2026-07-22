@@ -4,7 +4,9 @@ from typing import Optional
 from hubspot import HubSpot
 from hubspot.crm.tickets import ApiException, PublicObjectSearchRequest
 from hubspot.crm.tickets.models import Filter, FilterGroup
+import logging
 
+logger = logging.getLogger(__name__)
 api_client = HubSpot(access_token=os.getenv("HUBSPOT_ACCESS_TOKEN"))
     
 #=======================================================================================================
@@ -12,14 +14,17 @@ api_client = HubSpot(access_token=os.getenv("HUBSPOT_ACCESS_TOKEN"))
 #=======================================================================================================
 
 def caseIDExists(case_id: str) -> bool:
+    logger.debug(f"Checking if case ID exists: {case_id}")
     ticket = advancedSearchThroughHubSpot(case_id, "ais_ticket_number")
     return ticket is not None
 
 def get_ticket(ais_id: str):
+    logger.debug(f"Retrieving ticket for AIS ID: {ais_id}")
     return advancedSearchThroughHubSpot(ais_id, "ais_ticket_number")
 
 
 def get_AIS_Id(ticket_id: str) -> Optional[str]:
+    logger.debug(f"Retrieving AIS ID for ticket ID: {ticket_id}")
     ticket = advancedSearchThroughHubSpot(ticket_id, "hs_object_id")
     return (ticket.properties or {}).get("ais_ticket_number") if ticket else None
 

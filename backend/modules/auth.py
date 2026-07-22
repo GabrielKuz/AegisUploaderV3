@@ -10,7 +10,9 @@ from pydantic import BaseModel, Field
 import requests
 from typing import Annotated
 from warnings import deprecated
+import logging
 
+logger = logging.getLogger(__name__)
 #========================================================================================
 # Entra ID SSO Authentication Setup
 #========================================================================================
@@ -20,11 +22,9 @@ load_dotenv()
 TENANT_ID = os.getenv("TENANT_ID")
 CLIENT_ID = os.getenv("CLIENT_ID") 
 if os.getenv("TESTING", "false") == "true":
-    print("TESTING"+"\n"*3)
     JWKS_URL = ""
     ISSUER = ""
 else:
-    print("ENTRA"+"\n"*3)
     OPENID_CONFIG = requests.get(f"https://login.microsoftonline.com/{TENANT_ID}/v2.0/.well-known/openid-configuration", timeout=10).json()
 
     JWKS_URL = OPENID_CONFIG["jwks_uri"]
@@ -68,6 +68,7 @@ async def getCurrentUser(credentials: Annotated[HTTPAuthorizationCredentials, De
         headers={"WWW-Authenticate": "Bearer"},
     )
     try:
+        logger.debug(f"Validating token: {token}")
         signingKey = jwks_client.get_signing_key_from_jwt(token).key # get singing key fropm ms jwks endpoint
         
         payload = decode( #decode and validate

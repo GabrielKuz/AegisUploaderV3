@@ -5,7 +5,9 @@ from typing import AsyncIterator, BinaryIO
 from azure.core.exceptions import ResourceExistsError, ResourceNotFoundError
 from azure.storage.fileshare.aio import ShareDirectoryClient,ShareFileClient
 from azure.core.exceptions import ResourceExistsError, ResourceNotFoundError
+import logging
 
+logger = logging.getLogger(__name__)
 class StorageProvider(ABC):
     def __init__(self, base_path: str):
         self.base_path = base_path
@@ -79,11 +81,13 @@ class LocalStorageProvider(StorageProvider):
 
         with open(destination, "wb") as f:
             f.write(file)
+        logger.debug(f"Uploaded file to {destination}")
     
     def get_file_stream(self, file_path: str) -> BinaryIO:
         try:
             return open(self._resolve_path(file_path), "rb")
         except FileNotFoundError:
+            logger.error(f"File '{file_path}' does not exist.")
             raise FileNotFoundError(f"File '{file_path}' does not exist.") from None
     
     def delete_directory(self, directory_path: str) -> None:
@@ -99,6 +103,7 @@ class LocalStorageProvider(StorageProvider):
                 item.rmdir()
 
         directory.rmdir()
+        logger.debug(f"Deleted directory {directory}")
 
     def download_file(self, source_path: str) -> bytes:
         source = self._resolve_path(source_path)
@@ -108,6 +113,7 @@ class LocalStorageProvider(StorageProvider):
                 return f.read()
         except FileNotFoundError:
             raise FileNotFoundError(f"File '{source_path}' does not exist.") from None
+        logger.debug(f"Downloaded file from {source}")
 
     def delete_file(self, file_path: str) -> None:
         path = self._resolve_path(file_path)
@@ -116,9 +122,12 @@ class LocalStorageProvider(StorageProvider):
             path.unlink()
         except FileNotFoundError:
             raise FileNotFoundError(f"File '{file_path}' does not exist.") from None
+        logger.debug(f"Deleted file {path}")
 
     def exists(self, file_path: str) -> bool:
+        logger.debug(f"Checking existence of file {file_path}")
         return self._resolve_path(file_path).exists()
+        
             
     def get_file_url(self, file_path: str) -> str:
         return str(self._resolve_path(file_path))
@@ -132,12 +141,14 @@ class LocalStorageProvider(StorageProvider):
             f.truncate(size)
 
     async def write_stream_range(self, stream: AsyncIterator[bytes], destination_path: str, offset: int, size: int) -> None:
+        logger.info(f"Writing stream range to {destination_path} at offset {offset} with size {size}")
         destination = self._resolve_path(destination_path)
 
         destination.parent.mkdir(parents=True, exist_ok=True)
 
         if not destination.exists():
             with open(destination, "wb") as f:
+                logger.info(f"Created new file {destination} for writing stream range")
                 f.truncate(offset + size)
 
         with open(destination, "r+b") as f:
@@ -153,6 +164,7 @@ class LocalStorageProvider(StorageProvider):
 
             if bytes_written != size:
                 raise ValueError("Stream size does not match the specified size.")
+            logger.debug(f"Finished writing stream range to {destination_path}")
             
     async def upload_stream(self, stream: AsyncIterator[bytes], destination_path: str) -> None:
         destination = self._resolve_path(destination_path)
@@ -188,6 +200,7 @@ class AzureFileStorageProvider(StorageProvider):
 
     def _get_client(self, path: str) -> ShareFileClient:
         remote_path = str(Path(self.base_path) / path).replace("\\", "/")
+        logger.debug(f"Getting Azure file client for path: {remote_path}")
 
         return ShareFileClient.from_connection_string(
             conn_str=self.connection_string,
@@ -240,6 +253,7 @@ class AzureFileStorageProvider(StorageProvider):
             raise FileNotFoundError(f"File '{file_path}' does not exist.") from None
         
     async def prepare_file(self, file_path: str, size: int) -> None:
+        logger.info(f"Preparing file {file_path} with size {size}")
         directory = str(Path(self.base_path) / Path(file_path).parent).replace("\\", "/")
 
         self._ensure_directory_exists(directory)
@@ -252,6 +266,7 @@ class AzureFileStorageProvider(StorageProvider):
             raise FileExistsError(f"File '{file_path}' already exists.") from None
         
     async def write_stream_range(self, stream: AsyncIterator[bytes], destination_path: str, offset: int, size: int) -> None:
+        logger.info(f"Writing stream range to {destination_path} at offset {offset} with size {size}")
         client = self._get_client(destination_path)
 
         buffer = BytesIO()

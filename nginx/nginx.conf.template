@@ -95,7 +95,7 @@ http {
     add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always; # disable access to stuff we dont need
     add_header Content-Security-Policy "default-src 'self';base-uri 'self';object-src 'none';frame-ancestors 'self';frame-src 'self' https://login.microsoftonline.com;form-action 'self';script-src 'self';style-src 'self';img-src 'self' data: blob:;font-src 'self';connect-src 'self' https://login.microsoftonline.com;manifest-src 'self';worker-src 'self' blob:;" always; # Check with frontend about inline scripts and styles
     add_header Cross-Origin-Opener-Policy "same-origin" always;
-    add_header Origin-Agent-Cluster: "?1" always;
+    add_header Origin-Agent-Cluster "?1" always;
     add_header Cross-Origin-Resource-Policy "same-origin" always;
     add_header X-Robots-Tag "noindex, nofollow, noarchive" always;
 

@@ -188,7 +188,9 @@ def expireAndDeleteOldData():
         _deleteExpiredUploadSessions()
         for storage in [usFileStorageProvider, euFileStorageProvider, itarFileStorageProvider]:
             _deleteExpiredUploads(storage)
+            logger.info(f"Deleted expired uploads in storage: {storage.base_path}")
             _deleteEmptyCaseDirs(storage)
+            logger.info(f"Deleted empty case directories in storage: {storage.base_path}")
         _deleteExpiredLinks()
 
         logger.info("Cleanup completed successfully")

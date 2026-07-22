@@ -18,6 +18,7 @@ from typing import Annotated
 from Utils import IsUUID
 from warnings import deprecated
 from zoneinfo import ZoneInfo
+from modules.logging import setup_logging
 
 logging.basicConfig(level=logging.INFO) # setup logging server. TODO: change to file and add more logging
 testing = False
@@ -71,7 +72,7 @@ async def lifespan(app: FastAPI):
     yield
     scheduler.shutdown(wait=False)
 
-app = FastAPI(title="Aegis Backend", root_path="/api", lifespan=lifespan)
+app = FastAPI(title="Aegis Backend", root_path="/api", debug=False, docs_url=None, redoc_url=None,  lifespan=lifespan)
 app.include_router(uploader_router)
 app.include_router(deletionRequest_router)
 setup_telemetry(app)  # init opentelemetry
@@ -129,14 +130,7 @@ def getLinkInfo(uuid: str, currentUser: Annotated[User, Depends(requireRoles("Us
             return link
     raise HTTPException(status_code=404, detail="Link not found")
 
-@app.get("/uploads/{upload_id}/download")
-def download_upload(upload_id: str, currentUser: Annotated[User, Depends(requireRoles("User", "Admin"))]):
-    if not IsUUID(upload_id):
-        badUUID = HTTPException(400,detail={"message": "Invalid uuid"})
-        raise badUUID
-        return None
-    return downloadData(upload_id, currentUser)
 
 if __name__ == "__main__": # Doesnt get run by docker
-    print("v0.1.16")
+    setup_logging()
     main()

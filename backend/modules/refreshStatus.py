@@ -13,7 +13,9 @@ import AppConstants
 from warnings import warn, deprecated
 from modules import Session, engine
 from Utils import IsCaseID
+import logging
 
+logger = logging.getLogger(__name__)
 def update_link_status_from_hubspot():
     with Session() as session:
         links = session.scalars(select(LinkRecord)).all()
@@ -25,8 +27,8 @@ def update_link_status_from_hubspot():
                 if status:
                     link.status = status
                 else:
-                    print(f"Could not retrieve status for case ID: {case_id}")
+                    logger.warning(f"Could not retrieve status for case ID: {case_id}")
             else:
-                print(f"No case ID associated with link UUID: {link.uuid}")
+                logger.warning(f"No case ID associated with link UUID: {link.uuid}")
 
         session.commit()

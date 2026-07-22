@@ -10,7 +10,9 @@ from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
 
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+import logging
 
+logger = logging.getLogger(__name__)
 
 def setup_telemetry(app):
     resource = Resource.create({
