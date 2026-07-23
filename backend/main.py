@@ -75,8 +75,8 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="Aegis Backend", root_path="/api", debug=False, docs_url=None, redoc_url=None,  lifespan=lifespan)
 app.include_router(uploader_router)
 app.include_router(deletionRequest_router)
-setup_telemetry(app)  # init opentelemetry
-app.add_middleware(TelemetryMiddleware)
+#setup_telemetry(app)  # init opentelemetry
+#app.add_middleware(TelemetryMiddleware)
 @app.post("/links/create/")
 def create_link(link_request: LinkRequest, current_user: Annotated[User, Depends(requireRoles("User", "Admin"))]):  # TODO: Change to getCurrentActiveUser after testing
     #authentication: bool = userAuthenticated(getCurrentUser())
