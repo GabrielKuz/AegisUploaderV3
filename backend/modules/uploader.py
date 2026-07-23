@@ -205,7 +205,7 @@ async def start_upload(
         ).scalar()
 
         if not lock_acquired:
-            raise HTTPException(status_code=409, detail="Another upload is currently being initialized for this link.")
+            raise HTTPException(status_code=409, detail="Another upload is currently being initialized for this link. Please try again shortly.")
 
         path_obj = Path(blob_name)
         stem = path_obj.stem
@@ -866,7 +866,7 @@ def mark_all_for_deletion(link_uuid: str, current_user: Annotated[User, Depends(
     ).all()
 
     if not uploads:
-        
+
         raise HTTPException(status_code=404, detail="No uploads found for this link")
 
     for upload in uploads:
