@@ -138,7 +138,7 @@ async function requestCaseId(
   uuid: string,
   accessToken: string,
 ): Promise<string> {
-  const response = await fetch("/api/links", {
+  const response = await fetch("/api/links/", {
     headers: {
       Authorization: `Bearer ${accessToken}`,
     },
