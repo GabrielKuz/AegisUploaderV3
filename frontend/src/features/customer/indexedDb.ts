@@ -6,10 +6,16 @@ export type UploadSession = {
   fileSize: number;
   chunkSize: number;
   file: File;
+  region: "US" | "EU";
 };
 
+export type UploadSettings = {
+  uuid: string;
+  region: "US" | "EU";
+  uploadStarted: boolean;
+};
 const DATABASE_NAME = "CustomerUploads";
-const DATABASE_VERSION = 1;
+const DATABASE_VERSION = 2;
 const UPLOAD_STORE_NAME = "uploads";
 
 function openDatabase(): Promise<IDBDatabase> {
@@ -22,6 +28,12 @@ function openDatabase(): Promise<IDBDatabase> {
       if (!database.objectStoreNames.contains(UPLOAD_STORE_NAME)) {
         database.createObjectStore(UPLOAD_STORE_NAME, {
           keyPath: "uploadToken",
+        });
+      }
+
+      if (!database.objectStoreNames.contains("settings")) {
+        database.createObjectStore("settings", {
+          keyPath: "uuid",
         });
       }
     };
@@ -67,6 +79,55 @@ export async function saveUploadSession(session: UploadSession): Promise<void> {
     transaction.objectStore(UPLOAD_STORE_NAME).put(session);
 
     await waitForTransaction(transaction);
+  } finally {
+    database.close();
+  }
+}
+
+export async function saveUploadSettings(
+  settings: UploadSettings,
+): Promise<void> {
+  const database = await openDatabase();
+
+  try {
+    const transaction = database.transaction(
+      "settings",
+      "readwrite",
+    );
+
+    transaction.objectStore("settings").put(settings);
+
+    await waitForTransaction(transaction);
+  } finally {
+    database.close();
+  }
+}
+
+export async function getUploadSettings(
+  uuid: string,
+): Promise<UploadSettings | null> {
+  const database = await openDatabase();
+
+  try {
+    return await new Promise<UploadSettings | null>(
+      (resolve, reject) => {
+        const request = database
+          .transaction("settings", "readonly")
+          .objectStore("settings")
+          .get(uuid);
+
+        request.onsuccess = () => {
+          resolve(request.result ?? null);
+        };
+
+        request.onerror = () => {
+          reject(
+            request.error ??
+            new Error("Failed to read upload settings."),
+          );
+        };
+      },
+    );
   } finally {
     database.close();
   }
