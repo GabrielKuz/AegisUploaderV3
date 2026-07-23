@@ -154,6 +154,10 @@ function requestUploads(
       Authorization: `Bearer ${accessToken}`,
     },
   }).then(async (response) => {
+    if (response.status === 204) {
+      return [];
+    }
+
     if (!response.ok) {
       throw new ApiRequestError(
         await readApiError(response, "load the uploaded files"),
@@ -164,7 +168,6 @@ function requestUploads(
 
     return parseUploadResponse(payload);
   });
-
   const entry: UploadRequestEntry = {
     createdAt: Date.now(),
     promise: request,
