@@ -258,7 +258,7 @@ export function DataTable({
             to={createPath}
             className="data-page-action"
           >
-            Create link
+            Create Link
           </Link>
         </div>
       </header>
@@ -458,7 +458,7 @@ export function DataTable({
                         to={`${uploadActionPathPrefix}/${supportLink.uuid}`}
                         state={{ caseId: supportLink.case_id }}
                       >
-                        View uploads
+                        View Uploads
                       </Link>
                     </td>
                   )}

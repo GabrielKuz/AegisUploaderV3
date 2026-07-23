@@ -686,7 +686,7 @@ export function AdminUpload() {
             to="/admin/links"
             className="data-page-action"
           >
-            Back to links
+            Back to Links
           </Link>
         </div>
       </header>
@@ -869,7 +869,7 @@ export function AdminUpload() {
                             ? "Marking..."
                             : deletionRequested
                               ? "Deletion requested"
-                              : "Delete"}
+                              : "Mark for Deletion"}
                         </button>
                       </div>
                     </td>

@@ -111,6 +111,7 @@
   border-bottom: 1px solid var(--theme-border);
   padding: 18px 20px;
   text-align: left;
+  white-space: nowrap;
 }
 
 .data-table th {
@@ -156,6 +157,7 @@
   text-align: left;
   text-transform: inherit;
   width: 100%;
+  white-space: nowrap;
 }
 
 .data-table-sort-button:hover {
@@ -168,7 +170,33 @@
   overflow-wrap: anywhere;
   text-decoration: underline;
   text-underline-offset: 3px;
+  flex: 1;
+  overflow-wrap: anywhere;
 }
+
+.data-table td:nth-child(4),
+.data-table th:nth-child(4) {
+  text-align: left;
+}
+
+.data-table-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+}
+
+.data-table td:first-child,
+.data-table th:first-child {
+  min-width: 300px;
+}
+
+.data-table-link-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 
 /* ==========================================================================
    ACTIONS, BADGES, AND MESSAGES
@@ -199,6 +227,10 @@
     color var(--transition-fast),
     opacity var(--transition-fast),
     transform var(--transition-fast);
+
+  min-height: 40px;
+  padding: 0 18px;
+  white-space: nowrap;
 }
 
 .data-table-action-button:hover:not(:disabled),
@@ -239,26 +271,10 @@
   font-weight: 500;
   margin: 0;
   padding: 18px 20px;
+  margin-bottom: 16px;
 }
 
-.data-table-link-container {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-}
 
-.copy-link-button {
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  padding: 0;
-  font-size: 1rem;
-  line-height: 1;
-}
-
-.copy-link-button:hover {
-  opacity: 0.7;
-}
 
 .upload-link-summary {
   background: var(--theme-surface);
@@ -290,20 +306,33 @@
 
 .upload-link-value {
   align-items: center;
-  display: flex;
-  gap: 10px;
-  min-width: 0;
-}
-
-.upload-link-value code {
   background: var(--theme-control-bg);
   border: 1px solid var(--theme-control-border);
   border-radius: var(--radius-md);
+  box-shadow: var(--theme-control-shadow);
+  display: flex;
+  gap: 10px;
+  margin-top: 4px;
+  padding: 10px 12px;
+}
+
+.upload-link-value code {
   color: var(--theme-accent);
-  font-family: var(--font-mono);
-  overflow-wrap: anywhere;
-  padding: 8px 12px;
   flex: 1;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.copy-link-button:hover {
+  background: var(--theme-accent-soft);
+  border-color: var(--theme-accent);
+  transform: translateY(-1px);
+}
+
+.copy-link-button:active {
+  transform: translateY(0);
 }
 /* ==========================================================================
    ERROR ALERT

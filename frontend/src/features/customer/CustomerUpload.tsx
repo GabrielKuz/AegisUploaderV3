@@ -27,6 +27,7 @@ const HASH_CONCURRENCY = 12;
 const MAX_CHUNK_RETRIES = 3;
 const RETRY_DELAY_MS = 1_500;
 const UPLOAD_CONCURRENCY = 20;
+const MAX_UPLOAD_RESTARTS = 2;
 
 type SelectedFile = {
   id: string;
@@ -42,6 +43,7 @@ type UploadState = {
   progress: number;
   retry?: number;
   errorMessage?: string;
+  restart?: boolean;
 };
 
 type UploadStatus = {
@@ -64,6 +66,15 @@ const UPLOAD_ACTIONS: Record<UploadRequestStage, string> = {
   complete: "finish the file upload",
 };
 
+class UploadConflictError extends Error {
+  constructor() {
+    super(
+      "The upload session became out of sync. Creating a new upload session."
+    );
+
+    this.name = "UploadConflictError";
+  }
+}
 // Converts upload API failures into messages informing customer what happened and what they should do next.
 async function getUploadResponseError(
   response: Response,
@@ -103,11 +114,15 @@ async function getUploadResponseError(
         "The upload request timed out. Check your connection and try the upload again.",
       );
 
-    case 409:
+    /*case 409:
       return new Error(
         "The server reported a conflict with this upload session. Refresh the page and try again.",
       );
+    */
 
+    case 409:
+      return new UploadConflictError();
+    
     case 410:
       return new Error(
         "This upload link has expired and can no longer accept files. Contact support to request a new secure upload link.",
@@ -576,11 +591,13 @@ function getUploadStateText(state: UploadState): string {
       return `Uploading (${state.progress}%)`;
 
     case "retrying":
-      return state.retry
-        ? `The connection was interrupted. ` +
-            `Retrying file chunk ${state.retry} of ${MAX_CHUNK_RETRIES}...`
-        : "Resuming an interrupted upload...";
+      if (state.restart) {
+        return `Upload session expired. Starting a new upload (${state.retry}/${MAX_UPLOAD_RESTARTS})...`;
+      }
 
+      return state.retry
+        ? `The connection was interrupted. Retrying file chunk ${state.retry} of ${MAX_CHUNK_RETRIES}...`
+        : "Resuming an interrupted upload...";
     case "done":
       return "Upload completed successfully.";
 
@@ -671,14 +688,17 @@ export function CustomerUpload() {
   }, []);
 
   const attachUploadSession = useCallback(
-    (fileId: string, session: UploadSession): void => {
+    (
+      fileId: string,
+      session?: UploadSession,
+    ): void => {
       setSelectedFiles((currentFiles) =>
         currentFiles.map((selectedFile) =>
           selectedFile.id === fileId
             ? {
-                ...selectedFile,
-                uploadSession: session,
-              }
+              ...selectedFile,
+              uploadSession: session,
+            }
             : selectedFile,
         ),
       );
@@ -698,81 +718,121 @@ export function CustomerUpload() {
           progress: currentStatus[selectedFile.id]?.progress ?? 0,
         },
       }));
+      let currentSession = selectedFile.uploadSession;
 
-      try {
-        let session = selectedFile.uploadSession;
+      for (
+        let uploadAttempt = 1;
+        uploadAttempt <= MAX_UPLOAD_RESTARTS;
+        uploadAttempt += 1
+      ) {
+        try {
+          let session = currentSession;
+          const isNewSession = !session;
 
-        const isNewSession = !session;
+          if (!session) {
+            session = await createUploadSession(
+              uuid,
+              selectedFile.file,
+              region,
+              markUploadStarted,
+            );
 
-        if (!session) {
-          session = await createUploadSession(
-            uuid,
-            selectedFile.file,
-            region,
-            markUploadStarted,
-          );
+            attachUploadSession(selectedFile.id, session);
+          }
 
-          attachUploadSession(selectedFile.id, session);
-        }
+          if (session.uuid !== uuid) {
+            throw new Error(
+              "This interrupted upload belongs to a different upload link. Remove the file and select it again to begin a new upload.",
+            );
+          }
 
-        if (session.uuid !== uuid) {
-          throw new Error(
-            "This interrupted upload belongs to a different upload link. Remove the file and select it again to begin a new upload.",
-          );
-        }
+          const updateProgress = (progress: number): void => {
+            setUploadStatus((currentStatus) => ({
+              ...currentStatus,
+              [selectedFile.id]: {
+                status: "uploading",
+                progress,
+              },
+            }));
+          };
 
-        const updateProgress = (progress: number): void => {
+          const updateRetry = (attempt: number): void => {
+            setUploadStatus((currentStatus) => ({
+              ...currentStatus,
+              [selectedFile.id]: {
+                status: "retrying",
+                progress: currentStatus[selectedFile.id]?.progress ?? 0,
+                retry: attempt,
+              },
+            }));
+          };
+
+          if (isNewSession) {
+            await uploadAllChunks(session, updateProgress, updateRetry);
+          }
+
+          await repairMissingChunks(session, updateProgress, updateRetry);
+
+          await completeUploadSession(session);
+
           setUploadStatus((currentStatus) => ({
             ...currentStatus,
             [selectedFile.id]: {
-              status: "uploading",
-              progress,
+              status: "done",
+              progress: 100,
             },
           }));
-        };
 
-        const updateRetry = (attempt: number): void => {
-          setUploadStatus((currentStatus) => ({
-            ...currentStatus,
+          return;
+        } catch (error) {
+          if (
+            error instanceof UploadConflictError &&
+            uploadAttempt < MAX_UPLOAD_RESTARTS
+          ) {
+            if (selectedFile.uploadSession) {
+              try {
+                await deleteUploadSession(
+                  selectedFile.uploadSession.uploadToken,
+                );
+              } catch {
+                  console.error("Could not delete old upload session.");
+               }
+            }
+
+            attachUploadSession(selectedFile.id, undefined);
+
+            currentSession = undefined;
+            setUploadStatus((current) => ({
+              ...current,
+              [selectedFile.id]: {
+                status: "retrying",
+                progress: current[selectedFile.id]?.progress ?? 0,
+                retry: uploadAttempt,
+                restart: true,
+              },
+            }));
+
+            continue;
+          }
+
+          console.error(`Upload failed for ${selectedFile.file.name}:`, error);
+
+          const userFacingError = getUnexpectedError(error, "upload the file");
+
+          setUploadStatus((current) => ({
+            ...current,
             [selectedFile.id]: {
-              status: "retrying",
-              progress: currentStatus[selectedFile.id]?.progress ?? 0,
-              retry: attempt,
+              status: "error",
+              progress: current[selectedFile.id]?.progress ?? 0,
+              errorMessage: userFacingError.message,
             },
           }));
-        };
 
-        if (isNewSession) {
-          await uploadAllChunks(session, updateProgress, updateRetry);
+          return;
         }
-
-        await repairMissingChunks(session, updateProgress, updateRetry);
-
-        await completeUploadSession(session);
-
-        setUploadStatus((currentStatus) => ({
-          ...currentStatus,
-          [selectedFile.id]: {
-            status: "done",
-            progress: 100,
-          },
-        }));
-      } catch (error) {
-        console.error(`Upload failed for ${selectedFile.file.name}:`, error);
-
-        const userFacingError = getUnexpectedError(error, "upload the file");
-
-        setUploadStatus((currentStatus) => ({
-          ...currentStatus,
-          [selectedFile.id]: {
-            status: "error",
-            progress: currentStatus[selectedFile.id]?.progress ?? 0,
-            errorMessage: userFacingError.message,
-          },
-        }));
       }
     },
-    [attachUploadSession, uuid],
+    [ attachUploadSession, markUploadStarted, region, uuid ],
   );
 
   useEffect(() => {

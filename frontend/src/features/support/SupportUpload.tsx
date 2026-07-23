@@ -198,6 +198,8 @@ export function SupportUpload() {
   
   const [linkCopied, setLinkCopied] = useState(false);
 
+  const [isRequestingDeletion, setIsRequestingDeletion] = useState(false);
+
   const loadUploads = useCallback(
     async (forceRefresh = false): Promise<void> => {
       setError(null);
@@ -339,6 +341,67 @@ export function SupportUpload() {
     }
   }
 
+  async function requestDeletion(): Promise<void> {
+    if (!uuid) {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      "Send a deletion request email for this upload link?"
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setActionError(null);
+    setActionMessage(null);
+    setIsRequestingDeletion(true);
+
+    try {
+      const accessToken = await getAccessToken();
+
+      if (!accessToken) {
+        setActionError({
+          status: 401,
+          title: "Sign-in required",
+          message:
+            "Your session could not be verified. Sign in again before requesting deletion.",
+        });
+
+        return;
+      }
+
+      const response = await fetch(
+        `/api/requestfordeletion/${encodeURIComponent(uuid)}`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        setActionError(
+          await readApiError(response, "send the deletion request")
+        );
+
+        return;
+      }
+
+      setActionMessage(
+        "A deletion request email has been sent successfully."
+      );
+    } catch (requestError) {
+      setActionError(
+        getUnexpectedError(requestError, "send the deletion request")
+      );
+    } finally {
+      setIsRequestingDeletion(false);
+    }
+  }
+
   return (
     <section className="data-page" aria-labelledby="support-upload-heading">
       <header className="data-page-header">
@@ -349,10 +412,25 @@ export function SupportUpload() {
             View files received through this customer upload link.
           </p>
         </div>
+        <div className="data-page-actions">
+          <button
+            type="button"
+            className="data-page-action data-table-action-button--danger"
+            disabled={isRequestingDeletion}
+            onClick={() => void requestDeletion()}
+          >
+            {isRequestingDeletion
+              ? "Sending..."
+              : "Request Deletion"}
+          </button>
 
-        <Link to="/support/links" className="data-page-action">
-          Back to links
-        </Link>
+          <Link
+            to="/support/links"
+            className="data-page-action"
+          >
+            Back to Links
+          </Link>
+        </div>
       </header>
       <div className="upload-link-summary">
         <div className="upload-link-summary-row">
