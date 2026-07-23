@@ -166,7 +166,8 @@ async def start_upload(
 
     if link_entry.expired: # Link entry will eventually be deleted (When the last file its associated with is deleted) and go back to 404, but this is nicer for users
         raise HTTPException(status_code=410, detail="This link has expired and is no longer available for uploads") # Dont create new tokens, but old tokens should finish
-
+    
+    
     if link_entry.expiration_date is None or link_entry.expiration_date <= datetime.datetime.now(datetime.timezone.utc): # If the link has expired, mark it as expired and return 410. This is a backup in case the cleanup job hasnt run yet
         link_entry.expired = True # mark the link entry as expired if the expiration date has passed in case the cleanup job hasnt run yet 
         raise HTTPException(status_code=410, detail="This link has expired and is no longer available for uploads")
@@ -190,20 +191,16 @@ async def start_upload(
 
     filename = sanitize_filename(filename)  # Sanitize the filename to prevent directory traversal and other issues
     path_filename = Path(filename).name # deal with dir traversal and get just the filename
-
     try:
         validate_filename(path_filename, min_len=1, max_len=255) # Validate the sanitized filename to ensure it meets the criteria for a valid filename
     except Exception:
         logger.warning(f"Invalid filename after sanitization: {path_filename}")
         raise HTTPException(status_code=400, detail="Invalid filename after sanitization, check for invalid characters or length issues")
-
     blob_name = path_filename
 
     try:
-        db.execute(text("SET LOCAL lock_timeout = '5 seconds'"))
-
         lock_acquired = db.execute(
-            text("SELECT pg_try_advisory_xact_lock(hashtext(:key))"),
+            text("SELECT pg_try_advisory_xact_lock(hashtext(:key))"), # Lock the link uuid to prevent concurrent uploads from creating the same blob name. Released automatically on a commit or rollback
             {"key": str(link_entry.uuid)}
         ).scalar()
 
@@ -218,15 +215,16 @@ async def start_upload(
         while True: # Check if blob name already exists under the case id and if it does append _{counter} to the end until its unique to prevent overwriting old files
             if counter > 256: # Protects against a potential infinite loop or malicious attempts to create collisions. Should never be hit
                 raise HTTPException(status_code=400, detail="Unable to generate a unique filename after 256 attempts, please rename the file and try again")
+            exists_in_storage = await service_client.exists(f"{link_entry.case_id}/{blob_name}") # Check if file is stored
 
-            exists_in_db = (
+            exists_in_db = ( # Check for a db record with the name
                 db.query(UploadSession).filter(
                     UploadSession.link_uuid == link_entry.uuid,
                     UploadSession.blob_name == blob_name,
                 ).first() is not None 
             )
 
-            if not exists_in_db:
+            if not exists_in_storage and not exists_in_db: # If unique, break and use the current name
                 break
 
             if suffix:
@@ -234,7 +232,7 @@ async def start_upload(
             else:
                 blob_name = f"{stem}_{counter}"
 
-            counter += 1
+            counter += 1 # Increment the counter and try again if needed
 
         upload_session = UploadSession(
             link_uuid=link_entry.uuid,
@@ -265,14 +263,14 @@ async def start_upload(
         logger.warning(f"IntegrityError: A conflicting upload session already exists for link {link_entry.uuid} and blob name {blob_name}")
         db.rollback()
         raise HTTPException(status_code=409, detail="A conflicting upload session already exists.")
-    except HTTPException:
+    except HTTPException: # Handle HTTP exceptions raised during the upload session creation process
         db.rollback()
-        raise
+        raise 
+
     except Exception: # General exception handling for unexpected errors during the upload session creation process
         db.rollback()
         traceback.print_exc()
         raise HTTPException(status_code=500, detail="Failed to create upload session")
-
     logger.info(f"Preparing storage for file {blob_name} with size {file_size}")
 
     try:
@@ -288,7 +286,7 @@ async def start_upload(
 
         traceback.print_exc()
         raise HTTPException(status_code=500, detail="Failed to prepare storage")
-
+    
     return {
         "uploadToken": upload_token, # Token to identify session
         "chunkSize": 4*1024*1024,  # 32 MiB  # Tell client the chunk size to use for uploads, maybe set up negotiation later for different sizes

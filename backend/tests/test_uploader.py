@@ -13,7 +13,7 @@ import pytest
 
 import AppConstants
 from modules import Session
-from modules.models import UploadSession, UploadRecord, UploadChunk
+from modules.models import StorageRegion, UploadSession, UploadRecord, UploadChunk
 
 
 TEST_LINK_UUID = "55340765-5e4f-4215-a416-05fe0b0a12f4"
@@ -413,7 +413,32 @@ async def test_filename_collision_creates_new_name(upload_test_setup):
     await storage.prepare_file(
         "AIS-1234/hello.txt",
         5,
-    )
+    ) 
+    # add to database to simulate existing file with same name
+    db = Session()
+    try:
+        existing_session = UploadSession(
+            link_uuid=TEST_LINK_UUID,
+            case_id="AIS-1234",
+            blob_name="hello.txt",
+            original_filename="hello.txt",
+            content_type=None,
+            expected_size=5,
+            expected_hash=blake3_hash(b"hello"),
+            hash_algorithm="blake3",
+            received_ranges=[],
+            received_size=0,
+            chunk_size=4*1024*1024,
+            completed=False,
+            itar_status=False,
+            storage_region=StorageRegion.US,
+        )
+
+
+        db.add(existing_session)
+        db.commit()
+    finally:
+        db.close()
 
     payload = b"hello"
 
@@ -433,12 +458,15 @@ async def test_filename_collision_creates_new_name(upload_test_setup):
     db = Session()
 
     try:
-        session = db.query(UploadSession).filter(
+        sessions = db.query(UploadSession).filter(
             UploadSession.link_uuid == TEST_LINK_UUID
-        ).first()
+        ).all()
 
-        assert session is not None
-        assert session.blob_name != "hello.txt"
+        assert len(sessions) == 2
+        assert any(
+            session.blob_name != "hello.txt"
+            for session in sessions
+        )
 
     finally:
         db.close()
