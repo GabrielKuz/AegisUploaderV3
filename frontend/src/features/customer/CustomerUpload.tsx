@@ -23,10 +23,10 @@ import {
 import "./CustomerUpload.css";
 
 
-const HASH_CONCURRENCY = 4;
+const HASH_CONCURRENCY = 12;
 const MAX_CHUNK_RETRIES = 3;
-const RETRY_DELAY_MS = 1_000;
-const UPLOAD_CONCURRENCY = 3;
+const RETRY_DELAY_MS = 1_500;
+const UPLOAD_CONCURRENCY = 20;
 
 type SelectedFile = {
   id: string;
