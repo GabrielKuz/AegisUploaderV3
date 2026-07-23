@@ -1,17 +1,30 @@
-import { PortalLayout } from "./PortalLayout";
+import { AppLayout } from "./AppLayout";
+
+const SUPPORT_NAV_ITEMS = [
+  {
+    to: "/support",
+    label: "Home",
+    end: true,
+  },
+  {
+    to: "/support/links",
+    label: "View Links",
+    end: true,
+  },
+  {
+    to: "/support/links/new",
+    label: "Create Link",
+    end: true,
+  },
+] as const;
 
 export function SupportLayout() {
   return (
-    <PortalLayout
+    <AppLayout
       productName="Secure Data Portal"
-      sectionName="Customer Support"
-      navLabel="Customer support"
-      defaultUserName="Support User"
-      navItems={[
-        { to: "/support", label: "Home", end: true },
-        { to: "/support/links", label: "Created links", end: true },
-        { to: "/support/links/new", label: "Create link" },
-      ]}
+      sectionName="Support Portal"
+      navLabel="Support navigation"
+      navItems={SUPPORT_NAV_ITEMS}
     />
   );
 }

@@ -1,7 +1,9 @@
 import { PublicClientApplication } from "@azure/msal-browser";
 
 const tenantId = import.meta.env.VITE_AZURE_TENANT_ID ?? "common";
-const clientId = import.meta.env.VITE_AZURE_CLIENT_ID ?? "00000000-0000-0000-0000-000000000000";
+const clientId =
+  import.meta.env.VITE_AZURE_CLIENT_ID ??
+  "00000000-0000-0000-0000-000000000000";
 const isEntraConfigured = Boolean(
   import.meta.env.VITE_AZURE_TENANT_ID && import.meta.env.VITE_AZURE_CLIENT_ID,
 );
@@ -17,7 +19,7 @@ export const msalConfig = {
     redirectUri: window.location.origin,
   },
   cache: {
-    cacheLocation: "localStorage", 
+    cacheLocation: "localStorage",
     storeAuthStateInCookie: false,
   },
 };
@@ -44,9 +46,7 @@ export async function initializeMsalInstance(): Promise<void> {
   }
 
   const activeAccount =
-    msalInstance.getActiveAccount() ??
-    msalInstance.getAllAccounts()[0] ??
-    null;
+    msalInstance.getActiveAccount() ?? msalInstance.getAllAccounts()[0] ?? null;
 
   if (activeAccount) {
     msalInstance.setActiveAccount(activeAccount);

@@ -3,7 +3,8 @@
     "@azure/msal-browser": "^5.17.0",
     "@azure/msal-react": "^5.5.2",
     "react": "^19.2.7",
-    "react-dom": "^19.2.7"
+    "react-dom": "^19.2.7",
+    "react-dropzone": "^19.1.1"
   },
   "devDependencies": {
     "@types/react": "^19.2.17",

@@ -1,141 +1,151 @@
 /* ==========================================================================
    APP LAYOUT
-   Shared shell for customer, support, and admin pages.
    ========================================================================== */
 
-.layout {
-  width: 100%;
+.app-layout {
+  background: var(--theme-page);
+  color: var(--theme-text);
+  display: grid;
+  grid-template-columns: clamp(190px, 20vw, 240px) minmax(0, 1fr);
+  grid-template-rows: 76px minmax(0, 1fr);
   height: 100vh;
   height: 100dvh;
-  display: grid;
-  grid-template-columns: 240px minmax(0, 1fr);
-  grid-template-rows: 76px minmax(0, 1fr);
+  min-height: 0;
   overflow: hidden;
-  background: var(--theme-page);
+  width: 100%;
 }
 
-.layout-no-sidebar {
+.app-layout--no-sidebar {
   grid-template-columns: minmax(0, 1fr);
-}
-
-.layout-no-sidebar .main {
-  grid-column: 1;
 }
 
 /* ==========================================================================
    HEADER
    ========================================================================== */
 
-.header {
+.app-header {
+  align-items: center;
+  background: #000000;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.22);
+  border-top: 4px solid var(--theme-accent);
+  color: var(--white);
+  display: flex;
+  gap: 24px;
   grid-column: 1 / -1;
   grid-row: 1;
-  min-width: 0;
-  display: flex;
-  align-items: center;
   justify-content: space-between;
-  gap: 24px;
+  min-width: 0;
   padding: 0 30px;
-  color: #ffffff;
-  background: #000000;
-  border-top: 4px solid var(--current-theme);
-  border-bottom: 1px solid var(--theme-border-strong);
 }
 
-.brand {
-  min-width: 0;
-  display: flex;
+.app-brand {
   align-items: center;
+  display: flex;
   gap: 24px;
-}
-
-.logo {
-  width: clamp(144px, 18vw, 181px);
-  height: auto;
-  flex: 0 1 auto;
-}
-
-.divide {
-  width: 1px;
-  height: 42px;
-  margin-left: 3px;
-  flex: 0 0 auto;
-  background: rgba(255, 255, 255, 0.24);
-}
-
-.title {
   min-width: 0;
+}
+
+.app-logo {
+  flex: 0 1 auto;
+  height: auto;
+  width: clamp(144px, 18vw, 181px);
+}
+
+.app-divider {
+  background: rgba(255, 255, 255, 0.24);
+  flex: 0 0 auto;
+  height: 42px;
+  width: 1px;
+  margin: 5px;
+}
+
+.app-title {
   display: grid;
   gap: 4px;
+  min-width: 0;
 }
 
-.product-name {
-  color: #ffffff;
+.app-product-name {
+  color: var(--white);
   font-size: 14px;
   font-weight: 600;
   line-height: 1.25;
+  margin-bottom: 2px;
 }
 
-.section-name {
-  color: var(--current-theme);
-  font-family: var(--font-mono, monospace);
+.app-section-name {
+  color: var(--theme-accent-hover);
+  font-family: var(--font-mono);
   font-size: 11px;
-  line-height: 1.3;
   letter-spacing: 0.08em;
+  line-height: 1.3;
   text-transform: uppercase;
+  margin-top: 2px;
 }
 
-.header-actions {
-  display: flex;
+.app-header-actions {
   align-items: center;
-  gap: 16px;
+  display: flex;
   flex: 0 0 auto;
+  gap: 16px;
+  min-width: 0;
 }
 
-.user-details {
+.app-user-details {
   display: grid;
-  gap: 3px;
+  min-width: 0;
   text-align: right;
 }
 
-.user-name {
-  color: #ffffff;
+.app-user-name {
+  color: var(--white);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.3;
+  margin-bottom: 2px;
+}
+
+.app-user-email {
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 11px;
+  line-height: 1.3;
+  margin-top: 2px;
+  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-sign-out {
+  align-items: center;
+  background: transparent;
+  border: 2px solid var(--gray);
+  border-radius: var(--radius-md);
+  box-shadow: var(--theme-control-shadow);
+  color: var(--white);
+  cursor: pointer;
+  display: inline-flex;
+  font-family: var(--font-body);
   font-size: 14px;
   font-weight: 600;
-}
-
-.email {
-  color: rgba(255, 255, 255, 0.62);
-  font-size: 13px;
-}
-
-.user-button {
+  justify-content: center;
   min-height: 40px;
   padding: 0 14px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid grey;
-  background: transparent;
-  color: #ffffff;
-  font: inherit;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  box-shadow: var(--theme-control-shadow);
+  text-decoration: none;
   transition:
-    color 160ms ease,
-    background-color 160ms ease,
-    border-color 160ms ease,
-    transform 160ms ease;
+    background-color var(--transition-fast),
+    border-color var(--transition-fast),
+    color var(--transition-fast),
+    transform var(--transition-fast);
 }
 
-.user-button:hover {
+.app-sign-out:hover {
   border-color: var(--theme-mode);
   color: var(--theme-mode);
   transform: translateY(-1px);
 }
 
-.user-button:active {
+.app-sign-out:active {
   transform: translateY(0);
 }
 
@@ -143,173 +153,254 @@
    SIDEBAR
    ========================================================================== */
 
-.sidebar {
+.app-sidebar {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.025), transparent), #05090b;
+  border-right: 1px solid rgba(255, 255, 255, 0.12);
+  color: var(--white);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
   grid-column: 1;
   grid-row: 2;
+  min-height: 0;
   min-width: 0;
-  padding: 28px 16px;
-  overflow: auto;
-  background: #1a1a1a;
-  border-right: 1px solid var(--theme-border-strong);
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 24px 16px;
+  scrollbar-gutter: stable;
 }
 
-.sidebar nav {
+.app-nav-link {
+  align-items: center;
+  border-left: 3px solid transparent;
+  color: rgba(255, 255, 255, 0.7);
+  display: flex;
+  font-family: var(--font-body);
+  font-size: clamp(14px, 2vw, 16px);
+  font-weight: 500;
+  min-height: 46px;
+  margin-top: 5px;
+  margin-bottom: 5px;
+  overflow-wrap: anywhere;
+  padding: 10px 14px;
+  transition:
+    background-color var(--transition-fast),
+    border-color var(--transition-fast),
+    color var(--transition-fast);
+  width: 100%;
+}
+
+.app-nav-link:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--white);
+  font-weight: 600;
+}
+
+.app-nav-link--active {
+  background: var(--theme-accent-soft);
+  border-left-color: var(--theme-accent-hover);
+  color: var(--theme-accent-hover);
+  font-weight: 600;
+}
+
+/* ==========================================================================
+   MAIN CONTENT
+   ========================================================================== */
+
+.app-main {
+  grid-column: 2;
+  grid-row: 2;
+  min-height: 0;
+  min-width: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: clamp(24px, 4vw, 48px) clamp(20px, 4vw, 52px);
+}
+
+.app-main > * {
+  max-width: 100%;
+  min-width: 0;
+}
+
+.app-layout--no-sidebar .app-main {
+  grid-column: 1;
+}
+
+/* ==========================================================================
+   CUSTOMER UPLOAD SUMMARY
+   Customer-specific content displayed in the shared app sidebar.
+   ========================================================================== */
+
+.customer-upload-summary {
   display: grid;
   gap: 8px;
 }
 
-.nav-link {
-  min-height: 46px;
-  display: flex;
-  align-items: center;
-  padding: 0 16px;
+.customer-upload-summary-title {
+  color: var(--theme-accent);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  margin: 0 0 20px;
+  text-transform: uppercase;
+}
+
+.customer-upload-summary-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.customer-upload-summary-item {
   color: rgba(255, 255, 255, 0.72);
-  border-left: 3px solid transparent;
-  text-decoration: none;
-  transition:
-    color 160ms ease,
-    background-color 160ms ease,
-    border-color 160ms ease;
+  display: grid;
+  gap: 6px;
+  padding: 14px 16px;
 }
 
-.nav-link:hover {
-  color: #ffffff;
-  background: rgba(255, 255, 255, 0.06);
+.customer-upload-summary-item dd,
+.customer-upload-summary-item dt {
+  margin: 0;
 }
 
-.nav-link-active {
-  color: #ffffff;
-  background: rgba(255, 255, 255, 0.1);
-  border-left-color: var(--current-theme);
+.customer-upload-summary-item dt {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
-/* ==========================================================================
-   MAIN
-   ========================================================================== */
+.customer-upload-summary-item dd {
+  color: var(--white);
+  font-size: 20px;
+  font-weight: 700;
+}
 
-.main {
-  position: relative;
-  grid-column: 2;
-  grid-row: 2;
-  min-width: 0;
-  min-height: 0;
-  padding: clamp(28px, 4vw, 48px);
-  overflow-y: auto;
-  overflow-x: hidden;
-  background: var(--theme-page);
-  color: var(--theme-text);
+.customer-upload-summary-item code {
+  color: var(--theme-accent);
+  font-family: var(--font-mono);
+  font-size: 0.7em;
+  overflow-wrap: anywhere;
 }
 
 /* ==========================================================================
-   TABLET / MOBILE
+   RESPONSIVE
+   The sidebar remains vertical at every viewport size.
    ========================================================================== */
 
-@media (max-width: 760px) {
-  .layout {
-    grid-template-columns: 1fr;
-    grid-template-rows: auto auto minmax(0, 1fr);
-    overflow: visible;
+@media (max-width: 900px) {
+  .app-layout {
+    grid-template-columns: clamp(170px, 28vw, 210px) minmax(0, 1fr);
   }
 
-  .layout-no-sidebar {
-    grid-template-rows: auto minmax(0, 1fr);
+  .app-header {
+    gap: 16px;
+    padding-inline: 20px;
   }
 
-  .layout-no-sidebar .main {
-    grid-column: 1;
-  }
-
-  .header {
-    grid-column: 1;
-    grid-row: 1;
-    min-height: 76px;
-    padding: 18px 20px;
-    align-items: flex-start;
-  }
-
-  .brand {
+  .app-brand {
     gap: 16px;
   }
 
-  .logo {
-    width: 180px;
+  .app-user-email {
+    max-width: 150px;
   }
 
-  .user-details {
+  .app-sidebar {
+    padding: 20px 12px;
+  }
+
+  .app-main {
+    padding: clamp(20px, 3vw, 32px) clamp(16px, 3vw, 30px);
+  }
+}
+
+@media (min-width: 721px) and (max-height: 820px) {
+  .app-main {
+    padding-block: 24px;
+  }
+}
+
+@media (min-width: 721px) and (max-height: 680px) {
+  .app-main {
+    padding-block: 16px;
+  }
+}
+
+@media (max-width: 720px) {
+  .app-layout {
+    grid-template-columns: clamp(150px, 38vw, 190px) minmax(0, 1fr);
+  }
+
+  .app-header {
+    padding-inline: 16px;
+  }
+
+  .app-logo {
+    width: 132px;
+  }
+
+  .app-divider,
+  .app-title,
+  .app-user-details {
     display: none;
   }
 
-  .sidebar {
-    grid-column: 1;
-    grid-row: 2;
-    padding: 12px 16px;
-    overflow-x: auto;
-    border-right: 0;
-    border-bottom: 1px solid var(--theme-border-strong);
+  .app-header-actions {
+    gap: 10px;
   }
 
-  .sidebar nav {
-    display: flex;
-    gap: 8px;
+  .app-sidebar {
+    padding: 16px 10px;
   }
 
-  .nav-link {
-    min-width: max-content;
-    min-height: 42px;
-    padding: 0 14px;
-    border-left: 0;
-    border-bottom: 3px solid transparent;
-  }
-
-  .nav-link-active {
-    border-left-color: transparent;
-    border-bottom-color: var(--current-theme);
-  }
-
-  .main {
-    grid-column: 1;
-    grid-row: 3;
-    padding: 28px 20px;
-    overflow-y: auto;
-    overflow-x: hidden;
-  }
-
-  .layout-no-sidebar .main {
-    grid-row: 2;
-  }
-}
-
-@media (max-width: 520px) {
-  .header {
-    gap: 14px;
-  }
-
-  .logo {
-    width: 150px;
-  }
-
-  .product-name {
+  .app-nav-link {
     font-size: 13px;
+    padding-inline: 10px;
   }
 
-  .section-name {
-    font-size: 10px;
-  }
-
-  .main {
-    padding: 24px 16px;
+  .app-main {
+    padding: 18px 14px 28px;
   }
 }
+
+@media (max-width: 420px) {
+  .app-layout {
+    grid-template-columns: 144px minmax(0, 1fr);
+  }
+
+  .app-header {
+    padding-inline: 12px;
+  }
+
+  .app-logo {
+    width: 118px;
+  }
+
+  .app-sign-out {
+    min-height: 38px;
+    padding-inline: 10px;
+  }
+
+  .app-sidebar {
+    padding-inline: 8px;
+  }
+
+  .app-main {
+    padding-inline: 12px;
+  }
+}
+
+/* ==========================================================================
+   REDUCED MOTION
+   ========================================================================== */
 
 @media (prefers-reduced-motion: reduce) {
-
-  .user-button,
-  .nav-link {
-    transition: none;
-  }
-
-  .user-button:hover,
-  .user-button:active {
+  .app-sign-out:hover,
+  .app-sign-out:active {
     transform: none;
   }
 }
