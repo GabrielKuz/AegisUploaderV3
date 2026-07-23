@@ -62,6 +62,12 @@
     transform var(--transition-fast);
 }
 
+.data-page-actions {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
 .data-page-action:hover {
   background: var(--theme-button-bg-hover);
   border-color: var(--theme-button-border-hover);
@@ -235,6 +241,24 @@
   padding: 18px 20px;
 }
 
+.data-table-link-container {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.copy-link-button {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.copy-link-button:hover {
+  opacity: 0.7;
+}
 /* ==========================================================================
    ERROR ALERT
    ========================================================================== */
@@ -333,6 +357,12 @@
   box-shadow: 0 10px 28px rgba(0, 0, 0, 0.28);
 }
 
+.copy-link-button {
+  margin-left: 0.5rem;
+  padding: 0.1rem 0.4rem;
+  cursor: pointer;
+  font-size: 1rem;
+}
 /* ==========================================================================
    RESPONSIVE
    ========================================================================== */

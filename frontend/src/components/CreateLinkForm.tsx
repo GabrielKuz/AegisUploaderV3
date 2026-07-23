@@ -29,6 +29,10 @@ export function CreateLinkForm({
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const [createdLink, setCreatedLink] = useState<string | null>(null);
+
+  const [linkCopied, setLinkCopied] = useState(false);
+
   async function handleSubmit(
     event: FormEvent<HTMLFormElement>,
   ): Promise<void> {
@@ -77,7 +81,11 @@ export function CreateLinkForm({
         return;
       }
 
-      navigate(successPath);
+      const payload = await response.json();
+
+      const uploadLink = `${window.location.origin}/uploads/${payload.uuid}`;
+
+      setCreatedLink(uploadLink);
     } catch (requestError) {
       setError(getUnexpectedError(requestError, "create the upload link"));
     } finally {
@@ -85,6 +93,27 @@ export function CreateLinkForm({
     }
   }
 
+  async function copyCreatedLink(): Promise<void> {
+    if (!createdLink) {
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(createdLink);
+
+      setLinkCopied(true);
+
+      window.setTimeout(() => {
+        setLinkCopied(false);
+      }, 2000);
+    } catch {
+      setError({
+        title: "Unable to copy link",
+        message:
+          "Your browser prevented copying the upload link. Please copy it manually.",
+      });
+    }
+  }
   return (
     <section className="create-link-page" aria-labelledby="create-link-heading">
       <header className="create-link-header">
@@ -156,6 +185,46 @@ export function CreateLinkForm({
           </p>
         </aside>
       </div>
+      {createdLink && (
+        <div className="create-link-modal-overlay">
+          <div
+            className="create-link-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="link-created-heading"
+          >
+            <h2 id="link-created-heading">
+              Upload link created
+            </h2>
+
+            <p>
+              The customer upload link has been created successfully.
+            </p>
+
+            <div className="created-link-display">
+              <code>{createdLink}</code>
+
+              <button
+                type="button"
+                className="copy-link-button"
+                onClick={() => void copyCreatedLink()}
+                title="Copy upload link"
+                aria-label="Copy upload link"
+              >
+                {linkCopied ? "✓" : "❐"}
+              </button>
+            </div>
+
+            <button
+              type="button"
+              className="create-link-submit"
+              onClick={() => navigate(successPath)}
+            >
+              Continue
+            </button>
+          </div>
+        </div>
+      )}
     </section>
   );
 }

@@ -29,6 +29,11 @@ type Upload = {
   date_uploaded: string;
 };
 
+type CaseLink = {
+  uuid: string;
+  caseId: string;
+};
+
 type SortKey =
   | "blob_name"
   | "size"
@@ -129,6 +134,33 @@ function requestUploads(
   return request;
 }
 
+async function requestCaseId(
+  uuid: string,
+  accessToken: string,
+): Promise<string> {
+  const response = await fetch("/api/links", {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+
+  if (!response.ok) {
+    throw new ApiRequestError(
+      await readApiError(response, "load the upload link")
+    );
+  }
+
+  const links = (await response.json()) as CaseLink[];
+
+  const matchingLink = links.find((link) => link.uuid === uuid);
+
+  if (!matchingLink) {
+    throw new Error("Upload link not found.");
+  }
+
+  return matchingLink.caseId;
+}
+
 function getUploadStatusLabel(uploadComplete: boolean): string {
   return uploadComplete ? "Complete" : "In progress";
 }
@@ -150,6 +182,8 @@ export function SupportUpload() {
 
   const [uploads, setUploads] = useState<Upload[]>([]);
 
+  const [caseId, setCaseId] = useState<string>("Loading...");
+
   const [sortKey, setSortKey] = useState<SortKey>("date_uploaded");
 
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
@@ -158,6 +192,12 @@ export function SupportUpload() {
 
   const [isLoading, setIsLoading] = useState(true);
 
+  const [actionError, setActionError] = useState<UserFacingError | null>(null);
+
+  const [actionMessage, setActionMessage] = useState<string | null>(null);
+  
+  const [linkCopied, setLinkCopied] = useState(false);
+
   const loadUploads = useCallback(
     async (forceRefresh = false): Promise<void> => {
       setError(null);
@@ -165,6 +205,7 @@ export function SupportUpload() {
 
       if (!uuid) {
         setUploads([]);
+        setCaseId("Unknown");
 
         setError({
           title: "Upload link not selected",
@@ -182,6 +223,7 @@ export function SupportUpload() {
 
         if (!accessToken) {
           setUploads([]);
+          setCaseId("Unknown");
 
           setError({
             status: 401,
@@ -193,12 +235,17 @@ export function SupportUpload() {
           return;
         }
 
-        const data = await requestUploads(uuid, accessToken, forceRefresh);
+        const [data, currentCaseId] = await Promise.all([
+          requestUploads(uuid, accessToken, forceRefresh),
+          requestCaseId(uuid, accessToken),
+        ]);
 
         setUploads(data);
+        setCaseId(currentCaseId);
+
       } catch (requestError) {
         setUploads([]);
-
+        setCaseId("Unknown");
         if (requestError instanceof ApiRequestError) {
           setError(requestError.userFacingError);
 
@@ -268,6 +315,30 @@ export function SupportUpload() {
     });
   }, [uploads, sortDirection, sortKey]);
 
+  async function copyUploadLink(): Promise<void> {
+    if (!uuid) {
+      return;
+    }
+
+    const uploadLink = `${window.location.origin}/uploads/${uuid}`;
+
+    try {
+      await navigator.clipboard.writeText(uploadLink);
+
+      setLinkCopied(true);
+      setActionError(null);
+      setActionMessage("Upload link copied to clipboard.");
+
+      window.setTimeout(() => setLinkCopied(false), 2000);
+    } catch {
+      setActionError({
+        title: "Unable to copy link",
+        message:
+          "Your browser prevented the upload link from being copied. Please copy it manually.",
+      });
+    }
+  }
+
   return (
     <section className="data-page" aria-labelledby="support-upload-heading">
       <header className="data-page-header">
@@ -283,7 +354,35 @@ export function SupportUpload() {
           Back to links
         </Link>
       </header>
+      <div className="data-table-message">
+        <strong>Upload Link:</strong>{" "}
+        <code>{`${window.location.origin}/uploads/${uuid}`}</code>
 
+        <button
+          type="button"
+          className="copy-link-button"
+          onClick={() => void copyUploadLink()}
+          title="Copy upload link"
+          aria-label="Copy upload link"
+        >
+          {linkCopied ? "✓" : "❐"}
+        </button>
+      </div>
+      <div className="data-table-message">
+        <strong>Case ID:</strong> {caseId}
+      </div>
+      {actionError && (
+        <ApiErrorAlert
+          error={actionError}
+          onRetry={() => setActionError(null)}
+        />
+      )}
+
+      {actionMessage && (
+        <p className="data-table-message" role="status">
+          {actionMessage}
+        </p>
+      )}
       {isLoading && (
         <p className="data-table-message" role="status">
           Loading uploaded files...

@@ -15,11 +15,14 @@ import {
   deleteUploadSession,
   getUploadSessions,
   saveUploadSession,
-  type UploadSession,
+ 
+  saveUploadSettings,
+  type UploadSession, 
+  
 } from "./indexedDb";
 import "./CustomerUpload.css";
 
-const FILE_CHUNK_SIZE = 32 * 1024 * 1024;
+
 const HASH_CONCURRENCY = 4;
 const MAX_CHUNK_RETRIES = 3;
 const RETRY_DELAY_MS = 1_000;
@@ -216,15 +219,18 @@ async function hashBlob(blob: Blob): Promise<string> {
 }
 
 // Builds BLAKE3 Merkle root expected by upload API.
-async function buildFileHash(file: File): Promise<string> {
+async function buildFileHash(
+  file: File,
+  chunkSize: number,
+): Promise<string> {
   if (file.size === 0) {
     return hashBlob(file);
   }
 
   const chunks: HashableChunk[] = [];
 
-  for (let offset = 0; offset < file.size; offset += FILE_CHUNK_SIZE) {
-    const end = Math.min(offset + FILE_CHUNK_SIZE, file.size);
+  for (let offset = 0; offset < file.size; offset += chunkSize) {
+    const end = Math.min(offset + chunkSize, file.size);
 
     chunks.push({
       blob: file.slice(offset, end),
@@ -240,11 +246,11 @@ async function buildFileHash(file: File): Promise<string> {
       if (!chunk.hash) {
         throw new Error("Missing chunk hash.");
       }
+
       return chunk.hash;
     }),
   );
 }
-
 function merkleRoot(hashes: readonly string[]): string {
   if (hashes.length === 0) {
     throw new Error("Cannot create a Merkle root without hashes.");
@@ -422,7 +428,9 @@ async function repairMissingChunks(
     );
 
     if (missingOffsets.length === 0) {
-      return;
+      await delay(500);
+
+      continue;
     }
 
     for (const offset of missingOffsets) {
@@ -484,16 +492,18 @@ async function completeUploadSession(session: UploadSession): Promise<void> {
 async function createUploadSession(
   uuid: string,
   file: File,
+  region: "US" | "EU",
+  markUploadStarted: () => void,
 ): Promise<UploadSession> {
-  const fileHash = await buildFileHash(file);
+ 
 
   const response = await fetch(`/api/uploadfile/${uuid}/start`, {
     method: "POST",
     headers: {
-      "X-File-Hash": fileHash,
+      //"X-File-Hash": fileHash,
       "X-File-Name": file.name,
       "X-File-Size": file.size.toString(),
-      "X-User-Location": "US",
+      "X-User-Location": region,
     },
   });
 
@@ -503,6 +513,23 @@ async function createUploadSession(
 
   const data = (await response.json()) as Partial<StartUploadResponse>;
 
+  if (
+    typeof data.uploadToken !== "string" ||
+    !data.uploadToken
+  ) {
+    throw new Error(
+      "The upload service returned an incomplete session.",
+    );
+  }
+
+  markUploadStarted();
+
+  await saveUploadSettings({
+    uuid,
+    region,
+    uploadStarted: true,
+  });
+
   if (typeof data.uploadToken !== "string" || !data.uploadToken) {
     throw new Error(
       "The upload service returned an incomplete session. Refresh the page and try again.",
@@ -511,16 +538,16 @@ async function createUploadSession(
 
   const chunkSize =
     typeof data.chunkSize === "number" &&
-    Number.isFinite(data.chunkSize) &&
-    data.chunkSize > 0
+      Number.isFinite(data.chunkSize) &&
+      data.chunkSize > 0
       ? data.chunkSize
-      : FILE_CHUNK_SIZE;
+      : (() => {
+        throw new Error(
+          "The upload service did not provide a valid chunk size.",
+        );
+      })();
 
-  if (chunkSize !== FILE_CHUNK_SIZE) {
-    throw new Error(
-      "The upload service returned an incompatible file configuration. Refresh the page and try again. If the problem continues, contact support.",
-    );
-  }
+  const fileHash = await buildFileHash(file, chunkSize);
 
   const session: UploadSession = {
     uuid,
@@ -530,6 +557,7 @@ async function createUploadSession(
     fileSize: file.size,
     chunkSize,
     file,
+    region,
   };
 
   await saveUploadSession(session);
@@ -567,7 +595,7 @@ function getUploadStateText(state: UploadState): string {
 }
 
 export function CustomerUpload() {
-  const { setUploadStats, uuid } = useCustomerUpload();
+  const { setUploadStats, uuid, region, markUploadStarted } = useCustomerUpload();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -676,7 +704,12 @@ export function CustomerUpload() {
         const isNewSession = !session;
 
         if (!session) {
-          session = await createUploadSession(uuid, selectedFile.file);
+          session = await createUploadSession(
+            uuid,
+            selectedFile.file,
+            region,
+            markUploadStarted,
+          );
 
           attachUploadSession(selectedFile.id, session);
         }

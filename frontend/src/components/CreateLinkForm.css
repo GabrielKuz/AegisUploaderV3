@@ -224,6 +224,34 @@
   padding-top: 2px;
 }
 
+.create-link-modal-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 1000;
+}
+
+.create-link-modal {
+  width: min(500px, 90%);
+  padding: 2rem;
+  border-radius: 8px;
+  background: white;
+}
+
+.created-link-display {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 1rem 0;
+}
+
+.created-link-display code {
+  flex: 1;
+  overflow-wrap: anywhere;
+}
 /* ==========================================================================
    RESPONSIVE
    ========================================================================== */
