@@ -259,8 +259,9 @@ async def start_upload(
         logger.warning(f"IntegrityError: A conflicting upload session already exists for link {link_entry.uuid} and blob name {blob_name}")
         db.rollback()
         raise HTTPException(status_code=409, detail="A conflicting upload session already exists.")
-    except HTTPException as e: # Handle HTTP exceptions raised during the upload session creation process
-        raise e
+    except HTTPException: # Handle HTTP exceptions raised during the upload session creation process
+        db.rollback()
+        raise 
 
     except Exception: # General exception handling for unexpected errors during the upload session creation process
         db.rollback()
