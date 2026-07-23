@@ -107,7 +107,7 @@ export function CustomerUploadProvider({
       const settings = await getUploadSettings(uuid);
 
       if (settings) {
-        setRegion(settings.region);
+        setRegionState(settings.region);
 
         if (settings.uploadStarted) {
           setUploadStarted(true);

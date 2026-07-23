@@ -16,7 +16,7 @@ import {
   getUploadSessions,
   saveUploadSession,
  
-  saveUploadSettings,
+  //saveUploadSettings,
   type UploadSession, 
   
 } from "./indexedDb";
@@ -495,23 +495,34 @@ async function createUploadSession(
   region: "US" | "EU",
   markUploadStarted: () => void,
 ): Promise<UploadSession> {
- 
+
+  // Must match backend because backend requires hash before returning config
+  const expectedChunkSize = 4 * 1024 * 1024;
+
+  const fileHash = await buildFileHash(
+    file,
+    expectedChunkSize,
+  );
+
 
   const response = await fetch(`/api/uploadfile/${uuid}/start`, {
     method: "POST",
     headers: {
-      //"X-File-Hash": fileHash,
+      "X-File-Hash": fileHash,
       "X-File-Name": file.name,
       "X-File-Size": file.size.toString(),
       "X-User-Location": region,
     },
   });
 
+
   if (!response.ok) {
     throw await getUploadResponseError(response, "start");
   }
 
+
   const data = (await response.json()) as Partial<StartUploadResponse>;
+
 
   if (
     typeof data.uploadToken !== "string" ||
@@ -522,32 +533,20 @@ async function createUploadSession(
     );
   }
 
-  markUploadStarted();
-
-  await saveUploadSettings({
-    uuid,
-    region,
-    uploadStarted: true,
-  });
-
-  if (typeof data.uploadToken !== "string" || !data.uploadToken) {
-    throw new Error(
-      "The upload service returned an incomplete session. Refresh the page and try again.",
-    );
-  }
 
   const chunkSize =
     typeof data.chunkSize === "number" &&
-      Number.isFinite(data.chunkSize) &&
       data.chunkSize > 0
       ? data.chunkSize
-      : (() => {
-        throw new Error(
-          "The upload service did not provide a valid chunk size.",
-        );
-      })();
+      : expectedChunkSize;
 
-  const fileHash = await buildFileHash(file, chunkSize);
+
+  if (chunkSize !== expectedChunkSize) {
+    throw new Error(
+      "The server returned a different chunk size than expected.",
+    );
+  }
+
 
   const session: UploadSession = {
     uuid,
@@ -560,11 +559,13 @@ async function createUploadSession(
     region,
   };
 
+
   await saveUploadSession(session);
+
+  markUploadStarted();
 
   return session;
 }
-
 // Returns readable text for a file's current upload state.
 function getUploadStateText(state: UploadState): string {
   switch (state.status) {
