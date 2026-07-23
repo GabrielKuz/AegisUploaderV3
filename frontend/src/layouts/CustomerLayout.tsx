@@ -51,14 +51,17 @@ function CustomerUploadSummary() {
       </dl>
 
       <div className="customer-upload-region">
-        <label htmlFor="region-switch">
+        <span className="customer-upload-region-label">
           Upload Region
-        </label>
+        </span>
 
-        <div>
-          <span>US</span>
+        <label className="region-switch" htmlFor="region-switch">
+          <span className={region === "US" ? "region-option active" : "region-option"}>
+            US
+          </span>
 
           <input
+            id="region-switch"
             type="checkbox"
             checked={region === "EU"}
             disabled={!settingsLoaded || uploadStarted}
@@ -67,11 +70,15 @@ function CustomerUploadSummary() {
             }}
           />
 
-          <span>EU</span>
-        </div>
+          <span className="region-slider" />
+
+          <span className={region === "EU" ? "region-option active" : "region-option"}>
+            EU
+          </span>
+        </label>
 
         {uploadStarted && (
-          <small>
+          <small className="region-lock-message">
             Region locked after upload started.
           </small>
         )}

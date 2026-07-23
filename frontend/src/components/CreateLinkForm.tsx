@@ -217,7 +217,7 @@ export function CreateLinkForm({
 
             <button
               type="button"
-              className="create-link-submit"
+              className="create-link-modal-submit"
               onClick={() => navigate(successPath)}
             >
               Continue

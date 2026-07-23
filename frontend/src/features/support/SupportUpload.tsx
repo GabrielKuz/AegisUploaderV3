@@ -31,7 +31,7 @@ type Upload = {
 
 type CaseLink = {
   uuid: string;
-  caseId: string;
+  case_id: string;
 };
 
 type SortKey =
@@ -158,7 +158,7 @@ async function requestCaseId(
     throw new Error("Upload link not found.");
   }
 
-  return matchingLink.caseId;
+  return matchingLink.case_id;
 }
 
 function getUploadStatusLabel(uploadComplete: boolean): string {
@@ -354,22 +354,29 @@ export function SupportUpload() {
           Back to links
         </Link>
       </header>
-      <div className="data-table-message">
-        <strong>Upload Link:</strong>{" "}
-        <code>{`${window.location.origin}/uploads/${uuid}`}</code>
+      <div className="upload-link-summary">
+        <div className="upload-link-summary-row">
+          <strong>Upload Link</strong>
 
-        <button
-          type="button"
-          className="copy-link-button"
-          onClick={() => void copyUploadLink()}
-          title="Copy upload link"
-          aria-label="Copy upload link"
-        >
-          {linkCopied ? "✓" : "❐"}
-        </button>
-      </div>
-      <div className="data-table-message">
-        <strong>Case ID:</strong> {caseId}
+          <div className="upload-link-value">
+            <code>{`${window.location.origin}/uploads/${uuid}`}</code>
+
+            <button
+              type="button"
+              className="copy-link-button"
+              onClick={() => void copyUploadLink()}
+              title="Copy upload link"
+              aria-label="Copy upload link"
+            >
+              {linkCopied ? "✓" : "❐"}
+            </button>
+          </div>
+        </div>
+
+        <div className="upload-link-summary-row">
+          <strong>Case ID</strong>
+          <span>{caseId}</span>
+        </div>
       </div>
       {actionError && (
         <ApiErrorAlert
