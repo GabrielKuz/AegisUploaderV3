@@ -672,50 +672,59 @@ def mark_for_deletion(upload_id: str, current_user: Annotated[User, Depends(requ
     db.commit()
     return MarkForDeletionResponse(message=f"Upload {upload_id} marked for deletion")
 
-@router.get("/links/{linkUUID}/files", response_model=list[UploadedFileInfo]) # Get all files for a given link uuid from the db. Only returns files the user has access to
-def listFiles(linkUUID: str, current_user: Annotated[User, Depends(requireRoles("User", "Admin"))], db: Annotated[sqlalchemy.orm.Session, Depends(get_db)]):
+@router.get("/links/{linkUUID}/files", response_model=list[UploadedFileInfo])
+def listFiles(linkUUID: str,
+    current_user: Annotated[User, Depends(requireRoles("User", "Admin"))],
+    db: Annotated[sqlalchemy.orm.Session, Depends(get_db)],
+):
+    """
+    Return uploaded files visible to the current user.
+
+    Admin users may view every non-deleted upload for the link.
+    User-role accounts may view only uploads where their username
+    is included in users_with_access.
+    """
     if not IsUUID(linkUUID):
-        badUUID = HTTPException(400,detail={"message": "Invalid uuid"})
-        raise badUUID
-    
-    #If no uploads return 204, if any one of the uploads is not authorized return 403, otherwise return the list of uploads
-    if not db.query(UploadRecord).filter(UploadRecord.link_uuid == linkUUID, UploadRecord.for_deletion.is_(False)).first(): # If no uploads for the link, return 204
-        raise HTTPException(status_code=204, detail="No uploads found for this link")
-    if "Admin" not in current_user.roles: # If the user is not an admin, check if they have access to the link
-        uploads = (
-            db.query(UploadRecord)
-            .filter(
-                UploadRecord.link_uuid == linkUUID,
-                UploadRecord.for_deletion.is_(False),
-                cast(UploadRecord.users_with_access, JSONB).contains([current_user.username])
-            ).all()
-        )
-    elif "Admin" in current_user.roles: # If the user is an admin, return all uploads for the link
-        uploads = (
-            db.query(UploadRecord)
-            .filter(
-                UploadRecord.link_uuid == linkUUID,
-                UploadRecord.for_deletion.is_(False),
-            ).all()
-        )
+        raise HTTPException(status_code=400, detail={
+            "message": "Invalid uuid",
+        })
 
-    if not uploads and "Admin" not in current_user.roles: # If any one of the uploads is not authorized return forbidden
-        raise HTTPException(
-            status_code=403,
-            detail="You do not have permission to access files for this link",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    logger.debug(f"User {current_user.username} accessed files for link {linkUUID}, found {len(uploads)} uploads")
+    base_query = db.query(UploadRecord).filter(UploadRecord.link_uuid == linkUUID, UploadRecord.for_deletion.is_(False))
+    if "Admin" in current_user.roles:
+        uploads = base_query.all()
+    else:
+        uploads = base_query.filter(cast(UploadRecord.users_with_access, JSONB).contains([current_user.username])).all()
 
-    return [ # Return file information to allow for them to later query for the download link without exposing more sensitive information than needed
+        '''
+        Determine whether the link contains uploads at all.
+        An empty authorized result may mean either:
+        1. no files exist, or
+        2. files exist but this user cannot access them.
+        '''
+        if not uploads:
+            any_upload_exists = (db.query(UploadRecord).filter(UploadRecord.link_uuid == linkUUID, UploadRecord.for_deletion.is_(False)).first()is not None)
+
+            if any_upload_exists:
+                raise HTTPException(status_code=403, detail=("You do not have permission " "to access files for this link"))
+
+    logger.debug("User %s accessed files for link %s, found %s uploads", current_user.username, linkUUID, len(uploads))
+
+    return [
         UploadedFileInfo(
             upload_id=upload.upload_id,
             filename=upload.original_filename,
             size=upload.combined_file_size,
             blob_name=upload.blob_name,
-            date_uploaded=upload.date_uploaded if upload.date_uploaded else None,
-            expiration_date=(upload.date_uploaded + datetime.timedelta(days=upload.max_days_in_storage)).isoformat() if upload.date_uploaded and upload.max_days_in_storage else None,
-            upload_complete=upload.upload_complete,
+            date_uploaded=(
+                upload.date_uploaded
+                if upload.date_uploaded
+                else None
+            ),
+            expiration_date=((upload.date_uploaded + datetime.timedelta(days=upload.max_days_in_storage)).isoformat()
+                if (upload.date_uploaded and upload.max_days_in_storage is not None)
+                else None
+            ),
+            upload_complete=(upload.upload_complete),
         )
         for upload in uploads
     ]

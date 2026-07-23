@@ -87,11 +87,13 @@ def get_links(current_user: Annotated[User, Depends(requireRoles("User", "Admin"
     return get_all_links(current_user)
 
 @app.get("/links/{uuid}")
-def get_link_endpoint(uuid: str, current_user: Annotated[User, Depends(requireRoles("User", "Admin"))]):  # TODO: Change to getCurrentActiveUser after testing
+def get_link_endpoint(uuid: str, current_user: Annotated[User, Depends(requireRoles("User", "Admin"))]):
     if not IsUUID(uuid):
-        badUUID = HTTPException(400,detail={"message": "Invalid uuid"})
-        raise badUUID
-    return get_link(uuid)
+        raise HTTPException(status_code=400, detail={
+            "message": "Invalid uuid",
+        })
+
+    return get_link(uuid, current_user)
 
 @app.get("/")
 def read_root():
@@ -119,16 +121,6 @@ def download_link(uuid: str, currentUser: Annotated[User, Depends(requireRoles("
         return downloadData(uploads[0]["upload_id"], currentUser)
     if not uploads:
         raise HTTPException(status_code=404, detail="No uploads found for this link")
-    return uploads
-
-@app.get("/links/{uuid}")
-def getLinkInfo(uuid: str, currentUser: Annotated[User, Depends(requireRoles("User", "Admin"))]):  
-    data = get_all_links(currentUser)
-    for link in data:
-        if link["uuid"] == uuid:
-            return link
-    raise HTTPException(status_code=404, detail="Link not found")
-
 
 if __name__ == "__main__": # Doesnt get run by docker
     setup_logging()

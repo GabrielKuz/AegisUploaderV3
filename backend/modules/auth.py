@@ -68,7 +68,7 @@ async def getCurrentUser(credentials: Annotated[HTTPAuthorizationCredentials, De
         headers={"WWW-Authenticate": "Bearer"},
     )
     try:
-        logger.debug(f"Validating token: {token}")
+        logger.debug("Validating Entra access token")
         signingKey = jwks_client.get_signing_key_from_jwt(token).key # get singing key fropm ms jwks endpoint
         
         payload = decode( #decode and validate
