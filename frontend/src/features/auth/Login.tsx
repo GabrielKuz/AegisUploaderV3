@@ -104,7 +104,7 @@ export function Login() {
         <div className="login-header-brand">
           <img
             className="login-header-logo"
-            src="/images/Aegis-Logo.svg"
+            src="/images/Aegis-Logo.png"
             alt="Aegis Software"
           />
 

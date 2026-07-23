@@ -88,7 +88,7 @@ export function AppLayout({
         <div className="app-brand">
           <img
             className="app-logo"
-            src="/images/Aegis-Logo.svg"
+            src="/images/Aegis-Logo.png"
             alt="Aegis Software"
           />
 
