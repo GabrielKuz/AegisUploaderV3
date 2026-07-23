@@ -866,6 +866,7 @@ def mark_all_for_deletion(link_uuid: str, current_user: Annotated[User, Depends(
     ).all()
 
     if not uploads:
+        
         raise HTTPException(status_code=404, detail="No uploads found for this link")
 
     for upload in uploads:
