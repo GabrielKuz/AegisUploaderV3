@@ -231,8 +231,6 @@ class AzureFileStorageProvider(StorageProvider):
             finally:
                 await directory_client.close()
 
-        await directory_client.close()
-
     async def upload_file(self, file: bytes, destination_path: str) -> None:
         directory = str(Path(self.base_path) / Path(destination_path).parent).replace("\\", "/")
 

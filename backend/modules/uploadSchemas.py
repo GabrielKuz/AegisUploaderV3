@@ -52,7 +52,7 @@ class CompleteUploadResponse(BaseModel):
 
 
 
-# GET /links/{linkUUID}/files
+# GET 
 class UploadedFileInfo(BaseModel):
     upload_id: UUID4
     filename: str

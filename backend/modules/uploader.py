@@ -169,7 +169,7 @@ async def start_upload(
     
     
     if link_entry.expiration_date is None or link_entry.expiration_date <= datetime.datetime.now(datetime.timezone.utc): # If the link has expired, mark it as expired and return 410. This is a backup in case the cleanup job hasnt run yet
-        link_entry.expired = True # mark the link as expired if the expiration date has passed in case the cleanup job hasnt run yet 
+        link_entry.expired = True # mark the link entry as expired if the expiration date has passed in case the cleanup job hasnt run yet 
         raise HTTPException(status_code=410, detail="This link has expired and is no longer available for uploads")
 
     itar_status = bool(link_entry.itar) if link_entry else False # Grab ITAR status from the link entry (Link entry pulled it from HubSpot)
@@ -199,9 +199,13 @@ async def start_upload(
     blob_name = path_filename
 
     try:
-        db.execute(text("SELECT pg_advisory_xact_lock(hashtext(:key))"), # Lock the link uuid to prevent concurrent uploads from creating the same blob name. Released automatically on a commit or rollback
+        lock_acquired = db.execute(
+            text("SELECT pg_try_advisory_xact_lock(hashtext(:key))"), # Lock the link uuid to prevent concurrent uploads from creating the same blob name. Released automatically on a commit or rollback
             {"key": str(link_entry.uuid)}
-        )
+        ).scalar()
+
+        if not lock_acquired:
+            raise HTTPException(status_code=409, detail="Another upload is currently being initialized for this link.")
 
         path_obj = Path(blob_name)
         stem = path_obj.stem
@@ -259,8 +263,9 @@ async def start_upload(
         logger.warning(f"IntegrityError: A conflicting upload session already exists for link {link_entry.uuid} and blob name {blob_name}")
         db.rollback()
         raise HTTPException(status_code=409, detail="A conflicting upload session already exists.")
-    except HTTPException as e: # Handle HTTP exceptions raised during the upload session creation process
-        raise e
+    except HTTPException: # Handle HTTP exceptions raised during the upload session creation process
+        db.rollback()
+        raise 
 
     except Exception: # General exception handling for unexpected errors during the upload session creation process
         db.rollback()
