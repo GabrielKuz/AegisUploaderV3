@@ -850,3 +850,27 @@ The uploaded file is now available for review at {viewURL}.
                 logger.warning(f"Error occurred while sending completion email: {e}")
     except Exception as e:
         logger.warning(f"Error occurred while preparing to send completion email: {e}")
+
+@router.post("/links/{link_uuid}/mark_all_for_deletion", response_model=MarkForDeletionResponse)
+def mark_all_for_deletion(link_uuid: str, current_user: Annotated[User, Depends(requireRoles("Admin", strict=True))], db: Annotated[sqlalchemy.orm.Session, Depends(get_db)]):
+    if not IsUUID(link_uuid):
+        raise HTTPException(status_code=400, detail="Invalid uuid")
+
+    link_entry = find_link_entry(link_uuid, db)
+    if not link_entry:
+        raise HTTPException(status_code=404, detail="Link not found")
+
+    uploads = db.query(UploadRecord).filter(
+        UploadRecord.link_uuid == link_uuid,
+        UploadRecord.for_deletion.is_(False)
+    ).all()
+
+    if not uploads:
+        raise HTTPException(status_code=404, detail="No uploads found for this link")
+
+    for upload in uploads:
+        upload.for_deletion = True
+
+    db.commit()
+    logger.info(f"All uploads for link {link_uuid} marked for deletion by user {current_user.username}.")
+    return MarkForDeletionResponse(message=f"All uploads for link {link_uuid} marked for deletion")
