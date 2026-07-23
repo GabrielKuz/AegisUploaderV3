@@ -228,6 +228,10 @@ class AzureFileStorageProvider(StorageProvider):
                 await directory_client.create_directory()
             except ResourceExistsError:
                 pass
+            finally:
+                await directory_client.close()
+
+        await directory_client.close()
 
     async def upload_file(self, file: bytes, destination_path: str) -> None:
         directory = str(Path(self.base_path) / Path(destination_path).parent).replace("\\", "/")
@@ -237,6 +241,7 @@ class AzureFileStorageProvider(StorageProvider):
         client = self._get_client(destination_path)
 
         await client.upload_file(file)
+        await client.close()
 
     async def download_file(self, source_path: str) -> bytes:
         client = self._get_client(source_path)
@@ -245,6 +250,8 @@ class AzureFileStorageProvider(StorageProvider):
             return await client.download_file().readall()
         except ResourceNotFoundError:
             raise FileNotFoundError(f"File '{source_path}' does not exist.") from None
+        finally:
+            await client.close()
         
     async def get_file_stream(self, file_path: str) -> BinaryIO:
         client = self._get_client(file_path)
@@ -253,6 +260,8 @@ class AzureFileStorageProvider(StorageProvider):
             return await client.download_file()
         except ResourceNotFoundError:
             raise FileNotFoundError(f"File '{file_path}' does not exist.") from None
+        finally:
+            await client.close()
         
     async def prepare_file(self, file_path: str, size: int) -> None:
         logger.info(f"Preparing file {file_path} with size {size}")
@@ -266,7 +275,9 @@ class AzureFileStorageProvider(StorageProvider):
             await client.create_file(size)
         except ResourceExistsError:
             raise FileExistsError(f"File '{file_path}' already exists.") from None
-        
+        finally:
+            await client.close()
+
     async def write_stream_range(self, stream: AsyncIterator[bytes], destination_path: str, offset: int, size: int) -> None:
         logger.info(f"Writing stream range to {destination_path} at offset {offset} with size {size}")
         client = self._get_client(destination_path)
@@ -291,6 +302,7 @@ class AzureFileStorageProvider(StorageProvider):
             offset=offset,
             length=size,
         )
+        await client.close()
     
     async def upload_stream(self, stream: AsyncIterator[bytes], destination_path: str) -> None:
         directory = str(Path(self.base_path) / Path(destination_path).parent).replace("\\", "/")
@@ -314,6 +326,7 @@ class AzureFileStorageProvider(StorageProvider):
                 offset=offset,
                 length=len(chunk),
             )
+        await client.close()
 
 
     async def delete_file(self, file_path: str) -> None:
@@ -323,6 +336,8 @@ class AzureFileStorageProvider(StorageProvider):
             await client.delete_file()
         except ResourceNotFoundError:
             raise FileNotFoundError(f"File '{file_path}' does not exist.") from None
+        finally:
+            await client.close()
 
     async def exists(self, file_path: str) -> bool:
         client = self._get_client(file_path)
@@ -334,8 +349,10 @@ class AzureFileStorageProvider(StorageProvider):
         finally:
             await client.close()
 
-    def get_file_url(self, file_path: str) -> str:
-        return self._get_client(file_path).url
+    async def get_file_url(self, file_path: str) -> str:
+        url = (client:=self._get_client(file_path)).url
+        await client.close()
+        return url
 
     async def get_file(self, file_path: str) -> BinaryIO:
         client = self._get_client(file_path)
@@ -344,6 +361,8 @@ class AzureFileStorageProvider(StorageProvider):
             return BytesIO(await client.download_file().readall())
         except ResourceNotFoundError:
             raise FileNotFoundError(f"File '{file_path}' does not exist.") from None
+        finally:
+            await client.close()
     
     async def delete_directory(self, directory_path: str) -> None:
         directory = str(Path(self.base_path) / directory_path).replace("\\", "/")
@@ -358,6 +377,8 @@ class AzureFileStorageProvider(StorageProvider):
             await directory_client.delete_directory()
         except ResourceNotFoundError:
             raise FileNotFoundError(f"Directory '{directory_path}' does not exist.") from None
+        finally:
+            await directory_client.close()
 
     async def ls(self, directory_path: str) -> list[str]:
         directory = str(Path(self.base_path) / directory_path).replace("\\", "/")
@@ -371,17 +392,19 @@ class AzureFileStorageProvider(StorageProvider):
         files: list[str] = []
 
         async def recurse(client: ShareDirectoryClient,relative_path: str) -> None:
-            for item in await client.list_directories_and_files():
+            async for item in client.list_directories_and_files():
                 path = (f"{relative_path}/{item['name']}" if relative_path else item["name"])
 
                 if item["is_directory"]:
-                    recurse(client.get_subdirectory_client(item["name"]), path)
+                    await recurse(client.get_subdirectory_client(item["name"]), path)
                 else:
                     files.append(path)
 
         try:
-            recurse(directory_client, "")
+            await recurse(directory_client, "")
         except ResourceNotFoundError:
             return []
+        finally:
+            await directory_client.close()
 
         return files
