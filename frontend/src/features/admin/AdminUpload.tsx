@@ -33,7 +33,7 @@ type Upload = {
 
 type CaseLink = {
   uuid: string;
-  caseId: string;
+  case_id: string;
 };
 
 type SortKey =
@@ -224,7 +224,7 @@ async function requestCaseId(
     throw new Error("Upload link not found.");
   }
 
-  return matchingLink.caseId;
+  return matchingLink.case_id;
 }
 
 // Converts backend upload states into consistent table labels.
@@ -690,23 +690,29 @@ export function AdminUpload() {
           </Link>
         </div>
       </header>
-      <div className="data-table-message">
-        <strong>Upload Link:</strong>{" "}
-        <code>{`${window.location.origin}/uploads/${uuid}`}</code>
+      <div className="upload-link-summary">
+        <div className="upload-link-summary-row">
+          <strong>Upload Link</strong>
 
-        <button
-          type="button"
-          className="copy-link-button"
-          onClick={() => void copyUploadLink()}
-          title="Copy upload link"
-          aria-label="Copy upload link"
-        >
-          {linkCopied ? "✓" : "❐"}
-        </button>
-      </div>
+          <div className="upload-link-value">
+            <code>{`${window.location.origin}/uploads/${uuid}`}</code>
 
-      <div className="data-table-message">
-        <strong>Case ID:</strong> {caseId}
+            <button
+              type="button"
+              className="copy-link-button"
+              onClick={() => void copyUploadLink()}
+              title="Copy upload link"
+              aria-label="Copy upload link"
+            >
+              {linkCopied ? "✓" : "❐"}
+            </button>
+          </div>
+        </div>
+
+        <div className="upload-link-summary-row">
+          <strong>Case ID</strong>
+          <span>{caseId}</span>
+        </div>
       </div>
       {actionMessage && (
         <p className="data-table-message" role="status">
