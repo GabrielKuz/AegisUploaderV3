@@ -7,11 +7,20 @@ import {
 } from "../features/customer/CustomerUploadContext";
 import { formatBytes } from "../utils/formatters";
 
+
 /**
  * Displays customer upload statistics in the application sidebar.
  */
 function CustomerUploadSummary() {
-  const { uploadedCount, uploadedBytes, uuid } = useCustomerUpload();
+  const {
+    uploadedCount,
+    uploadedBytes,
+    uuid,
+    region,
+    setRegion,
+    uploadStarted,
+    settingsLoaded,
+  } = useCustomerUpload();
 
   return (
     <section
@@ -40,6 +49,33 @@ function CustomerUploadSummary() {
           </dd>
         </div>
       </dl>
+
+      <div className="customer-upload-region">
+        <label htmlFor="region-switch">
+          Upload Region
+        </label>
+
+        <div>
+          <span>US</span>
+
+          <input
+            type="checkbox"
+            checked={region === "EU"}
+            disabled={!settingsLoaded || uploadStarted}
+            onChange={(event) => {
+              setRegion(event.target.checked ? "EU" : "US");
+            }}
+          />
+
+          <span>EU</span>
+        </div>
+
+        {uploadStarted && (
+          <small>
+            Region locked after upload started.
+          </small>
+        )}
+      </div>
     </section>
   );
 }

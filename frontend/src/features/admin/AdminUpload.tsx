@@ -31,6 +31,11 @@ type Upload = {
   marked_for_deletion?: boolean;
 };
 
+type CaseLink = {
+  uuid: string;
+  caseId: string;
+};
+
 type SortKey =
   | "blob_name"
   | "size"
@@ -104,6 +109,13 @@ function getExtendEndpoint(uploadId: string, additionalDays: number): string {
 function getDeleteEndpoint(uploadId: string): string {
   return (
     `/api/uploads/` + `${encodeURIComponent(uploadId)}` + "/mark_for_deletion"
+  );
+}
+
+//Returns endpoint used to mark all uploads for deletion.
+function getDeleteAllEndpoint(uuid: string): string {
+  return (
+    `/api/links/${encodeURIComponent(uuid)}` + "/mark_all_for_deletion"
   );
 }
 
@@ -188,6 +200,33 @@ function requestUploads(
   return request;
 }
 
+async function requestCaseId(
+  uuid: string,
+  accessToken: string,
+): Promise<string> {
+  const response = await fetch("/api/links", {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+
+  if (!response.ok) {
+    throw new ApiRequestError(
+      await readApiError(response, "load the upload link")
+    );
+  }
+
+  const links = (await response.json()) as CaseLink[];
+
+  const matchingLink = links.find((link) => link.uuid === uuid);
+
+  if (!matchingLink) {
+    throw new Error("Upload link not found.");
+  }
+
+  return matchingLink.caseId;
+}
+
 // Converts backend upload states into consistent table labels.
 function getUploadStatus(upload: Upload): UploadStatusDisplay {
   const rawStatus = upload.status?.trim().toLowerCase().replace(/[_-]+/g, " ");
@@ -264,13 +303,15 @@ function getSortValue(upload: Upload, key: SortKey): SortValue {
 }
 
 export function AdminUpload() {
-  const { uuid } = useParams<{
-    uuid: string;
-  }>();
+  const { uuid } = useParams<{ uuid: string }>();
+
+
 
   const getAccessToken = useApiAccessToken();
 
   const [uploads, setUploads] = useState<Upload[]>([]);
+
+  const [caseId, setCaseId] = useState<string>("Loading...");
 
   const [sortKey, setSortKey] = useState<SortKey>("date_uploaded");
 
@@ -290,6 +331,10 @@ export function AdminUpload() {
 
   const [deletingUploadId, setDeletingUploadId] = useState<string | null>(null);
 
+  const [isDeletingAll, setIsDeletingAll] = useState(false);
+
+  const [linkCopied, setLinkCopied] = useState(false);
+
   const loadUploads = useCallback(
     async (forceRefresh = false): Promise<void> => {
       setError(null);
@@ -297,6 +342,7 @@ export function AdminUpload() {
 
       if (!uuid) {
         setUploads([]);
+        setCaseId("Unknown");
 
         setError({
           title: "Upload link not selected",
@@ -313,6 +359,7 @@ export function AdminUpload() {
 
         if (!accessToken) {
           setUploads([]);
+          setCaseId("Unknown");
 
           setError({
             status: 401,
@@ -324,11 +371,17 @@ export function AdminUpload() {
           return;
         }
 
-        const data = await requestUploads(uuid, accessToken, forceRefresh);
+        const [data, currentCaseId] = await Promise.all([
+          requestUploads(uuid, accessToken, forceRefresh),
+          requestCaseId(uuid, accessToken),
+        ]);
 
         setUploads(data);
+        setCaseId(currentCaseId);
+     
       } catch (requestError) {
         setUploads([]);
+        setCaseId("Unknown");
 
         if (requestError instanceof ApiRequestError) {
           setError(requestError.userFacingError);
@@ -522,6 +575,89 @@ export function AdminUpload() {
     }
   }
 
+  async function deleteAllUploads(): Promise<void> {
+    if (!uuid) {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      "Mark ALL uploads on this link for deletion?"
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setActionError(null);
+    setActionMessage(null);
+    setIsDeletingAll(true);
+
+    try {
+      const accessToken = await getAccessToken();
+
+      if (!accessToken) {
+        setActionError({
+          status: 401,
+          title: "Sign-in required",
+          message:
+            "Your session could not be verified. Sign in again before marking all uploads for deletion.",
+        });
+
+        return;
+      }
+
+      const response = await fetch(getDeleteAllEndpoint(uuid), {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+
+      if (!response.ok) {
+        setActionError(
+          await readApiError(response, "mark all uploads for deletion")
+        );
+        return;
+      }
+
+      setActionMessage(
+        "All uploads on this link were marked for deletion."
+      );
+
+      await loadUploads(true);
+    } catch (requestError) {
+      setActionError(
+        getUnexpectedError(requestError, "mark all uploads for deletion")
+      );
+    } finally {
+      setIsDeletingAll(false);
+    }
+  }
+
+  async function copyUploadLink(): Promise<void> {
+    if (!uuid) {
+      return;
+    }
+
+    const uploadLink = `${window.location.origin}/uploads/${uuid}`;
+
+    try {
+      await navigator.clipboard.writeText(uploadLink);
+
+      setLinkCopied(true);
+      setActionError(null);
+      setActionMessage("Upload link copied to clipboard.");
+
+      window.setTimeout(() => setLinkCopied(false), 2000);
+    } catch {
+      setActionError({
+        title: "Unable to copy link",
+        message:
+          "Your browser prevented the upload link from being copied. Please copy it manually.",
+      });
+    }
+  }
+
   return (
     <section className="data-page" aria-labelledby="upload-management-heading">
       <header className="data-page-header">
@@ -534,11 +670,44 @@ export function AdminUpload() {
           </p>
         </div>
 
-        <Link to="/admin/links" className="data-page-action">
-          Back to links
-        </Link>
-      </header>
+        <div className="data-page-actions">
+          <button
+            type="button"
+            className="data-page-action data-table-action-button--danger"
+            disabled={isDeletingAll}
+            onClick={() => void deleteAllUploads()}
+          >
+            {isDeletingAll
+              ? "Marking..."
+              : "Mark All for Deletion"}
+          </button>
 
+          <Link
+            to="/admin/links"
+            className="data-page-action"
+          >
+            Back to links
+          </Link>
+        </div>
+      </header>
+      <div className="data-table-message">
+        <strong>Upload Link:</strong>{" "}
+        <code>{`${window.location.origin}/uploads/${uuid}`}</code>
+
+        <button
+          type="button"
+          className="copy-link-button"
+          onClick={() => void copyUploadLink()}
+          title="Copy upload link"
+          aria-label="Copy upload link"
+        >
+          {linkCopied ? "✓" : "❐"}
+        </button>
+      </div>
+
+      <div className="data-table-message">
+        <strong>Case ID:</strong> {caseId}
+      </div>
       {actionMessage && (
         <p className="data-table-message" role="status">
           {actionMessage}

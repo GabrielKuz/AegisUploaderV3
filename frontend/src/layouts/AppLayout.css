@@ -205,6 +205,42 @@
   font-weight: 600;
 }
 
+.region-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+}
+
+.region-switch input {
+  position: absolute;
+  opacity: 0;
+}
+
+.region-slider {
+  width: 42px;
+  height: 22px;
+  background: #888;
+  border-radius: 999px;
+  position: relative;
+  transition: 0.2s;
+}
+
+.region-slider::before {
+  content: "";
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  left: 2px;
+  top: 2px;
+  background: white;
+  border-radius: 50%;
+  transition: 0.2s;
+}
+
+.region-switch input:checked+.region-slider::before {
+  transform: translateX(20px);
+}
 /* ==========================================================================
    MAIN CONTENT
    ========================================================================== */
