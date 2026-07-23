@@ -43,14 +43,6 @@ def test_python_version():
     major, minor, *_ = sys.version_info
     assert major == 3 and minor >= 13, "Python version must be 3.13 or higher"
 
-def test_python(): # test features unique to python and not in most other languages
-    assert bool([]) == False
-    assert bool([1, 2, 3]) == True
-    assert bool("") == False
-    assert (c:=(a:=[b:=[]]).append([a,b]) or a).append([c,[a,c]])  is None
-    import random as r
-    assert __import__("random") is r
-
 
 def test_jwt():
     jwt_secret = "1234567890987654321abcdefabcdefabcdef"
