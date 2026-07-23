@@ -211,7 +211,7 @@ async def start_upload(
         while True: # Check if blob name already exists under the case id and if it does append _{counter} to the end until its unique to prevent overwriting old files
             if counter > 256: # Protects against a potential infinite loop or malicious attempts to create collisions. Should never be hit
                 raise HTTPException(status_code=400, detail="Unable to generate a unique filename after 256 attempts, please rename the file and try again")
-            exists_in_storage = service_client.exists(f"{link_entry.case_id}/{blob_name}") # Check if file is stored
+            exists_in_storage = await service_client.exists(f"{link_entry.case_id}/{blob_name}") # Check if file is stored
 
             exists_in_db = ( # Check for a db record with the name
                 db.query(UploadSession).filter(
@@ -241,7 +241,7 @@ async def start_upload(
             hash_algorithm="blake3",
             received_ranges=[],
             received_size=0,
-            chunk_size=32 * 1024 * 1024,  # 32 MiB
+            chunk_size=4*1024*1024,  # 32 MiB
             completed=False,
             itar_status=itar_status,
             storage_region=storage_region,
@@ -259,6 +259,8 @@ async def start_upload(
         logger.warning(f"IntegrityError: A conflicting upload session already exists for link {link_entry.uuid} and blob name {blob_name}")
         db.rollback()
         raise HTTPException(status_code=409, detail="A conflicting upload session already exists.")
+    except HTTPException as e: # Handle HTTP exceptions raised during the upload session creation process
+        raise e
 
     except Exception: # General exception handling for unexpected errors during the upload session creation process
         db.rollback()
@@ -282,7 +284,7 @@ async def start_upload(
     
     return {
         "uploadToken": upload_token, # Token to identify session
-        "chunkSize": 32 * 1024 * 1024,  # 32 MiB  # Tell client the chunk size to use for uploads, maybe set up negotiation later for different sizes
+        "chunkSize": 4*1024*1024,  # 32 MiB  # Tell client the chunk size to use for uploads, maybe set up negotiation later for different sizes
     }
 
 @router.post("/uploadfile/{link_uuid}/{upload_token}", response_model=UploadChunkResponse) # Even if link is expired, allow the upload to continue if it was started before expiration
@@ -305,7 +307,7 @@ async def upload_file_chunk(
     if not chunk_hash:
         raise HTTPException(status_code=400, detail="X-Chunk-Hash header required")
 
-    if chunk_size is None or chunk_size <= 0 or received_size != chunk_size or chunk_size > 32 * 1024 * 1024: # Handle invalid chunk sizes, including the final chunk which can be smaller than the chunk size
+    if chunk_size is None or chunk_size <= 0 or received_size != chunk_size or chunk_size > 4*1024*1024: # Handle invalid chunk sizes, including the final chunk which can be smaller than the chunk size
         raise HTTPException(status_code=400, detail="X-Chunk-Size invalid or missing, must be > 0 and <= 32 MiB and match Content-Length")
 
     upload_session = ( # GRab the session using the token and link uuid
@@ -385,7 +387,7 @@ async def upload_file_chunk(
 
     async def buffered_stream():
         while True:
-            chunk = chunk_buffer.read(32 * 1024 * 1024) # read 32 MiB chunks 
+            chunk = chunk_buffer.read(4*1024*1024) # read 32 MiB chunks 
 
             if not chunk: # Stop when out of chunks
                 break
@@ -757,12 +759,12 @@ async def sendCompletetionEmail(upload_record: UploadRecord):
     if not link_entry:
         logger.warning(f"Unable to send completion email. Link {upload_record.link_uuid} not found.")
         return
-
-    async with EmailClient.from_connection_string(ACS_CONNECTION_STRING) as client:
-        message = {
-            "content": {
-                "subject": f"File Upload Complete - {upload_record.case_id}",
-                "plainText": f"""A file has been successfully uploaded through Uploader V3.
+    try:
+        async with EmailClient.from_connection_string(ACS_CONNECTION_STRING) as client:
+            message = {
+                "content": {
+                    "subject": f"File Upload Complete - {upload_record.case_id}",
+                    "plainText": f"""A file has been successfully uploaded through Uploader V3.
 
 Case ID: {upload_record.case_id}
 File Name: {upload_record.blob_name}
@@ -827,9 +829,11 @@ The uploaded file is now available for review at {viewURL}.
             "senderAddress": os.getenv("ACS_SENDER_ADDRESS", "DoNotReply@aiscorp.com")
         }
 
-        try:
-            response = await client.begin_send(message)
-            await response.result()
-            logger.info(f"Completion email sent successfully to {link_entry.creator}.")
-        except Exception as e:
-            logger.warning(f"Error occurred while sending completion email: {e}")
+            try:
+                response = await client.begin_send(message)
+                await response.result()
+                logger.info(f"Completion email sent successfully to {link_entry.creator}.")
+            except Exception as e:
+                logger.warning(f"Error occurred while sending completion email: {e}")
+    except Exception as e:
+        logger.warning(f"Error occurred while preparing to send completion email: {e}")

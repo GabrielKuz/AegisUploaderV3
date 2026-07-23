@@ -138,8 +138,8 @@ def upload_test_setup(monkeypatch, tmp_path):
 
     return app, storage, tmp_path, uploader
 
-
-def test_resumable_upload_flow(upload_test_setup):
+@pytest.mark.asyncio
+async def test_resumable_upload_flow(upload_test_setup):
 
     app, storage, tmp_path, uploader = upload_test_setup
 
@@ -164,7 +164,7 @@ def test_resumable_upload_flow(upload_test_setup):
         start_body = response.json()
 
         assert "uploadToken" in start_body
-        assert start_body["chunkSize"] == 32 * 1024 * 1024
+        assert start_body["chunkSize"] == 4*1024*1024
 
         token = start_body["uploadToken"]
 
@@ -213,8 +213,8 @@ def test_resumable_upload_flow(upload_test_setup):
     assert stored_file.exists()
     assert stored_file.read_bytes() == payload
 
-
-def test_upload_start_missing_filename(upload_test_setup):
+@pytest.mark.asyncio
+async def test_upload_start_missing_filename(upload_test_setup):
 
     app, storage, tmp_path, uploader = upload_test_setup
 
@@ -231,8 +231,8 @@ def test_upload_start_missing_filename(upload_test_setup):
     assert response.status_code == 400
     assert "x-file-name" in response.json()["detail"].lower()
 
-
-def test_upload_start_missing_hash(upload_test_setup):
+@pytest.mark.asyncio
+async def test_upload_start_missing_hash(upload_test_setup):
 
     app, storage, tmp_path, uploader = upload_test_setup
 
@@ -522,7 +522,7 @@ def test_multi_chunk_merkle_completion(upload_test_setup):
 
     app, storage, tmp_path, uploader = upload_test_setup
 
-    chunk_size = 32 * 1024 * 1024
+    chunk_size = 4*1024*1024
 
     chunk_one = b"a" * chunk_size
     chunk_two = b"b" * 100
@@ -586,7 +586,7 @@ def test_multi_chunk_merkle_completion(upload_test_setup):
 def test_resume_upload_after_partial_completion(upload_test_setup):
     app, storage, tmp_path, uploader = upload_test_setup
 
-    chunk_one = b"a" * (32 * 1024 * 1024)
+    chunk_one = b"a" * (4*1024*1024)
     chunk_two = b"b" * 100
 
     expected_hash = uploader.compute_merkle_root(
@@ -655,7 +655,7 @@ def test_resume_upload_after_partial_completion(upload_test_setup):
 def test_chunks_can_upload_out_of_order(upload_test_setup):
     app, storage, tmp_path, uploader = upload_test_setup
 
-    chunk_one = b"a" * (32 * 1024 * 1024)
+    chunk_one = b"a" * (4*1024*1024)
     chunk_two = b"b" * 100
 
     expected_hash = uploader.compute_merkle_root(
@@ -715,7 +715,7 @@ def test_chunks_can_upload_out_of_order(upload_test_setup):
 def test_complete_rejects_missing_chunk(upload_test_setup):
     app, storage, tmp_path, uploader = upload_test_setup
 
-    chunk_one = b"a" * (32 * 1024 * 1024)
+    chunk_one = b"a" * (4*1024*1024)
     chunk_two = b"b" * 100
 
     expected_hash = uploader.compute_merkle_root(
@@ -946,7 +946,7 @@ def test_concurrent_filename_collision(upload_test_setup): # run twice to be saf
 def test_resume_upload_after_interruption(upload_test_setup):
     app, storage, tmp_path, uploader = upload_test_setup
 
-    chunk_one = b"a" * (32 * 1024 * 1024)
+    chunk_one = b"a" * (4*1024*1024)
     chunk_two = b"b" * 100
 
     full_hash = uploader.compute_merkle_root(

@@ -20,9 +20,23 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     """Upgrade schema."""
+    storage_region_enum = sa.Enum(
+        'US',
+        'EU',
+        'ITAR',
+        name='storageregion',
+        create_type=False
+    )
+
+    storage_region_enum.create(op.get_bind(), checkfirst=True)
+
     op.add_column(
         'uploads',
-        sa.Column('storage_region', sa.Enum('US', 'EU', 'ITAR', name='storageregion'), nullable=True, default='US'),
+        sa.Column(
+            'storage_region',
+            storage_region_enum,
+            nullable=True
+        ),
         schema='LinkDB'
     )
     # ### end Alembic commands ###
@@ -31,4 +45,5 @@ def upgrade() -> None:
 def downgrade() -> None:
     """Downgrade schema."""
     op.drop_column('uploads', 'storage_region', schema='LinkDB')
+    op.execute("DROP TYPE IF EXISTS storageregion")
     # ### end Alembic commands ###

@@ -91,7 +91,6 @@ def get_link_endpoint(uuid: str, current_user: Annotated[User, Depends(requireRo
     if not IsUUID(uuid):
         badUUID = HTTPException(400,detail={"message": "Invalid uuid"})
         raise badUUID
-        return None
     return get_link(uuid)
 
 @app.get("/")

@@ -23,7 +23,7 @@ class StartUploadResponse(BaseModel):
 class UploadChunkHeaders(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
     chunk_offset: int = Field(alias="X-Chunk-Offset", ge=0)
-    chunk_size: int = Field(alias="X-Chunk-Size", gt=0, le=32 * 1024 * 1024)
+    chunk_size: int = Field(alias="X-Chunk-Size", gt=0, le=4*1024*1024)
     chunk_hash: str = Field(alias="X-Chunk-Hash")
 
 class UploadChunkResponse(BaseModel):
