@@ -676,17 +676,25 @@ def listFiles(linkUUID: str, current_user: Annotated[User, Depends(requireRoles(
     #If no uploads return 204, if any one of the uploads is not authorized return 403, otherwise return the list of uploads
     if not db.query(UploadRecord).filter(UploadRecord.link_uuid == linkUUID, UploadRecord.for_deletion.is_(False)).first(): # If no uploads for the link, return 204
         raise HTTPException(status_code=204, detail="No uploads found for this link")
-    
-    uploads = (
-        db.query(UploadRecord)
-        .filter(
-            UploadRecord.link_uuid == linkUUID,
-            UploadRecord.for_deletion.is_(False),
-            cast(UploadRecord.users_with_access, JSONB).contains([current_user.username])
-        ).all()
-    )
+    if "Admin" not in current_user.roles: # If the user is not an admin, check if they have access to the link
+        uploads = (
+            db.query(UploadRecord)
+            .filter(
+                UploadRecord.link_uuid == linkUUID,
+                UploadRecord.for_deletion.is_(False),
+                cast(UploadRecord.users_with_access, JSONB).contains([current_user.username])
+            ).all()
+        )
+    elif "Admin" in current_user.roles: # If the user is an admin, return all uploads for the link
+        uploads = (
+            db.query(UploadRecord)
+            .filter(
+                UploadRecord.link_uuid == linkUUID,
+                UploadRecord.for_deletion.is_(False),
+            ).all()
+        )
 
-    if not uploads: # If any one of the uploads is not authorized return forbidden
+    if not uploads and "Admin" not in current_user.roles: # If any one of the uploads is not authorized return forbidden
         raise HTTPException(
             status_code=403,
             detail="You do not have permission to access files for this link",
