@@ -76,6 +76,7 @@
 
   --theme-page: #f5f3f2;
   --theme-surface: white;
+  --theme-surface-but-it-is-not-transparent-because-that-is-really-annoying: #ffffff;
   --theme-surface-secondary: #f0edec;
   --theme-surface-hover: #ebe7e6;
 
@@ -198,6 +199,7 @@
 
   --theme-page: #080d10;
   --theme-surface: rgba(17, 25, 30, 0.88);
+  --theme-surface-but-it-is-not-transparent-because-that-is-really-annoying: #1e1e1e;
   --theme-surface-secondary: rgba(19, 29, 35, 0.82);
   --theme-surface-hover: rgba(255, 255, 255, 0.07);
 

@@ -229,17 +229,17 @@
    ========================================================================== */
 
 .create-link-modal-overlay {
-  align-items: center;
-  background: rgba(0, 0, 0, 0.7);
-  display: flex;
-  inset: 0;
-  justify-content: center;
   position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
   z-index: 1000;
 }
 
 .create-link-modal {
-  background: var(--theme-surface);
+  background: var(--theme-surface-but-it-is-not-transparent-because-that-is-really-annoying);
   border: 2px solid var(--theme-card-border);
   border-radius: var(--radius-lg);
   box-shadow: var(--theme-card-shadow);
