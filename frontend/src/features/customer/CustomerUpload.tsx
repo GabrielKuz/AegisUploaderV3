@@ -397,20 +397,34 @@ async function uploadAllChunks(
     return;
   }
 
+  const offsets: number[] = [];
+
   for (
     let offset = 0;
     offset < session.file.size;
     offset += session.chunkSize
   ) {
-    await uploadChunkWithRetry(session, offset, onRetry);
-
-    const uploadedBytes = Math.min(
-      offset + session.chunkSize,
-      session.file.size,
-    );
-
-    onProgress(calculateProgress(uploadedBytes, session.file.size));
+    offsets.push(offset);
   }
+
+  let uploadedBytes = 0;
+
+  await runWithConcurrency(
+    offsets,
+    UPLOAD_CONCURRENCY,
+    async (offset) => {
+      await uploadChunkWithRetry(session, offset, onRetry);
+
+      uploadedBytes += Math.min(
+        session.chunkSize,
+        session.file.size - offset,
+      );
+
+      onProgress(
+        calculateProgress(uploadedBytes, session.file.size),
+      );
+    },
+  );
 }
 
 /**
