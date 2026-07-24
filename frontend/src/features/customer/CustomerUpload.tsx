@@ -15,15 +15,18 @@ import {
   deleteUploadSession,
   getUploadSessions,
   saveUploadSession,
+
+  //saveUploadSettings,
   type UploadSession,
 } from "./indexedDb";
 import "./CustomerUpload.css";
 
-const FILE_CHUNK_SIZE = 32 * 1024 * 1024;
-const HASH_CONCURRENCY = 4;
 const MAX_CHUNK_RETRIES = 3;
-const RETRY_DELAY_MS = 1_000;
-const UPLOAD_CONCURRENCY = 3;
+const RETRY_DELAY_MS = 1_500;
+const HASH_CONCURRENCY = 4;
+const CHUNK_UPLOAD_CONCURRENCY = 4;
+const FILE_UPLOAD_CONCURRENCY = 2;
+const MAX_UPLOAD_RESTARTS = 3;
 
 type SelectedFile = {
   id: string;
@@ -39,6 +42,7 @@ type UploadState = {
   progress: number;
   retry?: number;
   errorMessage?: string;
+  restart?: boolean;
 };
 
 type UploadStatus = {
@@ -61,6 +65,15 @@ const UPLOAD_ACTIONS: Record<UploadRequestStage, string> = {
   complete: "finish the file upload",
 };
 
+class UploadConflictError extends Error {
+  constructor() {
+    super(
+      "The upload session became out of sync. Creating a new upload session.",
+    );
+
+    this.name = "UploadConflictError";
+  }
+}
 // Converts upload API failures into messages informing customer what happened and what they should do next.
 async function getUploadResponseError(
   response: Response,
@@ -100,10 +113,14 @@ async function getUploadResponseError(
         "The upload request timed out. Check your connection and try the upload again.",
       );
 
-    case 409:
+    /*case 409:
       return new Error(
         "The server reported a conflict with this upload session. Refresh the page and try again.",
       );
+    */
+
+    case 409:
+      return new UploadConflictError();
 
     case 410:
       return new Error(
@@ -216,15 +233,15 @@ async function hashBlob(blob: Blob): Promise<string> {
 }
 
 // Builds BLAKE3 Merkle root expected by upload API.
-async function buildFileHash(file: File): Promise<string> {
+async function buildFileHash(file: File, chunkSize: number): Promise<string> {
   if (file.size === 0) {
     return hashBlob(file);
   }
 
   const chunks: HashableChunk[] = [];
 
-  for (let offset = 0; offset < file.size; offset += FILE_CHUNK_SIZE) {
-    const end = Math.min(offset + FILE_CHUNK_SIZE, file.size);
+  for (let offset = 0; offset < file.size; offset += chunkSize) {
+    const end = Math.min(offset + chunkSize, file.size);
 
     chunks.push({
       blob: file.slice(offset, end),
@@ -240,11 +257,11 @@ async function buildFileHash(file: File): Promise<string> {
       if (!chunk.hash) {
         throw new Error("Missing chunk hash.");
       }
+
       return chunk.hash;
     }),
   );
 }
-
 function merkleRoot(hashes: readonly string[]): string {
   if (hashes.length === 0) {
     throw new Error("Cannot create a Merkle root without hashes.");
@@ -376,20 +393,29 @@ async function uploadAllChunks(
     return;
   }
 
+  const offsets: number[] = [];
+
   for (
     let offset = 0;
     offset < session.file.size;
     offset += session.chunkSize
   ) {
-    await uploadChunkWithRetry(session, offset, onRetry);
-
-    const uploadedBytes = Math.min(
-      offset + session.chunkSize,
-      session.file.size,
-    );
-
-    onProgress(calculateProgress(uploadedBytes, session.file.size));
+    offsets.push(offset);
   }
+
+  let uploadedBytes = 0;
+
+  await runWithConcurrency(
+    offsets,
+    CHUNK_UPLOAD_CONCURRENCY,
+    async (offset) => {
+      await uploadChunkWithRetry(session, offset, onRetry);
+
+      uploadedBytes += Math.min(session.chunkSize, session.file.size - offset);
+
+      onProgress(calculateProgress(uploadedBytes, session.file.size));
+    },
+  );
 }
 
 /**
@@ -484,8 +510,13 @@ async function completeUploadSession(session: UploadSession): Promise<void> {
 async function createUploadSession(
   uuid: string,
   file: File,
+  region: "US" | "EU",
+  markUploadStarted: () => void,
 ): Promise<UploadSession> {
-  const fileHash = await buildFileHash(file);
+  // Must match backend because backend requires hash before returning config
+  const expectedChunkSize = 4 * 1024 * 1024;
+
+  const fileHash = await buildFileHash(file, expectedChunkSize);
 
   const response = await fetch(`/api/uploadfile/${uuid}/start`, {
     method: "POST",
@@ -493,7 +524,7 @@ async function createUploadSession(
       "X-File-Hash": fileHash,
       "X-File-Name": file.name,
       "X-File-Size": file.size.toString(),
-      "X-User-Location": "US",
+      "X-User-Location": region,
     },
   });
 
@@ -504,21 +535,17 @@ async function createUploadSession(
   const data = (await response.json()) as Partial<StartUploadResponse>;
 
   if (typeof data.uploadToken !== "string" || !data.uploadToken) {
-    throw new Error(
-      "The upload service returned an incomplete session. Refresh the page and try again.",
-    );
+    throw new Error("The upload service returned an incomplete session.");
   }
 
   const chunkSize =
-    typeof data.chunkSize === "number" &&
-    Number.isFinite(data.chunkSize) &&
-    data.chunkSize > 0
+    typeof data.chunkSize === "number" && data.chunkSize > 0
       ? data.chunkSize
-      : FILE_CHUNK_SIZE;
+      : expectedChunkSize;
 
-  if (chunkSize !== FILE_CHUNK_SIZE) {
+  if (chunkSize !== expectedChunkSize) {
     throw new Error(
-      "The upload service returned an incompatible file configuration. Refresh the page and try again. If the problem continues, contact support.",
+      "The server returned a different chunk size than expected.",
     );
   }
 
@@ -530,13 +557,15 @@ async function createUploadSession(
     fileSize: file.size,
     chunkSize,
     file,
+    region,
   };
 
   await saveUploadSession(session);
 
+  markUploadStarted();
+
   return session;
 }
-
 // Returns readable text for a file's current upload state.
 function getUploadStateText(state: UploadState): string {
   switch (state.status) {
@@ -547,11 +576,13 @@ function getUploadStateText(state: UploadState): string {
       return `Uploading (${state.progress}%)`;
 
     case "retrying":
-      return state.retry
-        ? `The connection was interrupted. ` +
-            `Retrying file chunk ${state.retry} of ${MAX_CHUNK_RETRIES}...`
-        : "Resuming an interrupted upload...";
+      if (state.restart) {
+        return `Upload session expired. Starting a new upload (${state.retry}/${MAX_UPLOAD_RESTARTS})...`;
+      }
 
+      return state.retry
+        ? `The connection was interrupted. Retrying file chunk ${state.retry} of ${MAX_CHUNK_RETRIES}...`
+        : "Resuming an interrupted upload...";
     case "done":
       return "Upload completed successfully.";
 
@@ -567,7 +598,8 @@ function getUploadStateText(state: UploadState): string {
 }
 
 export function CustomerUpload() {
-  const { setUploadStats, uuid } = useCustomerUpload();
+  const { setUploadStats, uuid, region, markUploadStarted } =
+    useCustomerUpload();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -642,7 +674,7 @@ export function CustomerUpload() {
   }, []);
 
   const attachUploadSession = useCallback(
-    (fileId: string, session: UploadSession): void => {
+    (fileId: string, session?: UploadSession): void => {
       setSelectedFiles((currentFiles) =>
         currentFiles.map((selectedFile) =>
           selectedFile.id === fileId
@@ -669,76 +701,121 @@ export function CustomerUpload() {
           progress: currentStatus[selectedFile.id]?.progress ?? 0,
         },
       }));
+      let currentSession = selectedFile.uploadSession;
 
-      try {
-        let session = selectedFile.uploadSession;
+      for (
+        let uploadAttempt = 0;
+        uploadAttempt <= MAX_UPLOAD_RESTARTS;
+        uploadAttempt += 1
+      ) {
+        try {
+          let session = currentSession;
+          const isNewSession = !session;
 
-        const isNewSession = !session;
+          if (!session) {
+            session = await createUploadSession(
+              uuid,
+              selectedFile.file,
+              region,
+              markUploadStarted,
+            );
 
-        if (!session) {
-          session = await createUploadSession(uuid, selectedFile.file);
+            attachUploadSession(selectedFile.id, session);
+          }
 
-          attachUploadSession(selectedFile.id, session);
-        }
+          if (session.uuid !== uuid) {
+            throw new Error(
+              "This interrupted upload belongs to a different upload link. Remove the file and select it again to begin a new upload.",
+            );
+          }
 
-        if (session.uuid !== uuid) {
-          throw new Error(
-            "This interrupted upload belongs to a different upload link. Remove the file and select it again to begin a new upload.",
-          );
-        }
+          const updateProgress = (progress: number): void => {
+            setUploadStatus((currentStatus) => ({
+              ...currentStatus,
+              [selectedFile.id]: {
+                status: "uploading",
+                progress,
+              },
+            }));
+          };
 
-        const updateProgress = (progress: number): void => {
+          const updateRetry = (attempt: number): void => {
+            setUploadStatus((currentStatus) => ({
+              ...currentStatus,
+              [selectedFile.id]: {
+                status: "retrying",
+                progress: currentStatus[selectedFile.id]?.progress ?? 0,
+                retry: attempt,
+              },
+            }));
+          };
+
+          if (isNewSession) {
+            await uploadAllChunks(session, updateProgress, updateRetry);
+          }
+
+          await repairMissingChunks(session, updateProgress, updateRetry);
+
+          await completeUploadSession(session);
+
           setUploadStatus((currentStatus) => ({
             ...currentStatus,
             [selectedFile.id]: {
-              status: "uploading",
-              progress,
+              status: "done",
+              progress: 100,
             },
           }));
-        };
 
-        const updateRetry = (attempt: number): void => {
-          setUploadStatus((currentStatus) => ({
-            ...currentStatus,
+          return;
+        } catch (error) {
+          if (
+            error instanceof UploadConflictError &&
+            uploadAttempt < MAX_UPLOAD_RESTARTS
+          ) {
+            if (selectedFile.uploadSession) {
+              try {
+                await deleteUploadSession(
+                  selectedFile.uploadSession.uploadToken,
+                );
+              } catch {
+                console.error("Could not delete old upload session.");
+              }
+            }
+
+            attachUploadSession(selectedFile.id, undefined);
+
+            currentSession = undefined;
+            setUploadStatus((current) => ({
+              ...current,
+              [selectedFile.id]: {
+                status: "retrying",
+                progress: current[selectedFile.id]?.progress ?? 0,
+                retry: uploadAttempt,
+                restart: true,
+              },
+            }));
+
+            continue;
+          }
+
+          console.error(`Upload failed for ${selectedFile.file.name}:`, error);
+
+          const userFacingError = getUnexpectedError(error, "upload the file");
+
+          setUploadStatus((current) => ({
+            ...current,
             [selectedFile.id]: {
-              status: "retrying",
-              progress: currentStatus[selectedFile.id]?.progress ?? 0,
-              retry: attempt,
+              status: "error",
+              progress: current[selectedFile.id]?.progress ?? 0,
+              errorMessage: userFacingError.message,
             },
           }));
-        };
 
-        if (isNewSession) {
-          await uploadAllChunks(session, updateProgress, updateRetry);
+          return;
         }
-
-        await repairMissingChunks(session, updateProgress, updateRetry);
-
-        await completeUploadSession(session);
-
-        setUploadStatus((currentStatus) => ({
-          ...currentStatus,
-          [selectedFile.id]: {
-            status: "done",
-            progress: 100,
-          },
-        }));
-      } catch (error) {
-        console.error(`Upload failed for ${selectedFile.file.name}:`, error);
-
-        const userFacingError = getUnexpectedError(error, "upload the file");
-
-        setUploadStatus((currentStatus) => ({
-          ...currentStatus,
-          [selectedFile.id]: {
-            status: "error",
-            progress: currentStatus[selectedFile.id]?.progress ?? 0,
-            errorMessage: userFacingError.message,
-          },
-        }));
       }
     },
-    [attachUploadSession, uuid],
+    [attachUploadSession, markUploadStarted, region, uuid],
   );
 
   useEffect(() => {
@@ -788,7 +865,7 @@ export function CustomerUpload() {
 
         await runWithConcurrency(
           filesToResume,
-          UPLOAD_CONCURRENCY,
+          FILE_UPLOAD_CONCURRENCY,
           (selectedFile) => processFile(selectedFile, true),
         );
       } catch (error) {
@@ -959,7 +1036,7 @@ export function CustomerUpload() {
     try {
       await runWithConcurrency(
         filesToUpload,
-        UPLOAD_CONCURRENCY,
+        FILE_UPLOAD_CONCURRENCY,
         (selectedFile) =>
           processFile(selectedFile, Boolean(selectedFile.uploadSession)),
       );

@@ -8,7 +8,6 @@ from modules import Session, engine
 from modules.auth import getCurrentActiveUser, getCurrentUser, User, userAuthenticated, requireRole, requireRoles
 from modules.DataCleaner import expireAndDeleteOldData
 from modules.deletionRequest import router as deletionRequest_router
-from modules.downloadData import downloadData
 from modules.LinkGenerator import LinkRequest, generate_links, get_all_links, get_link
 from modules.telemetry import setup_telemetry, TelemetryMiddleware
 from modules.uploader import router as uploader_router, listFiles
@@ -18,7 +17,7 @@ from typing import Annotated
 from Utils import IsUUID
 from warnings import deprecated
 from zoneinfo import ZoneInfo
-from modules.logging import setup_logging
+from modules.log_config import setup_logging
 
 logging.basicConfig(level=logging.INFO) # setup logging server. TODO: change to file and add more logging
 testing = False
@@ -26,53 +25,8 @@ scheduler = AsyncIOScheduler(timezone=ZoneInfo("America/New_York"))
 interval = testing 
 from modules.refreshStatus import update_link_status_from_hubspot
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    if interval:
-        scheduler.add_job(
-            expireAndDeleteOldData,
-            trigger="interval",
-            seconds=30,
-            id="test_cleanup",
-            replace_existing=True,
-            max_instances=1,
-            coalesce=True,
-        )
-        scheduler.add_job(
-            update_link_status_from_hubspot,
-            trigger="interval",
-            seconds=30,
-            id="test_link_status_refresh",
-            replace_existing=True,
-            max_instances=1,
-            coalesce=True,
-        )   
-    else:
-        scheduler.add_job( # every 6 hours on the hour
-            expireAndDeleteOldData,
-            trigger="cron",
-            hour="0,6,12,18",
-            minute="0",
-            id="daily_cleanup",
-            replace_existing=True,
-            max_instances=1,
-            coalesce=True,
-        )
-        scheduler.add_job(
-            update_link_status_from_hubspot,
-            trigger="cron",
-            hour="*", # every hour on the hour
-            minute="0",
-            id="link_status_refresh",
-            replace_existing=True,
-            max_instances=1,
-            coalesce=True,
-        )
-    scheduler.start()
-    yield
-    scheduler.shutdown(wait=False)
 
-app = FastAPI(title="Aegis Backend", root_path="/api", debug=False, docs_url=None, redoc_url=None,  lifespan=lifespan)
+app = FastAPI(title="Aegis Backend", root_path="/api", debug=False, docs_url=None, redoc_url=None)
 app.include_router(uploader_router)
 app.include_router(deletionRequest_router)
 #setup_telemetry(app)  # init opentelemetry
@@ -87,11 +41,13 @@ def get_links(current_user: Annotated[User, Depends(requireRoles("User", "Admin"
     return get_all_links(current_user)
 
 @app.get("/links/{uuid}")
-def get_link_endpoint(uuid: str, current_user: Annotated[User, Depends(requireRoles("User", "Admin"))]):  # TODO: Change to getCurrentActiveUser after testing
+def get_link_endpoint(uuid: str, current_user: Annotated[User, Depends(requireRoles("User", "Admin"))]):
     if not IsUUID(uuid):
-        badUUID = HTTPException(400,detail={"message": "Invalid uuid"})
-        raise badUUID
-    return get_link(uuid)
+        raise HTTPException(status_code=400, detail={
+            "message": "Invalid uuid",
+        })
+
+    return get_link(uuid, current_user)
 
 @app.get("/")
 def read_root():
@@ -101,10 +57,6 @@ def read_root():
 def health_check():
     return {"status": "healthy"}
 
-@app.on_event("startup")
-async def startup():
-    logging.info("Server started on http://localhost:8000")
-    logging.info(f"Frontend accessible at http://{__import__('socket').gethostbyname(__import__('socket').gethostname())}.sslip.io")
 
 def main(): # start the app when run directly and not through docker
     import uvicorn
@@ -119,16 +71,6 @@ def download_link(uuid: str, currentUser: Annotated[User, Depends(requireRoles("
         return downloadData(uploads[0]["upload_id"], currentUser)
     if not uploads:
         raise HTTPException(status_code=404, detail="No uploads found for this link")
-    return uploads
-
-@app.get("/links/{uuid}")
-def getLinkInfo(uuid: str, currentUser: Annotated[User, Depends(requireRoles("User", "Admin"))]):  
-    data = get_all_links(currentUser)
-    for link in data:
-        if link["uuid"] == uuid:
-            return link
-    raise HTTPException(status_code=404, detail="Link not found")
-
 
 if __name__ == "__main__": # Doesnt get run by docker
     setup_logging()

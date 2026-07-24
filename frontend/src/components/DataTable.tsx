@@ -25,11 +25,15 @@ type SupportLink = {
   creator: string;
   timestamp: string;
   expiration_date: string;
+  customer: string | null;
+  status: string | null;
 };
 
 type SortKey =
   | "uuid"
   | "case_id"
+  | "customer"
+  | "status"
   | "itar"
   | "creator"
   | "timestamp"
@@ -58,6 +62,50 @@ function parseLinksResponse(payload: unknown): SupportLink[] {
   return payload as SupportLink[];
 }
 
+type LinkStatusDisplay = {
+  label: string;
+  className: string;
+};
+
+function getLinkStatus(status: string | null | undefined): LinkStatusDisplay {
+  const normalized =
+    typeof status === "string" ? status.trim().toLowerCase() : "";
+
+  switch (normalized) {
+    case "completed":
+    case "complete":
+    case "closed":
+    case "resolved":
+      return {
+        label: status ?? "Completed",
+        className: "data-table-badge data-table-badge--complete",
+      };
+
+    case "in progress":
+    case "open":
+    case "active":
+    case "new":
+      return {
+        label: status ?? "In progress",
+        className: "data-table-badge data-table-badge--progress",
+      };
+
+    case "expired":
+    case "cancelled":
+    case "canceled":
+    case "failed":
+      return {
+        label: status ?? "Expired",
+        className: "data-table-badge data-table-badge--danger",
+      };
+
+    default:
+      return {
+        label: typeof status === "string" && status.trim() ? status : "Unknown",
+        className: "data-table-badge",
+      };
+  }
+}
 export function DataTable({
   createPath,
   title = "Created links",
@@ -76,6 +124,8 @@ export function DataTable({
   const [error, setError] = useState<UserFacingError | null>(null);
 
   const [isLoading, setIsLoading] = useState(true);
+
+  const [copiedUuid, setCopiedUuid] = useState<string | null>(null);
 
   const loadLinks = useCallback(async (): Promise<void> => {
     setError(null);
@@ -183,6 +233,22 @@ export function DataTable({
 
   const showActions = Boolean(uploadActionPathPrefix);
 
+  async function copyUploadLink(uuid: string): Promise<void> {
+    const uploadLink = `${window.location.origin}/uploads/${uuid}`;
+
+    try {
+      await navigator.clipboard.writeText(uploadLink);
+
+      setCopiedUuid(uuid);
+
+      window.setTimeout(() => {
+        setCopiedUuid((current) => (current === uuid ? null : current));
+      }, 2000);
+    } catch {
+      window.alert("Unable to copy the upload link. Please copy it manually.");
+    }
+  }
+
   return (
     <section className="data-page" aria-labelledby="links-page-heading">
       <header className="data-page-header">
@@ -192,9 +258,20 @@ export function DataTable({
           <p className="data-page-description">{description}</p>
         </div>
 
-        <Link to={createPath} className="data-page-action">
-          Create link
-        </Link>
+        <div className="data-page-actions">
+          <button
+            type="button"
+            className="data-page-action"
+            onClick={() => void loadLinks()}
+            disabled={isLoading}
+          >
+            {isLoading ? "Refreshing..." : "Refresh"}
+          </button>
+
+          <Link to={createPath} className="data-page-action">
+            Create Link
+          </Link>
+        </div>
       </header>
 
       {isLoading && (
@@ -220,19 +297,6 @@ export function DataTable({
               <tr>
                 <th
                   scope="col"
-                  aria-sort={getAriaSort("uuid", sortKey, sortDirection)}
-                >
-                  <button
-                    className="data-table-sort-button"
-                    type="button"
-                    onClick={() => handleSort("uuid")}
-                  >
-                    Upload link {getSortIcon("uuid", sortKey, sortDirection)}
-                  </button>
-                </th>
-
-                <th
-                  scope="col"
                   aria-sort={getAriaSort("case_id", sortKey, sortDirection)}
                 >
                   <button
@@ -243,7 +307,44 @@ export function DataTable({
                     Case ID {getSortIcon("case_id", sortKey, sortDirection)}
                   </button>
                 </th>
+                <th
+                  scope="col"
+                  aria-sort={getAriaSort("uuid", sortKey, sortDirection)}
+                >
+                  <button
+                    className="data-table-sort-button"
+                    type="button"
+                    onClick={() => handleSort("uuid")}
+                  >
+                    Upload Link {getSortIcon("uuid", sortKey, sortDirection)}
+                  </button>
+                </th>
 
+                
+                <th
+                  scope="col"
+                  aria-sort={getAriaSort("customer", sortKey, sortDirection)}
+                >
+                  <button
+                    className="data-table-sort-button"
+                    type="button"
+                    onClick={() => handleSort("customer")}
+                  >
+                    Customer {getSortIcon("customer", sortKey, sortDirection)}
+                  </button>
+                </th>
+                <th
+                  scope="col"
+                  aria-sort={getAriaSort("status", sortKey, sortDirection)}
+                >
+                  <button
+                    className="data-table-sort-button"
+                    type="button"
+                    onClick={() => handleSort("status")}
+                  >
+                    Status {getSortIcon("status", sortKey, sortDirection)}
+                  </button>
+                </th>
                 {showItarColumn && (
                   <th
                     scope="col"
@@ -310,17 +411,40 @@ export function DataTable({
             <tbody>
               {sortedLinks.map((supportLink) => (
                 <tr key={supportLink.uuid}>
-                  <td>
-                    <Link
-                      className="data-table-primary-link"
-                      to={`/uploads/${supportLink.uuid}`}
-                    >
-                      /uploads/
-                      {supportLink.uuid}
-                    </Link>
-                  </td>
-
+                  
                   <td>{supportLink.case_id}</td>
+                  <td>
+                    <div className="data-table-link-container">
+                      <Link
+                        className="data-table-action-link"
+                        to={`/uploads/${supportLink.uuid}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        Open
+                      </Link>
+
+                      <button
+                        type="button"
+                        className="copy-link-button"
+                        onClick={() => void copyUploadLink(supportLink.uuid)}
+                        title="Copy upload link"
+                        aria-label={`Copy upload link for ${supportLink.case_id}`}
+                      >
+                        {copiedUuid === supportLink.uuid ? "✓" : "❐"}
+                      </button>
+                    </div>
+                  </td>
+                  <td>{supportLink.customer ?? "Unknown"}</td>
+                  <td>
+                    {(() => {
+                      const status = getLinkStatus(supportLink.status);
+
+                      return (
+                        <span className={status.className}>{status.label}</span>
+                      );
+                    })()}
+                  </td>
 
                   {showItarColumn && (
                     <td>
@@ -345,8 +469,9 @@ export function DataTable({
                       <Link
                         className="data-table-action-link"
                         to={`${uploadActionPathPrefix}/${supportLink.uuid}`}
+                        state={{ caseId: supportLink.case_id }}
                       >
-                        View uploads
+                        View Uploads
                       </Link>
                     </td>
                   )}

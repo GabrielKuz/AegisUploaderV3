@@ -4,30 +4,70 @@ import fastapi
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException
+import sqlalchemy
 from modules.auth import getCurrentActiveUser, getCurrentUser, User, userAuthenticated
 from pydantic import Field, BaseModel
 from typing import Annotated
 from azure.communication.email.aio import EmailClient
 import os
+from cachetools import TTLCache
+from threading import Lock
 import logging
 from modules.models import LinkRecord, UploadRecord
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
 from Utils import IsUUID
 import logging
+from modules import Session
 
 logger = logging.getLogger(__name__)
-engine = create_engine(os.environ['DATABASE_URL'],)
-Session = sessionmaker(bind=engine)
 router = APIRouter()
 CONNECTION_STRING = os.getenv("ACS_CONNECTION_STRING")
+# Per-upload-token rate limiter
+_upload_status_rate_limit = TTLCache(
+    maxsize=10_000,  # Max tracked tokens
+    ttl=60          #window size
+)
+
+_upload_status_rate_limit_lock = Lock()
 
 
+def check_upload_status_rate_limit(link_uuid: str):
+    with _upload_status_rate_limit_lock:
+        requests = _upload_status_rate_limit.get(link_uuid, 0)
+
+        if requests >= 1: # 10 per minute per upload token
+            raise HTTPException(
+                status_code=429,
+                detail="Too many upload status requests"
+            )
+
+        _upload_status_rate_limit[link_uuid] = requests + 1
+
+def get_db(): # Avoid reusing the same session across requests, which can cause issues with concurrent transactions
+    db = Session()
+
+    try:
+        logger.debug("Yielding database session")
+        yield db # Use a generator to yield the session and ensure its closed after
+    finally:
+        db.close()
+        logger.debug("Closed database session")
 
 @router.post("/requestfordeletion/{link_uuid}") #Requests from client side to delete data. Only sends email 
-async def request_For_Data_Deletion(link_uuid: str):
+async def request_For_Data_Deletion(link_uuid: str, db: Annotated[sqlalchemy.orm.Session, Depends(get_db)]):
     if not IsUUID(link_uuid):
         raise HTTPException(status_code=400, detail="Invalid UUID format")
+    #get upload record from db
+    record = db.query(UploadRecord).filter(UploadRecord.link_uuid == link_uuid).first()
+    if not record:
+        raise HTTPException(status_code=404, detail="No upload record found for the provided UUID")
+    if record.for_deletion:
+        return {"message": "A deletion request for this UUID has already been submitted."}
+    if record.requested_for_deletion:
+        return {"message": "A deletion request for this UUID has already been submitted."}
+    record.requested_for_deletion = True
+    db.commit()
     try:
         if not os.getenv("TESTING") or os.getenv("TESTING").lower() != "true": # Only send email if not in testing mode
             session = Session()

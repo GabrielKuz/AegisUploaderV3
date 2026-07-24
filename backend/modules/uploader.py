@@ -15,6 +15,8 @@ import logging
 
 from sqlalchemy import text, cast
 from sqlalchemy.dialects.postgresql import JSONB
+from cachetools import TTLCache
+from threading import Lock
 from modules.StorageProvider import StorageProvider, LocalStorageProvider
 from modules import usFileStorageProvider, euFileStorageProvider, itarFileStorageProvider
 from fastapi import APIRouter, Depends, Header, HTTPException
@@ -205,7 +207,7 @@ async def start_upload(
         ).scalar()
 
         if not lock_acquired:
-            raise HTTPException(status_code=409, detail="Another upload is currently being initialized for this link.")
+            raise HTTPException(status_code=409, detail="Another upload is currently being initialized for this link. Please try again shortly.")
 
         path_obj = Path(blob_name)
         stem = path_obj.stem
@@ -480,12 +482,34 @@ async def upload_file_chunk(
         ranges=upload_session.received_ranges,
     )
 
+# Per-upload-token rate limiter
+_upload_status_rate_limit = TTLCache(
+    maxsize=10_000,  # Max tracked tokens
+    ttl=60          #window size
+)
+
+_upload_status_rate_limit_lock = Lock()
+
+
+def check_upload_status_rate_limit(upload_token: str):
+    with _upload_status_rate_limit_lock:
+        requests = _upload_status_rate_limit.get(upload_token, 0)
+
+        if requests >= 10: # 10 per minute per upload token
+            raise HTTPException(
+                status_code=429,
+                detail="Too many upload status requests"
+            )
+
+        _upload_status_rate_limit[upload_token] = requests + 1
+
 @router.get("/uploadfile/{link_uuid}/{upload_token}/status", response_model=UploadStatusResponse) # Provides enough data for the client to resume an upload or verify the upload status, even if the link has expired
 def upload_status(
     link_uuid: str,
     upload_token: str,
     db: Annotated[sqlalchemy.orm.Session, Depends(get_db)]
 ):
+    check_upload_status_rate_limit(upload_token) # Rate limit to prevent abuse and DoS attacks since this endpoint is very expensive
     if not IsUUID(link_uuid):
         raise HTTPException(status_code=400, detail="Invalid uuid")
 
@@ -513,16 +537,22 @@ def upload_status(
     else: #Chunks are deleted on completion
 
         chunks = (
-            db.query(UploadChunk).filter(
+            db.query(
+                UploadChunk.offset,
+                UploadChunk.size
+            )
+            .filter(
                 UploadChunk.upload_id == upload_session.upload_id,
                 UploadChunk.uploaded == True
-            ).all()
+            )
+            .order_by(UploadChunk.offset)
+            .all()
         )
 
-        ranges = sorted(
-            [[chunk.offset, chunk.offset + chunk.size] for chunk in chunks], # Sort the ranges
-            key=lambda r: r[0]
-        )
+        ranges = [
+            [offset, offset + size]
+            for offset, size in chunks
+        ]
 
         merged_ranges = [] # Merge overlapping ranges
         for start, end in ranges:
@@ -672,50 +702,59 @@ def mark_for_deletion(upload_id: str, current_user: Annotated[User, Depends(requ
     db.commit()
     return MarkForDeletionResponse(message=f"Upload {upload_id} marked for deletion")
 
-@router.get("/links/{linkUUID}/files", response_model=list[UploadedFileInfo]) # Get all files for a given link uuid from the db. Only returns files the user has access to
-def listFiles(linkUUID: str, current_user: Annotated[User, Depends(requireRoles("User", "Admin"))], db: Annotated[sqlalchemy.orm.Session, Depends(get_db)]):
+@router.get("/links/{linkUUID}/files", response_model=list[UploadedFileInfo])
+def listFiles(linkUUID: str,
+    current_user: Annotated[User, Depends(requireRoles("User", "Admin"))],
+    db: Annotated[sqlalchemy.orm.Session, Depends(get_db)],
+):
+    """
+    Return uploaded files visible to the current user.
+
+    Admin users may view every non-deleted upload for the link.
+    User-role accounts may view only uploads where their username
+    is included in users_with_access.
+    """
     if not IsUUID(linkUUID):
-        badUUID = HTTPException(400,detail={"message": "Invalid uuid"})
-        raise badUUID
-    
-    #If no uploads return 204, if any one of the uploads is not authorized return 403, otherwise return the list of uploads
-    if not db.query(UploadRecord).filter(UploadRecord.link_uuid == linkUUID, UploadRecord.for_deletion.is_(False)).first(): # If no uploads for the link, return 204
-        raise HTTPException(status_code=204, detail="No uploads found for this link")
-    if "Admin" not in current_user.roles: # If the user is not an admin, check if they have access to the link
-        uploads = (
-            db.query(UploadRecord)
-            .filter(
-                UploadRecord.link_uuid == linkUUID,
-                UploadRecord.for_deletion.is_(False),
-                cast(UploadRecord.users_with_access, JSONB).contains([current_user.username])
-            ).all()
-        )
-    elif "Admin" in current_user.roles: # If the user is an admin, return all uploads for the link
-        uploads = (
-            db.query(UploadRecord)
-            .filter(
-                UploadRecord.link_uuid == linkUUID,
-                UploadRecord.for_deletion.is_(False),
-            ).all()
-        )
+        raise HTTPException(status_code=400, detail={
+            "message": "Invalid uuid",
+        })
 
-    if not uploads and "Admin" not in current_user.roles: # If any one of the uploads is not authorized return forbidden
-        raise HTTPException(
-            status_code=403,
-            detail="You do not have permission to access files for this link",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    logger.debug(f"User {current_user.username} accessed files for link {linkUUID}, found {len(uploads)} uploads")
+    base_query = db.query(UploadRecord).filter(UploadRecord.link_uuid == linkUUID, UploadRecord.for_deletion.is_(False))
+    if "Admin" in current_user.roles:
+        uploads = base_query.all()
+    else:
+        uploads = base_query.filter(cast(UploadRecord.users_with_access, JSONB).contains([current_user.username])).all()
 
-    return [ # Return file information to allow for them to later query for the download link without exposing more sensitive information than needed
+        '''
+        Determine whether the link contains uploads at all.
+        An empty authorized result may mean either:
+        1. no files exist, or
+        2. files exist but this user cannot access them.
+        '''
+        if not uploads:
+            any_upload_exists = (db.query(UploadRecord).filter(UploadRecord.link_uuid == linkUUID, UploadRecord.for_deletion.is_(False)).first()is not None)
+
+            if any_upload_exists:
+                raise HTTPException(status_code=403, detail=("You do not have permission " "to access files for this link"))
+
+    logger.debug("User %s accessed files for link %s, found %s uploads", current_user.username, linkUUID, len(uploads))
+
+    return [
         UploadedFileInfo(
             upload_id=upload.upload_id,
             filename=upload.original_filename,
             size=upload.combined_file_size,
             blob_name=upload.blob_name,
-            date_uploaded=upload.date_uploaded if upload.date_uploaded else None,
-            expiration_date=(upload.date_uploaded + datetime.timedelta(days=upload.max_days_in_storage)).isoformat() if upload.date_uploaded and upload.max_days_in_storage else None,
-            upload_complete=upload.upload_complete,
+            date_uploaded=(
+                upload.date_uploaded
+                if upload.date_uploaded
+                else None
+            ),
+            expiration_date=((upload.date_uploaded + datetime.timedelta(days=upload.max_days_in_storage)).isoformat()
+                if (upload.date_uploaded and upload.max_days_in_storage is not None)
+                else None
+            ),
+            upload_complete=(upload.upload_complete),
         )
         for upload in uploads
     ]
@@ -763,11 +802,9 @@ def sizeof_fmt(num, suffix="B"):
 
 
 async def sendCompletetionEmail(upload_record: UploadRecord):
-    db = next(get_db())  # Get a new database session for this async function
-    if os.getenv("TESTING") and os.getenv("TESTING").lower() == "true":
-        return
+    with Session() as db:
+        link_entry = find_link_entry(upload_record.link_uuid, db=db)
 
-    link_entry = find_link_entry(upload_record.link_uuid, db=db)
     viewURL = f"https://{os.getenv('FRONTEND_URL')}/support/view-uploads/{upload_record.link_uuid}"
     if not link_entry:
         logger.warning(f"Unable to send completion email. Link {upload_record.link_uuid} not found.")
@@ -850,3 +887,28 @@ The uploaded file is now available for review at {viewURL}.
                 logger.warning(f"Error occurred while sending completion email: {e}")
     except Exception as e:
         logger.warning(f"Error occurred while preparing to send completion email: {e}")
+
+@router.post("/links/{link_uuid}/mark_all_for_deletion", response_model=MarkForDeletionResponse)
+def mark_all_for_deletion(link_uuid: str, current_user: Annotated[User, Depends(requireRoles("Admin", strict=True))], db: Annotated[sqlalchemy.orm.Session, Depends(get_db)]):
+    if not IsUUID(link_uuid):
+        raise HTTPException(status_code=400, detail="Invalid uuid")
+
+    link_entry = find_link_entry(link_uuid, db)
+    if not link_entry:
+        raise HTTPException(status_code=404, detail="Link not found")
+
+    uploads = db.query(UploadRecord).filter(
+        UploadRecord.link_uuid == link_uuid,
+        UploadRecord.for_deletion.is_(False)
+    ).all()
+
+    if not uploads:
+
+        raise HTTPException(status_code=404, detail="No uploads found for this link")
+
+    for upload in uploads:
+        upload.for_deletion = True
+
+    db.commit()
+    logger.info(f"All uploads for link {link_uuid} marked for deletion by user {current_user.username}.")
+    return MarkForDeletionResponse(message=f"All uploads for link {link_uuid} marked for deletion")

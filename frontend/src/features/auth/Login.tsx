@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useMsal } from "@azure/msal-react";
 
@@ -8,6 +8,7 @@ import { signInDevUser } from "./devAuth";
 import {
   clearPostLoginRedirect,
   getActiveAccount,
+  getAuthorizedPortalDestination,
   getPostLoginRedirect,
   setPostLoginRedirect,
 } from "./entraAuth";
@@ -45,9 +46,9 @@ const securityItems: SecurityItem[] = [
   },
 ];
 
-function getSafeDestination(state: unknown): string {
+function getRequestedDestination(state: unknown): string | null {
   if (typeof state !== "object" || state === null || !("from" in state)) {
-    return DEFAULT_DESTINATION;
+    return null;
   }
 
   const { from } = state as LoginLocationState;
@@ -55,7 +56,7 @@ function getSafeDestination(state: unknown): string {
   const isValidInternalPath =
     typeof from === "string" && from.startsWith("/") && !from.startsWith("//");
 
-  return isValidInternalPath ? from : DEFAULT_DESTINATION;
+  return isValidInternalPath ? from : null;
 }
 
 export function Login() {
@@ -63,6 +64,7 @@ export function Login() {
   const location = useLocation();
   const { accounts, instance } = useMsal();
   const account = getActiveAccount(instance);
+  const [roleError, setRoleError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!instance.getActiveAccount() && accounts[0]) {
@@ -75,26 +77,72 @@ export function Login() {
       return;
     }
 
-    const destination = getPostLoginRedirect(
-      getSafeDestination(location.state),
-    );
+    const stateDestination = getRequestedDestination(location.state);
+
+    const requestedDestination = getPostLoginRedirect(stateDestination ?? "");
 
     clearPostLoginRedirect();
-    navigate(destination, { replace: true });
-  }, [account, location.state, navigate]);
 
-  const handleSsoLogin = () => {
-    const destination = getSafeDestination(location.state);
+    const destination = getAuthorizedPortalDestination(
+      account,
+      requestedDestination || undefined,
+    );
 
-    if (!isEntraConfigured) {
-      const role = destination.startsWith("/uploads/") ? "customer" : "support";
-
-      signInDevUser(role);
-      navigate(destination, { replace: true });
+    if (!destination) {
+      setRoleError(
+        "Your account is signed in, but it does not have an Admin or User application role. Contact an administrator for access.",
+      );
       return;
     }
 
-    setPostLoginRedirect(destination);
+    setRoleError(null);
+
+    navigate(destination, {
+      replace: true,
+    });
+  }, [account, location.state, navigate]);
+
+  const handleSsoLogin = () => {
+    const requestedDestination = getRequestedDestination(location.state);
+
+    if (!isEntraConfigured) {
+      const role = requestedDestination?.startsWith("/admin")
+        ? "admin"
+        : requestedDestination?.startsWith("/uploads/")
+          ? "customer"
+          : "support";
+
+      signInDevUser(role);
+
+      if (role === "admin") {
+        navigate("/admin", {
+          replace: true,
+        });
+
+        return;
+      }
+
+      if (role === "support") {
+        navigate("/support", {
+          replace: true,
+        });
+
+        return;
+      }
+
+      navigate(requestedDestination ?? DEFAULT_DESTINATION, {
+        replace: true,
+      });
+
+      return;
+    }
+
+    if (requestedDestination) {
+      setPostLoginRedirect(requestedDestination);
+    } else {
+      clearPostLoginRedirect();
+    }
+
     void instance.loginRedirect(loginRequest);
   };
 
@@ -178,6 +226,12 @@ export function Login() {
             Continue with your company Single Sign-On account to access secure
             customer upload tools.
           </p>
+
+          {roleError && (
+            <p className="login-role-error" role="alert">
+              {roleError}
+            </p>
+          )}
 
           <button className="sso-button" type="button" onClick={handleSsoLogin}>
             <img

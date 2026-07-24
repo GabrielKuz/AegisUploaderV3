@@ -29,6 +29,11 @@ type Upload = {
   date_uploaded: string;
 };
 
+type CaseLink = {
+  uuid: string;
+  case_id: string;
+};
+
 type SortKey =
   | "blob_name"
   | "size"
@@ -129,6 +134,33 @@ function requestUploads(
   return request;
 }
 
+async function requestCaseId(
+  uuid: string,
+  accessToken: string,
+): Promise<string> {
+  const response = await fetch("/api/links/", {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+
+  if (!response.ok) {
+    throw new ApiRequestError(
+      await readApiError(response, "load the upload link")
+    );
+  }
+
+  const links = (await response.json()) as CaseLink[];
+
+  const matchingLink = links.find((link) => link.uuid === uuid);
+
+  if (!matchingLink) {
+    throw new Error("Upload link not found.");
+  }
+
+  return matchingLink.case_id;
+}
+
 function getUploadStatusLabel(uploadComplete: boolean): string {
   return uploadComplete ? "Complete" : "In progress";
 }
@@ -150,6 +182,8 @@ export function SupportUpload() {
 
   const [uploads, setUploads] = useState<Upload[]>([]);
 
+  const [caseId, setCaseId] = useState<string>("Loading...");
+
   const [sortKey, setSortKey] = useState<SortKey>("date_uploaded");
 
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
@@ -158,6 +192,14 @@ export function SupportUpload() {
 
   const [isLoading, setIsLoading] = useState(true);
 
+  const [actionError, setActionError] = useState<UserFacingError | null>(null);
+
+  const [actionMessage, setActionMessage] = useState<string | null>(null);
+  
+  const [linkCopied, setLinkCopied] = useState(false);
+
+  const [isRequestingDeletion, setIsRequestingDeletion] = useState(false);
+
   const loadUploads = useCallback(
     async (forceRefresh = false): Promise<void> => {
       setError(null);
@@ -165,6 +207,7 @@ export function SupportUpload() {
 
       if (!uuid) {
         setUploads([]);
+        setCaseId("Unknown");
 
         setError({
           title: "Upload link not selected",
@@ -182,6 +225,7 @@ export function SupportUpload() {
 
         if (!accessToken) {
           setUploads([]);
+          setCaseId("Unknown");
 
           setError({
             status: 401,
@@ -193,12 +237,17 @@ export function SupportUpload() {
           return;
         }
 
-        const data = await requestUploads(uuid, accessToken, forceRefresh);
+        const [data, currentCaseId] = await Promise.all([
+          requestUploads(uuid, accessToken, forceRefresh),
+          requestCaseId(uuid, accessToken),
+        ]);
 
         setUploads(data);
+        setCaseId(currentCaseId);
+
       } catch (requestError) {
         setUploads([]);
-
+        setCaseId("Unknown");
         if (requestError instanceof ApiRequestError) {
           setError(requestError.userFacingError);
 
@@ -216,6 +265,18 @@ export function SupportUpload() {
   useEffect(() => {
     void loadUploads();
   }, [loadUploads]);
+
+  useEffect(() => {
+    if (!actionMessage) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      setActionMessage(null);
+    }, 3000);
+
+    return () => window.clearTimeout(timer);
+  }, [actionMessage]);
 
   function handleSort(key: SortKey): void {
     if (key === sortKey) {
@@ -268,6 +329,93 @@ export function SupportUpload() {
     });
   }, [uploads, sortDirection, sortKey]);
 
+  async function copyUploadLink(): Promise<void> {
+    if (!uuid) {
+      return;
+    }
+
+    const uploadLink = `${window.location.origin}/uploads/${uuid}`;
+
+    try {
+      await navigator.clipboard.writeText(uploadLink);
+
+      setLinkCopied(true);
+      setActionError(null);
+      setActionMessage("Upload link copied to clipboard.");
+
+      window.setTimeout(() => {
+        setLinkCopied(false);
+      }, 3000);
+    } catch {
+      setActionError({
+        title: "Unable to copy link",
+        message:
+          "Your browser prevented the upload link from being copied. Please copy it manually.",
+      });
+    }
+  }
+
+  async function requestDeletion(): Promise<void> {
+    if (!uuid) {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      "Send a deletion request email for this upload link?"
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setActionError(null);
+    setActionMessage(null);
+    setIsRequestingDeletion(true);
+
+    try {
+      const accessToken = await getAccessToken();
+
+      if (!accessToken) {
+        setActionError({
+          status: 401,
+          title: "Sign-in required",
+          message:
+            "Your session could not be verified. Sign in again before requesting deletion.",
+        });
+
+        return;
+      }
+
+      const response = await fetch(
+        `/api/requestfordeletion/${encodeURIComponent(uuid)}`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        setActionError(
+          await readApiError(response, "send the deletion request")
+        );
+
+        return;
+      }
+
+      setActionMessage(
+        "A deletion request email has been sent successfully."
+      );
+    } catch (requestError) {
+      setActionError(
+        getUnexpectedError(requestError, "send the deletion request")
+      );
+    } finally {
+      setIsRequestingDeletion(false);
+    }
+  }
+
   return (
     <section className="data-page" aria-labelledby="support-upload-heading">
       <header className="data-page-header">
@@ -278,12 +426,77 @@ export function SupportUpload() {
             View files received through this customer upload link.
           </p>
         </div>
+        <div className="data-page-actions">
+          <button
+            type="button"
+            className="data-page-action"
+            onClick={() => void loadUploads(true)}
+            disabled={isLoading}
+          >
+            {isLoading ? "Loading..." : "Refresh"}
+          </button>
+          <button
+            type="button"
+            className="data-page-action data-table-action-button--danger"
+            disabled={isRequestingDeletion}
+            onClick={() => void requestDeletion()}
+          >
+            {isRequestingDeletion
+              ? "Sending..."
+              : "Request Deletion"}
+          </button>
 
-        <Link to="/support/links" className="data-page-action">
-          Back to links
-        </Link>
+          <Link
+            to="/support/links"
+            className="data-page-action"
+          >
+            Back to Links
+          </Link>
+        </div>
       </header>
+      <div className="upload-link-summary">
+        <div className="upload-link-summary-row">
+          <strong>Upload Link</strong>
 
+          <div className="upload-link-value">
+            <a
+              href={`${window.location.origin}/uploads/${uuid}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="upload-link"
+            >
+              <code>{`${window.location.origin}/uploads/${uuid}`}</code>
+            </a>
+
+            <button
+              type="button"
+              className="copy-link-button"
+              onClick={() => void copyUploadLink()}
+              title="Copy upload link"
+              aria-label="Copy upload link"
+            >
+              {linkCopied ? "✓" : "❐"}
+            </button>
+          </div>
+        </div>
+
+        <div className="upload-link-summary-row">
+          <strong>Case ID</strong>
+          <span>{caseId}</span>
+        </div>
+      </div>
+      {actionError && (
+        <ApiErrorAlert
+          error={actionError}
+          onRetry={() => setActionError(null)}
+        />
+      )}
+
+      {actionMessage && (
+        <p className="data-table-message" role="status">
+          {actionMessage}
+        </p>
+      )}
       {isLoading && (
         <p className="data-table-message" role="status">
           Loading uploaded files...
