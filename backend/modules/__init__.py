@@ -11,7 +11,6 @@ engine = create_engine(
     pool_timeout=20,
     pool_pre_ping=True,
     pool_recycle=1800,
-    pool_timeout=0.3,
 )
 Session = sessionmaker(bind=engine) # Create a main session factory to prevent multiple engine instances
 
