@@ -8,7 +8,6 @@ from modules import Session, engine
 from modules.auth import getCurrentActiveUser, getCurrentUser, User, userAuthenticated, requireRole, requireRoles
 from modules.DataCleaner import expireAndDeleteOldData
 from modules.deletionRequest import router as deletionRequest_router
-from modules.downloadData import downloadData
 from modules.LinkGenerator import LinkRequest, generate_links, get_all_links, get_link
 from modules.telemetry import setup_telemetry, TelemetryMiddleware
 from modules.uploader import router as uploader_router, listFiles
@@ -62,15 +61,6 @@ def main(): # start the app when run directly and not through docker
 
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=False)
 
-@app.get("/links/{uuid}/download")
-@deprecated("use /uploads/{upload_id}/download instead. This assumes only one uploaded file per link")
-def download_link(uuid: str, currentUser: Annotated[User, Depends(requireRoles("User", "Admin"))]):  
-    uploads = listFiles(uuid, currentUser)
-    if len(uploads) == 1:
-        return downloadData(uploads[0]["upload_id"], currentUser)
-    if not uploads:
-        raise HTTPException(status_code=404, detail="No uploads found for this link")
-    return uploads
 
 @app.get("/links/{uuid}")
 def getLinkInfo(uuid: str, currentUser: Annotated[User, Depends(requireRoles("User", "Admin"))]):  
