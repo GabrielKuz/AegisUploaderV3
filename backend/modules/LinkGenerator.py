@@ -109,57 +109,114 @@ def _serialize_link_record(record: LinkRecord):
         "status": record.status
     }
 
-def get_link(uuid_str: str): # get a link record from the db by uuid
+def get_link(uuid_str: str, current_user: User,):
     """
-    Retrieves a link record from the database by its UUID.
-    """
-    with Session() as session:
-        stmt = select(LinkRecord).where(LinkRecord.uuid == uuid_str) # Select the matching record
-        record = session.scalar(stmt)# Get the first matching record (Should at most be one)
-        if not record: # Not found
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Link not found")
-        logger.debug(f"Retrieved link record for UUID {uuid_str}: {record}")
+    Admin users may retrieve any link.
 
-        return { # TODO: add in authorization check and also remove some of the more sensitive data getting returned
+    User-role accounts may retrieve only links
+    they created or links where they are listed
+    in users_with_access.
+    """
+    with Session() as session: 
+        stmt = select(LinkRecord).where(LinkRecord.uuid == uuid_str)
+        record = session.scalar(stmt)
+
+        if record is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Link not found")
+
+        is_admin = ("Admin" in current_user.roles)
+
+        users_with_access = (record.users_with_access or [])
+
+        user_has_access = ("User" in current_user.roles and (record.creator == current_user.username or current_user.username in users_with_access))
+
+        if (not is_admin and not user_has_access):
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=("User does not have access " "to this upload link"))
+
+        logger.debug("Retrieved link record for UUID %s", uuid_str)
+
+        return {
             "uuid": record.uuid,
             "link": record.link,
             "case_id": record.case_id,
             "itar": record.itar,
             "creator": record.creator,
             "timestamp": record.timestamp,
-            "expiration_date": record.expiration_date,
-            "users_with_access": record.users_with_access,
+            "expiration_date":
+                record.expiration_date,
+            "users_with_access":
+                record.users_with_access,
             "expired": record.expired,
             "customer": record.customer,
-            "status": record.status
+            "status": record.status,
         }
 
-def get_all_links(current_user: User): 
+def get_all_links(
+    current_user: User,
+):
     """
-    Gets all link records by UUID from the database.
+    Admin users can retrieve all links.
+
+    User-role accounts can retrieve links they
+    created. Admin takes precedence when an
+    account has both roles.
     """
-    if not current_user or current_user.disabled:
+    if (
+        not current_user
+        or current_user.disabled
+    ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="User not authenticated"
+            detail="User not authenticated",
         )
-    if "User" in current_user.roles:
-        logger.debug(f"User {current_user.username} retrieving their own link records")
-        with Session() as session:
-            stmt = select(LinkRecord).where(LinkRecord.creator == current_user.username)
-            records = session.scalars(stmt).all()
-            return [_serialize_link_record(r) for r in records]
-    elif "Admin" in current_user.roles: # Admin can see all links
-        logger.debug(f"Admin user {current_user.username} retrieving all link records")
+
+    if "Admin" in current_user.roles:
+        logger.debug(
+            "Admin user %s retrieving all link records",
+            current_user.username,
+        )
+
         with Session() as session:
             stmt = select(LinkRecord)
-            records = session.scalars(stmt).all()
-            return [_serialize_link_record(r) for r in records]
-    else:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="User does not have permission to access this resource"
+            records = session.scalars(
+                stmt,
+            ).all()
+
+            return [
+                _serialize_link_record(record)
+                for record in records
+            ]
+
+    if "User" in current_user.roles:
+        logger.debug(
+            "User %s retrieving their own link records",
+            current_user.username,
         )
+
+        with Session() as session:
+            stmt = select(
+                LinkRecord,
+            ).where(
+                LinkRecord.creator
+                == current_user.username,
+            )
+
+            records = session.scalars(
+                stmt,
+            ).all()
+
+            return [
+                _serialize_link_record(record)
+                for record in records
+            ]
+
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail=(
+            "User does not have permission "
+            "to access this resource"
+        ),
+    )
     
 def get_all_files_for_link(uuid_str: str, current_user: User):
     """

@@ -3,17 +3,37 @@ import { Navigate, useLocation } from "react-router-dom";
 import { useMsal } from "@azure/msal-react";
 
 import { isEntraConfigured } from "./authConfig";
-import { getActiveAccount } from "./entraAuth";
 import { getDevUser } from "./devAuth";
+import { getActiveAccount, getPortalRole, type PortalRole } from "./entraAuth";
 
 type RequireEntraUserProps = {
   children: ReactNode;
+  requiredRole?: PortalRole;
 };
 
-export function RequireEntraUser({ children }: RequireEntraUserProps) {
+function getDevPortalRole(): PortalRole | null {
+  const devUser = getDevUser();
+
+  if (devUser?.role === "admin") {
+    return "admin";
+  }
+
+  if (devUser?.role === "support") {
+    return "support";
+  }
+
+  return null;
+}
+
+export function RequireEntraUser({
+  children,
+  requiredRole,
+}: RequireEntraUserProps) {
   const location = useLocation();
   const { accounts, instance } = useMsal();
+
   const account = getActiveAccount(instance);
+
   const devUser = getDevUser();
 
   useEffect(() => {
@@ -22,27 +42,49 @@ export function RequireEntraUser({ children }: RequireEntraUserProps) {
     }
   }, [accounts, instance]);
 
-  if (isEntraConfigured && !account) {
+  const isAuthenticated = isEntraConfigured
+    ? Boolean(account)
+    : Boolean(devUser);
+
+  if (!isAuthenticated) {
     return (
       <Navigate
         to="/"
         replace
         state={{
-          from: `${location.pathname}${location.search}`,
+          from: `${location.pathname}` + `${location.search}`,
         }}
       />
     );
   }
 
-  if (!isEntraConfigured && !devUser) {
+  const currentRole = isEntraConfigured
+    ? getPortalRole(account)
+    : getDevPortalRole();
+
+  if (requiredRole && currentRole !== requiredRole) {
+    /*
+     * Redirect recognized users to their own portal.
+     * This prevents changing roles by editing the URL.
+     */
+    if (currentRole === "admin") {
+      return <Navigate to="/admin" replace />;
+    }
+
+    if (currentRole === "support") {
+      return <Navigate to="/support" replace />;
+    }
+
     return (
-      <Navigate
-        to="/"
-        replace
-        state={{
-          from: `${location.pathname}${location.search}`,
-        }}
-      />
+      <main className="access-denied-page" role="alert">
+        <h1>Access not assigned</h1>
+
+        <p>
+          Your account is authenticated, but it does not have an Admin or User
+          portal role. Contact an administrator to have the correct Entra
+          application role assigned.
+        </p>
+      </main>
     );
   }
 

@@ -3,20 +3,22 @@ import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { AdminCreateLink } from "./features/admin/AdminCreateLink";
 import { AdminHome } from "./features/admin/AdminHome";
 import { AdminUpload } from "./features/admin/AdminUpload";
+import { AdminViewLinks } from "./features/admin/AdminViewLinks";
 
 import { Login } from "./features/auth/Login";
 import { RequireEntraUser } from "./features/auth/RequireEntraUser";
-import { SupportLayout } from "./layouts/SupportLayout";
-import { CustomerLayout } from "./layouts/CustomerLayout";
-import { AdminLayout } from "./layouts/AdminLayout";
+import { RoleAwareRedirect } from "./features/auth/RoleAwareRedirect";
+
+import { CustomerUpload } from "./features/customer/CustomerUpload";
 
 import { SupportCreateLink } from "./features/support/SupportCreateLink";
 import { SupportHome } from "./features/support/SupportHome";
-import { SupportViewLinks } from "./features/support/SupportViewLinks";
 import { SupportUpload } from "./features/support/SupportUpload";
+import { SupportViewLinks } from "./features/support/SupportViewLinks";
 
-import { CustomerUpload } from "./features/customer/CustomerUpload";
-import { AdminViewLinks } from "./features/admin/AdminViewLinks";
+import { AdminLayout } from "./layouts/AdminLayout";
+import { CustomerLayout } from "./layouts/CustomerLayout";
+import { SupportLayout } from "./layouts/SupportLayout";
 
 export default function App() {
   return (
@@ -24,15 +26,25 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Login />} />
 
-        {/* Public customer-facing upload link. */}
+        {/* Public customer upload page. */}
         <Route path="/uploads/:uuid" element={<CustomerLayout />}>
           <Route index element={<CustomerUpload />} />
         </Route>
 
         <Route
-          path="/support"
+          path="/view-uploads/:uuid"
           element={
             <RequireEntraUser>
+              <RoleAwareRedirect />
+            </RequireEntraUser>
+          }
+        />
+
+        {/* Private customer support page. */}
+        <Route
+          path="/support"
+          element={
+            <RequireEntraUser requiredRole="support">
               <SupportLayout />
             </RequireEntraUser>
           }
@@ -46,10 +58,11 @@ export default function App() {
           <Route path="view-uploads/:uuid" element={<SupportUpload />} />
         </Route>
 
+        {/* Private admin page. */}
         <Route
           path="/admin"
           element={
-            <RequireEntraUser>
+            <RequireEntraUser requiredRole="admin">
               <AdminLayout />
             </RequireEntraUser>
           }

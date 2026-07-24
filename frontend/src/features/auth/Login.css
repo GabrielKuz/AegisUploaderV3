@@ -89,6 +89,17 @@
   flex: 0 0 auto;
 }
 
+.login-role-error {
+  background: var(--status-error-bg);
+  border: 1px solid var(--status-error-border);
+  border-radius: var(--radius-md);
+  color: var(--status-error-text);
+  font-size: 14px;
+  line-height: 1.5;
+  margin: 0;
+  padding: 12px 14px;
+}
+
 .support-link {
   align-items: center;
   background: transparent;
