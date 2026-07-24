@@ -412,11 +412,17 @@ export function DataTable({
                 <tr key={supportLink.uuid}>
                   <td>
                     <div className="data-table-link-container">
+                      <span className="data-table-link-uuid">
+                        {supportLink.uuid}
+                      </span>
+
                       <Link
-                        className="data-table-primary-link"
+                        className="data-table-action-link"
                         to={`/uploads/${supportLink.uuid}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
                       >
-                        /uploads/{supportLink.uuid}
+                        Open
                       </Link>
 
                       <button
