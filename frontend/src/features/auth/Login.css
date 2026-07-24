@@ -3,18 +3,16 @@
    ========================================================================== */
 
 .login-page {
-  width: 100%;
+  background: var(--theme-page);
+  display: grid;
   height: 100vh;
   height: 100dvh;
-  max-height: 100vh;
-  max-height: 100dvh;
-
-  display: grid;
   grid-template-columns: minmax(360px, 46%) minmax(0, 1fr);
   grid-template-rows: 76px minmax(0, 1fr);
-
+  max-height: 100vh;
+  max-height: 100dvh;
   overflow: hidden;
-  background: var(--theme-page);
+  width: 100%;
 }
 
 /* ==========================================================================
@@ -23,28 +21,26 @@
    ========================================================================== */
 
 .login-header {
-  grid-column: 1 / -1;
-  grid-row: 1;
-  min-width: 0;
-  min-height: 76px;
-  padding: 0 30px;
-
-  display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 24px;
-
-  color: #ffffff;
   background: #000000;
   border-top: 4px solid var(--theme-accent);
   border-bottom: 1px solid rgba(255, 255, 255, 0.22);
+  color: #ffffff;
+  display: flex;
+  gap: 24px;
+  grid-column: 1 / -1;
+  grid-row: 1;
+  justify-content: space-between;
+  min-height: 76px;
+  min-width: 0;
+  padding: 0 30px;
 }
 
 .login-header-brand {
-  min-width: 0;
-  display: flex;
   align-items: center;
+  display: flex;
   gap: 24px;
+  min-width: 0;
 }
 
 .login-header-logo {
@@ -54,22 +50,23 @@
 }
 
 .login-header-divider {
-  width: 1px;
+  background: rgba(255, 255, 255, 0.24);
   height: 42px;
   flex: 0 0 auto;
-  background: rgba(255, 255, 255, 0.24);
+  width: 1px;
 }
 
 .login-header-title {
-  min-width: 0;
   display: grid;
   gap: 4px;
+  min-width: 0;
 }
 
 .login-product-name {
   color: #ffffff;
+  font-family: var(--font-heading);
+  font-weight: var(--font-weight-bold);
   font-size: 14px;
-  font-weight: 600;
   line-height: 1.25;
 }
 
@@ -83,10 +80,10 @@
 }
 
 .login-header-actions {
-  display: flex;
   align-items: center;
-  gap: 16px;
+  display: flex;
   flex: 0 0 auto;
+  gap: 16px;
 }
 
 .support-link {
@@ -132,52 +129,48 @@
    ========================================================================== */
 
 .brand-side {
-  grid-column: 1;
-  grid-row: 2;
-
-  position: relative;
-  min-width: 0;
-  height: 100%;
-  min-height: 0;
-  overflow: hidden;
-
-  padding: clamp(14px, 2.2vw, 28px) clamp(28px, 3.5vw, 52px);
-
-  display: flex;
-  flex-direction: column;
-
-  color: #ffffff;
   background:
     radial-gradient(circle at 18% 80%, rgba(239, 59, 50, 0.2), transparent 28%),
     linear-gradient(145deg, #000000 0%, #05090b 48%, #083446 100%);
+  color: #ffffff;
+  display: flex;
+  flex-direction: column;
+  grid-column: 1;
+  grid-row: 2;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  padding: clamp(14px, 2.2vw, 28px) clamp(28px, 3.5vw, 52px);
+  position: relative;
 }
 
 .brand-grid {
-  position: absolute;
-  inset: 0;
-  opacity: 0.22;
   background-image:
     linear-gradient(45deg, rgba(255, 255, 255, 0.12) 1px, transparent 1px),
     linear-gradient(-45deg, rgba(255, 255, 255, 0.08) 1px, transparent 1px);
   background-position: center;
   background-size: 120px 120px;
+  inset: 0;
+  opacity: 0.22;
   pointer-events: none;
+  position: absolute;
 }
 
 .brand-shapes {
-  position: absolute;
   inset: 0;
   pointer-events: none;
+  position: absolute;
 }
 
 .shape {
-  position: absolute;
-  display: block;
-  width: 160px;
-  height: 160px;
-  transform: rotate(45deg);
-  border: 1px solid rgba(255, 255, 255, 0.08);
   background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  display: block;
+  height: 160px;
+  position: absolute;
+  transform: rotate(45deg);
+  width: 160px;
 }
 
 .shape-one {
@@ -186,24 +179,24 @@
 }
 
 .shape-two {
+  background: rgba(255, 255, 255, 0.04);
   top: 31%;
   right: -42px;
-  background: rgba(255, 255, 255, 0.04);
 }
 
 .shape-three {
+  background: rgba(8, 52, 70, 0.5);
   bottom: 10%;
+  height: 220px;
   left: -72px;
   width: 220px;
-  height: 220px;
-  background: rgba(8, 52, 70, 0.5);
 }
 
 .shape-outline {
-  right: 22%;
+  background: transparent;
   bottom: 24%;
   border-color: rgba(239, 59, 50, 0.72);
-  background: transparent;
+  right: 22%;
 }
 
 .brand-message,
@@ -213,19 +206,20 @@
 }
 
 .brand-message {
-  max-width: 620px;
   margin-top: auto;
+  max-width: 620px;
   padding-block: clamp(18px, 5vh, 64px) clamp(18px, 4vh, 42px);
 }
 
 .brand-message h1 {
-  max-width: 640px;
-  margin: 0;
   color: #ffffff;
+  font-family: var(--font-heading);
+  font-weight: var(--font-weight-bold);
   font-size: clamp(34px, 4vw, 64px);
-  font-weight: 400;
   line-height: 0.98;
   letter-spacing: -0.07em;
+  max-width: 640px;
+  margin: 0;
 }
 
 .brand-message h1 span {
@@ -233,11 +227,11 @@
 }
 
 .brand-description {
-  max-width: 500px;
-  margin: clamp(14px, 2.5vh, 28px) 0 0;
   color: rgba(255, 255, 255, 0.72);
   font-size: clamp(13px, 1.05vw, 17px);
   line-height: 1.55;
+  max-width: 500px;
+  margin: clamp(14px, 2.5vh, 28px) 0 0;
 }
 
 /* ==========================================================================
@@ -245,40 +239,40 @@
    ========================================================================== */
 
 .security-list {
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.14);
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 1px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(255, 255, 255, 0.14);
 }
 
 .security-item {
-  min-height: clamp(82px, 14vh, 128px);
-  padding: clamp(10px, 1.4vw, 16px);
   background: rgba(0, 0, 0, 0.32);
   backdrop-filter: blur(14px);
+  min-height: clamp(82px, 14vh, 128px);
+  padding: clamp(10px, 1.4vw, 16px);
 }
 
 .security-number {
-  display: block;
-  margin-bottom: clamp(8px, 1.6vh, 18px);
   color: rgba(255, 255, 255, 0.42);
+  display: block;
   font-family: var(--font-mono);
   font-size: clamp(15px, 1.4vw, 20px);
+  margin-bottom: clamp(8px, 1.6vh, 18px);
 }
 
 .security-item h2 {
-  margin: 0 0 6px;
   color: #ffffff;
   font-size: clamp(12px, 1.05vw, 15px);
   font-weight: 600;
+  margin: 0 0 6px;
 }
 
 .security-item p {
-  margin: 0;
   color: rgba(255, 255, 255, 0.62);
   font-size: clamp(10px, 0.9vw, 12px);
   line-height: 1.4;
+  margin: 0;
 }
 
 /* ==========================================================================
@@ -286,33 +280,33 @@
    ========================================================================== */
 
 .auth-side {
+  background:
+    linear-gradient(90deg, var(--theme-panel-gradient), transparent 28%),
+    var(--theme-page);
+  display: grid;
   grid-column: 2;
   grid-row: 2;
-  position: relative;
-  min-width: 0;
+  grid-template-rows: minmax(0, 1fr) auto;
   height: 100%;
+  min-width: 0;
   min-height: 0;
   overflow-x: hidden;
   overflow-y: auto;
   padding: clamp(14px, 2.2vh, 28px) clamp(28px, 4vw, 56px);
-  display: grid;
-  grid-template-rows: minmax(0, 1fr) auto;
+  position: relative;
   row-gap: clamp(10px, 1.8vh, 20px);
-  background:
-    linear-gradient(90deg, var(--theme-panel-gradient), transparent 28%),
-    var(--theme-page);
   transition: background-color 180ms ease;
 }
 
 .auth-side::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  opacity: 0.42;
   background-image:
     linear-gradient(45deg, var(--theme-pattern) 1px, transparent 1px),
     linear-gradient(-45deg, var(--theme-pattern-secondary) 1px, transparent 1px);
   background-size: 140px 140px;
+  content: "";
+  inset: 0;
+  opacity: 0.42;
+  position: absolute;
   pointer-events: none;
 }
 
@@ -335,24 +329,26 @@
    ========================================================================== */
 
 .auth-card {
-  width: min(68%, 560px);
-  max-height: 100%;
   align-self: center;
-  justify-self: center;
-  padding: clamp(22px, 3vw, 42px);
-  border: 1px solid var(--theme-card-border);
-  border-radius: 18px;
+
   background:
     linear-gradient(135deg, var(--theme-accent-soft), transparent 40%),
     var(--theme-card);
+
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--theme-card-border);
+  border-radius: 18px;
   box-shadow:
     0 24px 80px rgba(0, 0, 0, 0.3),
     0 0 40px rgba(55, 179, 216, 0.05);
-  backdrop-filter: blur(20px);
+  justify-self: center;
+  max-height: 100%;
+  padding: clamp(22px, 3vw, 42px);
   transition:
     color 180ms ease,
     border-color 180ms ease,
     background-color 180ms ease;
+  width: min(68%, 560px);
 }
 
 :root[data-theme="dark"] .auth-card {
@@ -362,21 +358,22 @@
 }
 
 .auth-icon {
-  width: clamp(52px, 7vh, 86px);
+  display: grid;
   height: auto;
   margin: 0 auto clamp(14px, 2vh, 22px);
-  display: grid;
   place-items: center;
+  width: clamp(52px, 7vh, 86px);
 }
 
 .auth-card h2 {
-  margin: 0;
   color: var(--theme-text);
+  font-family: var(--font-heading);
+  font-weight: var(--font-weight-bold);
   font-size: clamp(30px, 3.8vw, 58px);
-  font-weight: 400;
-  line-height: 1;
-  text-align: center;
   letter-spacing: -0.06em;
+  line-height: 1;
+  margin: 0;
+  text-align: center;
 }
 
 .auth-card p {
@@ -384,11 +381,11 @@
 }
 
 .auth-copy {
-  max-width: 470px;
-  margin: clamp(14px, 2vh, 22px) auto clamp(20px, 3vh, 32px);
   color: var(--theme-text);
   font-size: clamp(14px, 1.25vw, 20px);
   line-height: 1.45;
+  max-width: 470px;
+  margin: clamp(14px, 2vh, 22px) auto clamp(20px, 3vh, 32px);
   text-align: center;
 }
 
@@ -448,7 +445,7 @@
   color: var(--theme-button-text);
   font-family: var(--font-microsoft);
   font-size: clamp(14px, 1.1vw, 17px);
-  font-weight: 500;
+  font-weight: var(--font-weight-semibold);
   letter-spacing: -0.02em;
   text-align: center;
 }
