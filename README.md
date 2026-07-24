@@ -38,6 +38,7 @@ This application provides a secure mechanism for customers to upload files assoc
 - Docker & Docker Compose
 - Nginx
 - uv
+- Gunicorn
 - Azure File Storage
 
 ### Frontend

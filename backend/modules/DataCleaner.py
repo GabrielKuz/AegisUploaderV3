@@ -9,7 +9,8 @@ from modules.models import LinkRecord, UploadRecord, UploadChunk, UploadSession,
 from modules.StorageProvider import StorageProvider 
 from sqlalchemy import select
 from Utils import IsCaseID
-
+from modules.log_config import setup_logging
+setup_logging()  # Initialize logging configuration
 logger = logging.getLogger(__name__)
 
 LINK_EXPIRY_DAYS = 2

@@ -198,6 +198,8 @@ export function SupportUpload() {
   
   const [linkCopied, setLinkCopied] = useState(false);
 
+  const [isRequestingDeletion, setIsRequestingDeletion] = useState(false);
+
   const loadUploads = useCallback(
     async (forceRefresh = false): Promise<void> => {
       setError(null);
@@ -264,6 +266,18 @@ export function SupportUpload() {
     void loadUploads();
   }, [loadUploads]);
 
+  useEffect(() => {
+    if (!actionMessage) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      setActionMessage(null);
+    }, 3000);
+
+    return () => window.clearTimeout(timer);
+  }, [actionMessage]);
+
   function handleSort(key: SortKey): void {
     if (key === sortKey) {
       setSortDirection((currentDirection) =>
@@ -329,13 +343,76 @@ export function SupportUpload() {
       setActionError(null);
       setActionMessage("Upload link copied to clipboard.");
 
-      window.setTimeout(() => setLinkCopied(false), 2000);
+      window.setTimeout(() => {
+        setLinkCopied(false);
+      }, 3000);
     } catch {
       setActionError({
         title: "Unable to copy link",
         message:
           "Your browser prevented the upload link from being copied. Please copy it manually.",
       });
+    }
+  }
+
+  async function requestDeletion(): Promise<void> {
+    if (!uuid) {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      "Send a deletion request email for this upload link?"
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setActionError(null);
+    setActionMessage(null);
+    setIsRequestingDeletion(true);
+
+    try {
+      const accessToken = await getAccessToken();
+
+      if (!accessToken) {
+        setActionError({
+          status: 401,
+          title: "Sign-in required",
+          message:
+            "Your session could not be verified. Sign in again before requesting deletion.",
+        });
+
+        return;
+      }
+
+      const response = await fetch(
+        `/api/requestfordeletion/${encodeURIComponent(uuid)}`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        setActionError(
+          await readApiError(response, "send the deletion request")
+        );
+
+        return;
+      }
+
+      setActionMessage(
+        "A deletion request email has been sent successfully."
+      );
+    } catch (requestError) {
+      setActionError(
+        getUnexpectedError(requestError, "send the deletion request")
+      );
+    } finally {
+      setIsRequestingDeletion(false);
     }
   }
 
@@ -349,17 +426,47 @@ export function SupportUpload() {
             View files received through this customer upload link.
           </p>
         </div>
+        <div className="data-page-actions">
+          <button
+            type="button"
+            className="data-page-action"
+            onClick={() => void loadUploads(true)}
+            disabled={isLoading}
+          >
+            {isLoading ? "Loading..." : "Refresh"}
+          </button>
+          <button
+            type="button"
+            className="data-page-action data-table-action-button--danger"
+            disabled={isRequestingDeletion}
+            onClick={() => void requestDeletion()}
+          >
+            {isRequestingDeletion
+              ? "Sending..."
+              : "Request Deletion"}
+          </button>
 
-        <Link to="/support/links" className="data-page-action">
-          Back to links
-        </Link>
+          <Link
+            to="/support/links"
+            className="data-page-action"
+          >
+            Back to Links
+          </Link>
+        </div>
       </header>
       <div className="upload-link-summary">
         <div className="upload-link-summary-row">
           <strong>Upload Link</strong>
 
           <div className="upload-link-value">
-            <code>{`${window.location.origin}/uploads/${uuid}`}</code>
+            <a
+              href={`${window.location.origin}/uploads/${uuid}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="upload-link"
+            >
+              <code>{`${window.location.origin}/uploads/${uuid}`}</code>
+            </a>
 
             <button
               type="button"

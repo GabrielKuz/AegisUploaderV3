@@ -146,7 +146,15 @@ export function CreateLinkForm({
               aria-describedby={error ? "create-link-error" : undefined}
               disabled={isSubmitting}
               onChange={(event) => {
-                setCaseId(event.target.value);
+                let value = event.target.value;
+
+                // Normalize the AIS prefix.
+                value = value.replace(/^ais/i, "AIS");
+
+                // Automatically insert the hyphen if the user types AIS1234.
+                value = value.replace(/^AIS(?!-)(\d)/, "AIS-$1");
+
+                setCaseId(value);
 
                 if (error) {
                   setError(null);

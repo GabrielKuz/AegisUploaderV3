@@ -346,7 +346,8 @@
    ========================================================================== */
 
 .auth-card {
-  width: min(68%, 560px);
+  width: min(92%, 560px);
+  min-width: 320px;
   max-height: 100%;
   align-self: center;
   justify-self: center;
@@ -410,12 +411,14 @@
 .sso-button {
   width: min(100%, 400px);
   min-height: clamp(48px, 6vh, 58px);
-  padding: 0 clamp(12px, 2vw, 14px);
+  /*padding: 0 clamp(12px, 2vw, 14px);*/
+  padding: 12px 14px;
+  column-gap: 12px;
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   justify-content: center;
-  column-gap: clamp(8px, 1.4vw, 14px);
+  /*column-gap: clamp(8px, 1.4vw, 14px);*/
   margin: auto;
   color: var(--theme-button-text);
   background: var(--theme-button-bg);
@@ -451,16 +454,21 @@
   width: clamp(28px, 4vh, 40px);
   height: auto;
   justify-self: start;
+  flex-shrink: 0;
 }
 
 .sso-button-label {
   min-width: 0;
-  overflow: hidden;
+  /*overflow: hidden;*/
   color: var(--theme-button-text);
   font-family: var(--font-microsoft);
   font-size: clamp(14px, 1.1vw, 17px);
   font-weight: 500;
   letter-spacing: -0.02em;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  line-height: 1.25;
   text-align: center;
 }
 
@@ -468,6 +476,7 @@
   justify-self: end;
   font-size: clamp(24px, 4vh, 35px);
   line-height: 1;
+  flex-shrink: 0;
 }
 
 /* ==========================================================================
@@ -624,8 +633,9 @@
   }
 
   .auth-card {
-    width: min(86%, 460px);
+    width: min(95%, 460px);
     padding: 26px;
+    min-width: 0;
   }
 
   .auth-footer {
@@ -770,6 +780,31 @@
    TINY SCREENS
    ========================================================================== */
 
+ @media (max-width: 520px) {
+   .sso-button {
+     grid-template-columns: auto 1fr;
+     grid-template-areas:
+       "logo arrow"
+       "text text";
+
+     row-gap: 8px;
+     padding: 14px;
+     text-align: center;
+   }
+
+   .sso-button-logo {
+     grid-area: logo;
+   }
+
+   .sso-button-arrow {
+     grid-area: arrow;
+     justify-self: end;
+   }
+
+   .sso-button-label {
+     grid-area: text;
+   }
+ }
 @media (max-width: 420px) {
   .login-header {
     padding-inline: 14px;

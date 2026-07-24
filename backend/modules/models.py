@@ -77,6 +77,7 @@ class UploadRecord(Base): # "LinkDB".uploads table
     blob_name = Column(Text, nullable=True) # Azure
     content_type = Column(Text, nullable=True) # MIME
     file_hash = Column(Text, nullable=True) # server side hash
+    requested_for_deletion = Column(Boolean, default=False, nullable=False) # flag to mark if user requested deleition. Does not mean it will be deleted
     date_uploaded = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
     combined_file_size = Column(BigInteger)
     max_days_in_storage = Column(Integer, default=30)
