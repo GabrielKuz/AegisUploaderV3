@@ -203,6 +203,7 @@ def _scheduler_get_pipelines():
 
     if _scheduler_pipeline_cache is None or now - _scheduler_pipeline_cache_time > _SCHEDULER_PIPELINE_CACHE_TTL:
         try:
+            _scheduler_rate_limit()
             _scheduler_pipeline_cache = api_client.crm.pipelines.pipelines_api.get_all(object_type="tickets")
             _scheduler_pipeline_cache_time = now
 
@@ -240,6 +241,7 @@ def _scheduler_hubspot_search(case_id: str):
     )
 
     retries = 4
+    _scheduler_rate_limit()
 
     for attempt in range(retries):
         try:
@@ -249,7 +251,6 @@ def _scheduler_hubspot_search(case_id: str):
 
         except ApiException as e:
             status_code = getattr(e, "status", None)
-            _scheduler_rate_limit() # sleep to avoid rate limiting
 
             if status_code == 429:
                 wait = 2 ** (attempt + 1)  
