@@ -117,7 +117,13 @@
   text-align: left;
   white-space: nowrap;
 }
+.data-table td:first-child {
+  white-space: normal;
+}
 
+.data-table th:first-child {
+  white-space: nowrap;
+}
 .data-table th {
   background: var(--theme-surface-secondary);
   color: var(--theme-muted);
@@ -195,9 +201,20 @@
   display: flex;
   align-items: center;
   gap: 10px;
+  width: 100%;
 }
 
+.data-table-link-uuid {
+  flex: 1;
+  min-width: 0;
 
+  color: var(--theme-accent);
+  font-family: var(--font-mono);
+
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  white-space: normal;
+}
 /* ==========================================================================
    ACTIONS, BADGES, AND MESSAGES
    ========================================================================== */
