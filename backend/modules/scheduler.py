@@ -46,14 +46,14 @@ if testing:
 else:
     scheduler.add_job(
         expireAndDeleteOldData,
-        trigger="interval",
+        trigger="cron",
         hours=[0, 6, 12, 18],
         id="cleanup",
     )
 
     scheduler.add_job(
         update_link_status_from_hubspot,
-        trigger="interval",
+        trigger="cron",
         hours=[1, 2, 3, 4, 5, 7, 8, 9, 10, 11, 13, 14, 15, 16, 17, 19, 20, 21, 22, 23],
         id="hubspot",
     )
