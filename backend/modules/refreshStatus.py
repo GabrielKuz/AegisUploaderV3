@@ -5,13 +5,14 @@ import uuid
 from datetime import datetime, timedelta, timezone
 from sqlalchemy import create_engine, select, update
 from typing import Dict
-from modules.HubSpotIntegration import get_caseITARstatus, caseIDExists, get_caseCompany, get_caseStatus
+from modules.HubSpotIntegration import get_caseITARstatus, caseIDExists, get_caseCompany, get_caseStatus, get_caseStatus_scheduler
 from modules.auth import User
 from modules.models import LinkRecord, UploadRecord, update_other_from_self, update_similar_between_LinkDB_and_UploadDB
 import os
 import AppConstants
 from warnings import warn, deprecated
 from modules import Session, engine
+import time
 from Utils import IsCaseID
 import logging
 
@@ -23,12 +24,20 @@ def update_link_status_from_hubspot():
         for link in links:
             case_id = link.case_id
             if case_id:
-                status = get_caseStatus(case_id)
-                if status:
-                    link.status = status
-                else:
-                    logger.warning(f"Could not retrieve status for case ID: {case_id}")
+                for _ in range(3):  # Retry up to 3 times
+                    try:
+                        status = get_caseStatus_scheduler(case_id)
+                        if status:
+                            link.status = status
+                            logger.info(f"Updated status for case ID {case_id} to {status}")
+                        else:
+                            logger.warning(f"Could not retrieve status for case ID: {case_id}, retrying...")
+                        break  # Exit the retry loop if successful
+                    except Exception as e:
+                        logger.error(f"Error retrieving status for case ID {case_id}: {e}")
+
             else:
                 logger.warning(f"No case ID associated with link UUID: {link.uuid}")
 
         session.commit()
+

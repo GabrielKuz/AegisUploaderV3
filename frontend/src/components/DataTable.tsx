@@ -297,19 +297,6 @@ export function DataTable({
               <tr>
                 <th
                   scope="col"
-                  aria-sort={getAriaSort("uuid", sortKey, sortDirection)}
-                >
-                  <button
-                    className="data-table-sort-button"
-                    type="button"
-                    onClick={() => handleSort("uuid")}
-                  >
-                    Upload link {getSortIcon("uuid", sortKey, sortDirection)}
-                  </button>
-                </th>
-
-                <th
-                  scope="col"
                   aria-sort={getAriaSort("case_id", sortKey, sortDirection)}
                 >
                   <button
@@ -320,6 +307,20 @@ export function DataTable({
                     Case ID {getSortIcon("case_id", sortKey, sortDirection)}
                   </button>
                 </th>
+                <th
+                  scope="col"
+                  aria-sort={getAriaSort("uuid", sortKey, sortDirection)}
+                >
+                  <button
+                    className="data-table-sort-button"
+                    type="button"
+                    onClick={() => handleSort("uuid")}
+                  >
+                    Upload Link {getSortIcon("uuid", sortKey, sortDirection)}
+                  </button>
+                </th>
+
+                
                 <th
                   scope="col"
                   aria-sort={getAriaSort("customer", sortKey, sortDirection)}
@@ -410,13 +411,17 @@ export function DataTable({
             <tbody>
               {sortedLinks.map((supportLink) => (
                 <tr key={supportLink.uuid}>
+                  
+                  <td>{supportLink.case_id}</td>
                   <td>
                     <div className="data-table-link-container">
                       <Link
-                        className="data-table-primary-link"
+                        className="data-table-action-link"
                         to={`/uploads/${supportLink.uuid}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
                       >
-                        /uploads/{supportLink.uuid}
+                        Open
                       </Link>
 
                       <button
@@ -430,7 +435,6 @@ export function DataTable({
                       </button>
                     </div>
                   </td>
-                  <td>{supportLink.case_id}</td>
                   <td>{supportLink.customer ?? "Unknown"}</td>
                   <td>
                     {(() => {

@@ -14,9 +14,13 @@ RUN groupadd --system app \
     && useradd --system --gid app --home /app app \
     && pip install --no-cache-dir uv \
     && chown app:app /app
-
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends supervisor \
+    && rm -rf /var/lib/apt/lists/*
 # Copy dependency files first for better layer caching
 COPY --chown=app:app pyproject.toml uv.lock startup.sh ./
+COPY supervisord.conf /etc/supervisord.conf
+#COPY entrypoint.sh /entrypoint.sh
 
 # Switch to the non-root user
 USER app
