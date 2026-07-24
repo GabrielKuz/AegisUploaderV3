@@ -376,6 +376,41 @@
   line-height: 1.4;
 }
 
+.customer-delete-button {
+  width: 100%;
+  min-height: 42px;
+
+  background: var(--theme-button-bg-variation);
+  border: 2px solid var(--theme-button-border);
+  border-radius: var(--radius-md);
+
+  color: #ffffff;
+
+  font-weight: 700;
+  cursor: pointer;
+
+  transition:
+    background-color var(--transition-fast),
+    border-color var(--transition-fast),
+    color var(--transition-fast),
+    transform var(--transition-fast);
+}
+
+.customer-delete-button:hover:not(:disabled) {
+  background: var(--theme-button-bg-hover);
+  border-color: var(--theme-button-border-hover);
+  color: var(--theme-button-text-hover);
+  transform: translateY(-1px);
+}
+
+.customer-delete-button:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.customer-delete-button:disabled {
+  opacity: .65;
+  cursor: default;
+}
 /* ==========================================================================
    RESPONSIVE
    The sidebar remains vertical at every viewport size.

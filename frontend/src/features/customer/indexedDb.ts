@@ -7,12 +7,14 @@ export type UploadSession = {
   chunkSize: number;
   file: File;
   region: "US" | "EU";
+  
 };
 
 export type UploadSettings = {
   uuid: string;
   region: "US" | "EU";
   uploadStarted: boolean;
+  deletionRequested: boolean;
 };
 const DATABASE_NAME = "CustomerUploads";
 const DATABASE_VERSION = 2;

@@ -26,6 +26,8 @@ type CustomerUploadContextValue = {
 
   setUploadStats: (count: number, bytes: number) => void;
   settingsLoaded: boolean;
+  deletionRequested: boolean;
+  markDeletionRequested: () => void;
 };
 
 type CustomerUploadProviderProps = {
@@ -46,6 +48,7 @@ export function CustomerUploadProvider({
   const [region, setRegionState] = useState<UploadRegion>("US");
 
   const [uploadStarted, setUploadStarted] = useState(false);
+  const [deletionRequested, setDeletionRequested] = useState(false);
   const [settingsLoaded, setSettingsLoaded] = useState(false);
   const setUploadStats = useCallback(
     (count: number, bytes: number): void => {
@@ -62,6 +65,7 @@ export function CustomerUploadProvider({
         uuid,
         region: newRegion,
         uploadStarted,
+        deletionRequested,
       });
     },
     [uuid, uploadStarted],
@@ -73,9 +77,21 @@ export function CustomerUploadProvider({
       uuid,
       region,
       uploadStarted: true,
+      deletionRequested,
     });
   }, [uuid, region]);
   
+  const markDeletionRequested = useCallback(() => {
+    setDeletionRequested(true);
+
+    void saveUploadSettings({
+      uuid,
+      region,
+      uploadStarted,
+      deletionRequested: true,
+    });
+  }, [uuid, region, uploadStarted]);
+
   const contextValue = useMemo(
     () => ({
       uploadedBytes,
@@ -90,6 +106,9 @@ export function CustomerUploadProvider({
 
       setUploadStats,
       settingsLoaded,
+
+      deletionRequested,
+      markDeletionRequested,
     }),
     [
       uploadedBytes,
@@ -111,6 +130,10 @@ export function CustomerUploadProvider({
 
         if (settings.uploadStarted) {
           setUploadStarted(true);
+        }
+
+        if (settings.deletionRequested) {
+          setDeletionRequested(true);
         }
       }
 

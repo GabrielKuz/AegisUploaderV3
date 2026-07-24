@@ -1,5 +1,5 @@
 import { Navigate, useParams } from "react-router-dom";
-
+import { useState } from "react";
 import { AppLayout } from "./AppLayout";
 import {
   CustomerUploadProvider,
@@ -20,7 +20,11 @@ function CustomerUploadSummary() {
     setRegion,
     uploadStarted,
     settingsLoaded,
+    deletionRequested,
+    markDeletionRequested,
   } = useCustomerUpload();
+
+  const [requestSent, setRequestSent] = useState(false);
 
   return (
     <section
@@ -80,6 +84,56 @@ function CustomerUploadSummary() {
         {uploadStarted && (
           <small className="region-lock-message">
             Region locked after upload started.
+          </small>
+        )}
+      </div>
+      <div className="customer-upload-region">
+        <span className="customer-upload-region-label">
+          Delete Uploaded Files
+        </span>
+
+        <button
+          className="customer-delete-button"
+          disabled={deletionRequested}
+          onClick={async () => {
+            const confirmed = window.confirm(
+              "Request deletion of all uploaded files?"
+            );
+
+            if (!confirmed) {
+              return;
+            }
+
+            try {
+              const response = await fetch(
+                `/api/requestfordeletion/${encodeURIComponent(uuid)}`,
+                {
+                  method: "POST",
+                },
+              );
+
+              if (!response.ok) {
+                throw new Error();
+              }
+
+              markDeletionRequested();
+              setRequestSent(true);
+            } catch {
+              window.alert(
+                "Unable to send the deletion request. Please try again."
+              );
+            }
+          }}
+        >
+          {deletionRequested
+            ? "Deletion Requested"
+            : "Request Deletion"}
+        </button>
+
+        
+        {(requestSent || deletionRequested) && (
+          <small className="region-lock-message">
+            Your deletion request has been sent successfully.
           </small>
         )}
       </div>
