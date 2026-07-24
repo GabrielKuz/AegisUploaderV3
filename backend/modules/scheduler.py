@@ -6,7 +6,9 @@ from apscheduler.events import EVENT_JOB_EXECUTED, EVENT_JOB_ERROR
 
 from modules.DataCleaner import expireAndDeleteOldData
 from modules.refreshStatus import update_link_status_from_hubspot
+from modules.log_config import setup_logging
 
+setup_logging()
 
 logging.basicConfig(level=logging.INFO)
 

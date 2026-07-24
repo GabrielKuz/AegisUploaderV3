@@ -1,14 +1,17 @@
 import os
-from typing import Optional
-
-from hubspot import HubSpot
-from hubspot.crm.tickets import ApiException, PublicObjectSearchRequest
-from hubspot.crm.tickets.models import Filter, FilterGroup
+import time
 import logging
 
+from hubspot import HubSpot
+from typing import Optional
+from hubspot.crm.tickets import ApiException, PublicObjectSearchRequest
+from hubspot.crm.tickets.models import Filter, FilterGroup
+
 logger = logging.getLogger(__name__)
-api_client = HubSpot(access_token=os.getenv("HUBSPOT_ACCESS_TOKEN"))
-    
+token = os.getenv("HUBSPOT_ACCESS_TOKEN")
+api_client = HubSpot(access_token=token)
+logger.warning(f"HubSpot token loaded: {bool(token)}, length={len(token) if token else 0}")
+del token  # Remove token from memory for security reasons
 #=======================================================================================================
 # Main Functions
 #=======================================================================================================
@@ -116,7 +119,8 @@ def search_pipeline(ais_id: str, operationProtocolNumber: int) -> Optional[str]:
         response = api_client.crm.pipelines.pipelines_api.get_all(
             object_type="tickets"
         )
-    except ApiException:
+    except ApiException as e:
+        logger.error(f"Failed to retrieve pipelines from HubSpot: {e}")
         return None
     
     if operationProtocolNumber == 0:
@@ -171,3 +175,132 @@ def advancedSearchThroughHubSpot(searchTerm: str, searchTermHS_name: str):
 
     results = getattr(response, "results", None) or []
     return results[0] if results else None
+
+#=======================================================================================================
+# Scheduler optimized status lookup
+#=======================================================================================================
+_scheduler_pipeline_cache = None
+_scheduler_pipeline_cache_time = 0
+_SCHEDULER_PIPELINE_CACHE_TTL = 3600  # refresh every hour
+_SCHEDULER_REQUEST_INTERVAL = 0.6
+_scheduler_last_request_time = 0
+
+def _scheduler_rate_limit():
+    global _scheduler_last_request_time
+
+    now = time.time()
+    elapsed = now - _scheduler_last_request_time
+
+    if elapsed < _SCHEDULER_REQUEST_INTERVAL:
+        time.sleep(_SCHEDULER_REQUEST_INTERVAL - elapsed)
+
+    _scheduler_last_request_time = time.time()
+
+def _scheduler_get_pipelines():
+    global _scheduler_pipeline_cache, _scheduler_pipeline_cache_time
+
+    now = time.time()
+
+    if _scheduler_pipeline_cache is None or now - _scheduler_pipeline_cache_time > _SCHEDULER_PIPELINE_CACHE_TTL:
+        try:
+            _scheduler_pipeline_cache = api_client.crm.pipelines.pipelines_api.get_all(object_type="tickets")
+            _scheduler_pipeline_cache_time = now
+
+        except ApiException as e:
+            logger.error(
+                f"Failed retrieving HubSpot pipelines: "
+                f"status={getattr(e, 'status', None)} "
+                f"body={getattr(e, 'body', None)}"
+            )
+            return None
+
+    return _scheduler_pipeline_cache
+
+
+def _scheduler_hubspot_search(case_id: str):
+    if not case_id:
+        return None
+
+    search_request = PublicObjectSearchRequest(
+        filter_groups=[
+            FilterGroup(
+                filters=[
+                    Filter(
+                        property_name="ais_ticket_number",
+                        operator="EQ",
+                        value=case_id,
+                    )
+                ]
+            )
+        ],
+        properties=[
+            "hs_pipeline",
+            "hs_pipeline_stage",
+        ],
+    )
+
+    retries = 4
+
+    for attempt in range(retries):
+        try:
+            return api_client.crm.tickets.search_api.do_search(
+                search_request
+            )
+
+        except ApiException as e:
+            status_code = getattr(e, "status", None)
+            _scheduler_rate_limit() # sleep to avoid rate limiting
+
+            if status_code == 429:
+                wait = 2 ** (attempt + 1)  
+                logger.warning(
+                    f"HubSpot rate limited for case {case_id}. "
+                    f"Retrying in {wait}s..."
+                )
+                time.sleep(wait)
+                continue
+
+            logger.error(
+                f"HubSpot search failed for {case_id}: "
+                f"status={status_code} "
+                f"body={getattr(e, 'body', None)}"
+            )
+            return None
+
+    logger.error(f"HubSpot rate limit exceeded after retries for {case_id}")
+    return None
+
+
+def get_caseStatus_scheduler(case_id: str) -> Optional[str]:
+    response = _scheduler_hubspot_search(case_id)
+
+    if not response:
+        return None
+
+    results = getattr(response, "results", None)
+
+    if not results:
+        return None
+
+    ticket = results[0]
+
+    props = getattr(ticket, "properties", {}) or {}
+
+    pipeline_id = props.get("hs_pipeline")
+    stage_id = props.get("hs_pipeline_stage")
+
+    if not pipeline_id or not stage_id:
+        return None
+
+    pipelines = _scheduler_get_pipelines()
+
+    if not pipelines:
+        return None
+
+    for pipeline in pipelines.results:
+        if str(pipeline.id) == str(pipeline_id):
+            for stage in pipeline.stages:
+                if str(stage.id) == str(stage_id):
+                    return stage.label
+
+    return None

@@ -16,11 +16,9 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
 from Utils import IsUUID
 import logging
-from modules import Session, engine
+from modules import Session
 
 logger = logging.getLogger(__name__)
-engine = create_engine(os.environ['DATABASE_URL'],)
-Session = sessionmaker(bind=engine)
 router = APIRouter()
 CONNECTION_STRING = os.getenv("ACS_CONNECTION_STRING")
 
