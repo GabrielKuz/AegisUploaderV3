@@ -763,11 +763,9 @@ def sizeof_fmt(num, suffix="B"):
 
 
 async def sendCompletetionEmail(upload_record: UploadRecord):
-    db = next(get_db())  # Get a new database session for this async function
-    if os.getenv("TESTING") and os.getenv("TESTING").lower() == "true":
-        return
-
-    link_entry = find_link_entry(upload_record.link_uuid, db=db)
+    with Session() as db:
+        link_entry = find_link_entry(upload_record.link_uuid, db=db)
+        
     viewURL = f"https://{os.getenv('FRONTEND_URL')}/support/view-uploads/{upload_record.link_uuid}"
     if not link_entry:
         logger.warning(f"Unable to send completion email. Link {upload_record.link_uuid} not found.")
