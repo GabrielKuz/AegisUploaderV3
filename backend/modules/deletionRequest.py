@@ -56,6 +56,7 @@ def get_db(): # Avoid reusing the same session across requests, which can cause 
 
 @router.post("/requestfordeletion/{link_uuid}") #Requests from client side to delete data. Only sends email 
 async def request_For_Data_Deletion(link_uuid: str, db: Annotated[sqlalchemy.orm.Session, Depends(get_db)]):
+    check_upload_status_rate_limit(link_uuid)
     if not IsUUID(link_uuid):
         raise HTTPException(status_code=400, detail="Invalid UUID format")
     #get upload record from db
