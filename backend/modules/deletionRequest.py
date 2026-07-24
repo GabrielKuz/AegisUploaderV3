@@ -10,6 +10,8 @@ from pydantic import Field, BaseModel
 from typing import Annotated
 from azure.communication.email.aio import EmailClient
 import os
+from cachetools import TTLCache
+from threading import Lock
 import logging
 from modules.models import LinkRecord, UploadRecord
 from sqlalchemy.orm import sessionmaker
@@ -21,6 +23,26 @@ from modules import Session
 logger = logging.getLogger(__name__)
 router = APIRouter()
 CONNECTION_STRING = os.getenv("ACS_CONNECTION_STRING")
+# Per-upload-token rate limiter
+_upload_status_rate_limit = TTLCache(
+    maxsize=10_000,  # Max tracked tokens
+    ttl=60          #window size
+)
+
+_upload_status_rate_limit_lock = Lock()
+
+
+def check_upload_status_rate_limit(link_uuid: str):
+    with _upload_status_rate_limit_lock:
+        requests = _upload_status_rate_limit.get(link_uuid, 0)
+
+        if requests >= 1: # 10 per minute per upload token
+            raise HTTPException(
+                status_code=429,
+                detail="Too many upload status requests"
+            )
+
+        _upload_status_rate_limit[link_uuid] = requests + 1
 
 def get_db(): # Avoid reusing the same session across requests, which can cause issues with concurrent transactions
     db = Session()

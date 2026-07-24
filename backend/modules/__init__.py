@@ -6,11 +6,13 @@ from sqlalchemy import create_engine
 from modules.StorageProvider import LocalStorageProvider, AzureFileStorageProvider
 engine = create_engine(
     os.environ['DATABASE_URL'],    
-    pool_size=7,
-    max_overflow=4,
+    pool_size=15,
+    max_overflow=5,
     pool_timeout=20,
     pool_pre_ping=True,
-    pool_recycle=1800)
+    pool_recycle=1800,
+    pool_timeout=0.3,
+)
 Session = sessionmaker(bind=engine) # Create a main session factory to prevent multiple engine instances
 
 if os.getenv("BUILD_TYPE", "dev") == "dev":
