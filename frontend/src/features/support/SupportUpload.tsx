@@ -266,6 +266,18 @@ export function SupportUpload() {
     void loadUploads();
   }, [loadUploads]);
 
+  useEffect(() => {
+    if (!actionMessage) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      setActionMessage(null);
+    }, 3000);
+
+    return () => window.clearTimeout(timer);
+  }, [actionMessage]);
+
   function handleSort(key: SortKey): void {
     if (key === sortKey) {
       setSortDirection((currentDirection) =>
@@ -331,7 +343,9 @@ export function SupportUpload() {
       setActionError(null);
       setActionMessage("Upload link copied to clipboard.");
 
-      window.setTimeout(() => setLinkCopied(false), 2000);
+      window.setTimeout(() => {
+        setLinkCopied(false);
+      }, 3000);
     } catch {
       setActionError({
         title: "Unable to copy link",
@@ -415,6 +429,14 @@ export function SupportUpload() {
         <div className="data-page-actions">
           <button
             type="button"
+            className="data-page-action"
+            onClick={() => void loadUploads(true)}
+            disabled={isLoading}
+          >
+            {isLoading ? "Loading..." : "Refresh"}
+          </button>
+          <button
+            type="button"
             className="data-page-action data-table-action-button--danger"
             disabled={isRequestingDeletion}
             onClick={() => void requestDeletion()}
@@ -437,7 +459,14 @@ export function SupportUpload() {
           <strong>Upload Link</strong>
 
           <div className="upload-link-value">
-            <code>{`${window.location.origin}/uploads/${uuid}`}</code>
+            <a
+              href={`${window.location.origin}/uploads/${uuid}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="upload-link"
+            >
+              <code>{`${window.location.origin}/uploads/${uuid}`}</code>
+            </a>
 
             <button
               type="button"
