@@ -400,6 +400,18 @@ export function AdminUpload() {
     void loadUploads();
   }, [loadUploads]);
 
+  useEffect(() => {
+    if (!actionMessage) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      setActionMessage(null);
+    }, 3000);
+
+    return () => window.clearTimeout(timer);
+  }, [actionMessage]);
+
   function handleSort(key: SortKey): void {
     if (key === sortKey) {
       setSortDirection((currentDirection) =>
@@ -648,7 +660,9 @@ export function AdminUpload() {
       setActionError(null);
       setActionMessage("Upload link copied to clipboard.");
 
-      window.setTimeout(() => setLinkCopied(false), 2000);
+      window.setTimeout(() => {
+        setLinkCopied(false);
+      }, 3000);
     } catch {
       setActionError({
         title: "Unable to copy link",
@@ -671,6 +685,14 @@ export function AdminUpload() {
         </div>
 
         <div className="data-page-actions">
+          <button
+            className="data-page-action"
+            type="button"
+            onClick={() => void loadUploads(true)}
+            disabled={isLoading}
+          >
+            {isLoading ? "Loading..." : "Refresh"}
+          </button>
           <button
             type="button"
             className="data-page-action data-table-action-button--danger"
@@ -695,7 +717,14 @@ export function AdminUpload() {
           <strong>Upload Link</strong>
 
           <div className="upload-link-value">
-            <code>{`${window.location.origin}/uploads/${uuid}`}</code>
+            <a
+              href={`${window.location.origin}/uploads/${uuid}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="upload-link"
+            >
+              <code>{`${window.location.origin}/uploads/${uuid}`}</code>
+            </a>
 
             <button
               type="button"
@@ -850,6 +879,8 @@ export function AdminUpload() {
 
                     <td>
                       <div className="data-table-actions">
+                      
+
                         <button
                           className="data-table-action-button"
                           type="button"

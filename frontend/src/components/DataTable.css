@@ -48,7 +48,6 @@
   border-radius: var(--radius-md);
   color: var(--theme-button-text);
   display: inline-flex;
-  flex: 0 0 auto;
   font-size: 16px;
   font-weight: 700;
   justify-content: center;
@@ -60,12 +59,17 @@
     border-color var(--transition-fast),
     color var(--transition-fast),
     transform var(--transition-fast);
+
+  flex: 0 1 auto;
+  white-space: nowrap;
 }
 
 .data-page-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.75rem;
   align-items: center;
+  justify-content: flex-end;
 }
 
 .data-page-action:hover {
@@ -177,14 +181,10 @@
 .data-table td:nth-child(4),
 .data-table th:nth-child(4) {
   text-align: left;
+  width: 130px;
 }
 
-.data-table-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  vertical-align: middle;
-}
+
 
 .data-table td:first-child,
 .data-table th:first-child {
@@ -251,9 +251,14 @@
   align-items: center;
   border-radius: var(--radius-pill);
   display: inline-flex;
-  font-size: 12px;
-  font-weight: 700;
-  padding: 4px 8px;
+  font-size: inherit;
+  font-weight: 600;
+  font-family: inherit;
+  padding: 5px 10px;
+  display: inline-flex;
+  justify-content: flex-start;
+  vertical-align: middle;
+  line-height: 1.2;
 }
 
 .data-table-badge--danger {
@@ -323,6 +328,16 @@
   font-size: 13px;
   overflow-wrap: anywhere;
   word-break: break-word;
+}
+
+.upload-link {
+  color: inherit;
+  text-decoration: underline;
+  word-break: break-all;
+}
+
+.upload-link:hover {
+  opacity: 0.8;
 }
 
 .copy-link-button:hover {
@@ -480,5 +495,17 @@
   .data-table-action-button:hover,
   .data-table-action-link:hover {
     transform: none;
+  }
+}
+
+@media (max-width: 900px) {
+  .data-page-actions {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+  }
+
+  .data-page-action {
+    width: 100%;
   }
 }

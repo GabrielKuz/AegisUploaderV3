@@ -242,7 +242,10 @@
   background: var(--theme-surface-but-it-is-not-transparent-because-that-is-really-annoying);
   border: 2px solid var(--theme-card-border);
   border-radius: var(--radius-lg);
-  box-shadow: var(--theme-card-shadow);
+  box-shadow:
+      0 18px 40px rgba(0, 0, 0, 0.22),
+      0 8px 16px rgba(0, 0, 0, 0.12),
+      var(--theme-card-shadow);
   color: var(--theme-text);
   display: grid;
   gap: 18px;
