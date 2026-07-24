@@ -71,16 +71,6 @@ def download_link(uuid: str, currentUser: Annotated[User, Depends(requireRoles("
         return downloadData(uploads[0]["upload_id"], currentUser)
     if not uploads:
         raise HTTPException(status_code=404, detail="No uploads found for this link")
-    return uploads
-
-@app.get("/links/{uuid}")
-def getLinkInfo(uuid: str, currentUser: Annotated[User, Depends(requireRoles("User", "Admin"))]):  
-    data = get_all_links(currentUser)
-    for link in data:
-        if link["uuid"] == uuid:
-            return link
-    raise HTTPException(status_code=404, detail="Link not found")
-
 
 if __name__ == "__main__": # Doesnt get run by docker
     setup_logging()
