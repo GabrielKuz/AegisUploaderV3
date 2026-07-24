@@ -44,6 +44,10 @@ async def request_For_Data_Deletion(link_uuid: str, db: Annotated[sqlalchemy.orm
         raise HTTPException(status_code=404, detail="No upload record found for the provided UUID")
     if record.for_deletion:
         return {"message": "A deletion request for this UUID has already been submitted."}
+    if record.requested_for_deletion:
+        return {"message": "A deletion request for this UUID has already been submitted."}
+    record.requested_for_deletion = True
+    db.commit()
     try:
         if not os.getenv("TESTING") or os.getenv("TESTING").lower() != "true": # Only send email if not in testing mode
             session = Session()
