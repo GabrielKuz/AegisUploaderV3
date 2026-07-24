@@ -35,4 +35,6 @@ dependencies = [
     "azure-communication-email>=1.1.0",
     "aiohttp>=3.14.2",
     "gunicorn>=26.0.0",
+    "slowapi>=0.1.10",
+    "cachetools>=7.1.6",
 ]

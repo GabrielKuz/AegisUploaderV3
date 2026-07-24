@@ -15,6 +15,8 @@ import logging
 
 from sqlalchemy import text, cast
 from sqlalchemy.dialects.postgresql import JSONB
+from cachetools import TTLCache
+from threading import Lock
 from modules.StorageProvider import StorageProvider, LocalStorageProvider
 from modules import usFileStorageProvider, euFileStorageProvider, itarFileStorageProvider
 from fastapi import APIRouter, Depends, Header, HTTPException
@@ -480,12 +482,34 @@ async def upload_file_chunk(
         ranges=upload_session.received_ranges,
     )
 
+# Per-upload-token rate limiter
+_upload_status_rate_limit = TTLCache(
+    maxsize=10_000,  # Max tracked tokens
+    ttl=60          #window size
+)
+
+_upload_status_rate_limit_lock = Lock()
+
+
+def check_upload_status_rate_limit(upload_token: str):
+    with _upload_status_rate_limit_lock:
+        requests = _upload_status_rate_limit.get(upload_token, 0)
+
+        if requests >= 10: # 10 per minute per upload token
+            raise HTTPException(
+                status_code=429,
+                detail="Too many upload status requests"
+            )
+
+        _upload_status_rate_limit[upload_token] = requests + 1
+
 @router.get("/uploadfile/{link_uuid}/{upload_token}/status", response_model=UploadStatusResponse) # Provides enough data for the client to resume an upload or verify the upload status, even if the link has expired
 def upload_status(
     link_uuid: str,
     upload_token: str,
     db: Annotated[sqlalchemy.orm.Session, Depends(get_db)]
 ):
+    check_upload_status_rate_limit(upload_token) # Rate limit to prevent abuse and DoS attacks since this endpoint is very expensive
     if not IsUUID(link_uuid):
         raise HTTPException(status_code=400, detail="Invalid uuid")
 
@@ -513,16 +537,22 @@ def upload_status(
     else: #Chunks are deleted on completion
 
         chunks = (
-            db.query(UploadChunk).filter(
+            db.query(
+                UploadChunk.offset,
+                UploadChunk.size
+            )
+            .filter(
                 UploadChunk.upload_id == upload_session.upload_id,
                 UploadChunk.uploaded == True
-            ).all()
+            )
+            .order_by(UploadChunk.offset)
+            .all()
         )
 
-        ranges = sorted(
-            [[chunk.offset, chunk.offset + chunk.size] for chunk in chunks], # Sort the ranges
-            key=lambda r: r[0]
-        )
+        ranges = [
+            [offset, offset + size]
+            for offset, size in chunks
+        ]
 
         merged_ranges = [] # Merge overlapping ranges
         for start, end in ranges:
@@ -765,7 +795,7 @@ def sizeof_fmt(num, suffix="B"):
 async def sendCompletetionEmail(upload_record: UploadRecord):
     with Session() as db:
         link_entry = find_link_entry(upload_record.link_uuid, db=db)
-        
+
     viewURL = f"https://{os.getenv('FRONTEND_URL')}/support/view-uploads/{upload_record.link_uuid}"
     if not link_entry:
         logger.warning(f"Unable to send completion email. Link {upload_record.link_uuid} not found.")
