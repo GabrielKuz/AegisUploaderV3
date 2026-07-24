@@ -21,12 +21,12 @@ import "./DataTable.css";
 type SupportLink = {
   uuid: string;
   case_id: string;
-  customer: string;
-  status: string;
   itar: boolean;
   creator: string;
   timestamp: string;
   expiration_date: string;
+  customer: string | null;
+  status: string | null;
 };
 
 type SortKey =
@@ -67,25 +67,41 @@ type LinkStatusDisplay = {
   className: string;
 };
 
-function getLinkStatus(status: string): LinkStatusDisplay {
-  const normalized = status.trim().toLowerCase();
+function getLinkStatus(status: string | null | undefined): LinkStatusDisplay {
+  const normalized =
+    typeof status === "string" ? status.trim().toLowerCase() : "";
 
   switch (normalized) {
     case "completed":
+    case "complete":
+    case "closed":
+    case "resolved":
       return {
-        label: "Completed",
+        label: status ?? "Completed",
         className: "data-table-badge data-table-badge--complete",
       };
 
-    case "":
+    case "in progress":
+    case "open":
+    case "active":
+    case "new":
       return {
-        label: "Pending",
+        label: status ?? "In progress",
         className: "data-table-badge data-table-badge--progress",
+      };
+
+    case "expired":
+    case "cancelled":
+    case "canceled":
+    case "failed":
+      return {
+        label: status ?? "Expired",
+        className: "data-table-badge data-table-badge--danger",
       };
 
     default:
       return {
-        label: status,
+        label: typeof status === "string" && status.trim() ? status : "Unknown",
         className: "data-table-badge",
       };
   }
@@ -229,9 +245,7 @@ export function DataTable({
         setCopiedUuid((current) => (current === uuid ? null : current));
       }, 2000);
     } catch {
-      window.alert(
-        "Unable to copy the upload link. Please copy it manually."
-      );
+      window.alert("Unable to copy the upload link. Please copy it manually.");
     }
   }
 
@@ -254,10 +268,7 @@ export function DataTable({
             {isLoading ? "Refreshing..." : "Refresh"}
           </button>
 
-          <Link
-            to={createPath}
-            className="data-page-action"
-          >
+          <Link to={createPath} className="data-page-action">
             Create Link
           </Link>
         </div>
@@ -420,15 +431,13 @@ export function DataTable({
                     </div>
                   </td>
                   <td>{supportLink.case_id}</td>
-                  <td>{supportLink.customer}</td>
+                  <td>{supportLink.customer ?? "Unknown"}</td>
                   <td>
                     {(() => {
                       const status = getLinkStatus(supportLink.status);
 
                       return (
-                        <span className={status.className}>
-                          {status.label}
-                        </span>
+                        <span className={status.className}>{status.label}</span>
                       );
                     })()}
                   </td>
