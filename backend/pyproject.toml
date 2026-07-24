@@ -34,4 +34,5 @@ dependencies = [
     "pytest-asyncio>=1.4.0",
     "azure-communication-email>=1.1.0",
     "aiohttp>=3.14.2",
+    "gunicorn>=26.0.0",
 ]

@@ -61,7 +61,9 @@ def test_jwt():
 
 def check_main_testing_var_is_false():
     from main import testing
+    from modules.scheduler import testing as scheduler_testing
     assert testing is False, "The 'testing' variable in main.py should be set to False for production."
+    assert scheduler_testing is False, "The 'testing' variable in scheduler.py should be set to False for production."
 
 def test_NoAuthNotPresent():
     forbiddenMethod= "getCurrentUserNoAuthForTest"

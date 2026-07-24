@@ -18,7 +18,7 @@ from typing import Annotated
 from Utils import IsUUID
 from warnings import deprecated
 from zoneinfo import ZoneInfo
-from modules.logging import setup_logging
+from modules.log_config import setup_logging
 
 logging.basicConfig(level=logging.INFO) # setup logging server. TODO: change to file and add more logging
 testing = False
@@ -26,53 +26,8 @@ scheduler = AsyncIOScheduler(timezone=ZoneInfo("America/New_York"))
 interval = testing 
 from modules.refreshStatus import update_link_status_from_hubspot
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    if interval:
-        scheduler.add_job(
-            expireAndDeleteOldData,
-            trigger="interval",
-            seconds=30,
-            id="test_cleanup",
-            replace_existing=True,
-            max_instances=1,
-            coalesce=True,
-        )
-        scheduler.add_job(
-            update_link_status_from_hubspot,
-            trigger="interval",
-            seconds=30,
-            id="test_link_status_refresh",
-            replace_existing=True,
-            max_instances=1,
-            coalesce=True,
-        )   
-    else:
-        scheduler.add_job( # every 6 hours on the hour
-            expireAndDeleteOldData,
-            trigger="cron",
-            hour="0,6,12,18",
-            minute="0",
-            id="daily_cleanup",
-            replace_existing=True,
-            max_instances=1,
-            coalesce=True,
-        )
-        scheduler.add_job(
-            update_link_status_from_hubspot,
-            trigger="cron",
-            hour="*", # every hour on the hour
-            minute="0",
-            id="link_status_refresh",
-            replace_existing=True,
-            max_instances=1,
-            coalesce=True,
-        )
-    scheduler.start()
-    yield
-    scheduler.shutdown(wait=False)
 
-app = FastAPI(title="Aegis Backend", root_path="/api", debug=False, docs_url=None, redoc_url=None,  lifespan=lifespan)
+app = FastAPI(title="Aegis Backend", root_path="/api", debug=False, docs_url=None, redoc_url=None)
 app.include_router(uploader_router)
 app.include_router(deletionRequest_router)
 #setup_telemetry(app)  # init opentelemetry
@@ -101,10 +56,6 @@ def read_root():
 def health_check():
     return {"status": "healthy"}
 
-@app.on_event("startup")
-async def startup():
-    logging.info("Server started on http://localhost:8000")
-    logging.info(f"Frontend accessible at http://{__import__('socket').gethostbyname(__import__('socket').gethostname())}.sslip.io")
 
 def main(): # start the app when run directly and not through docker
     import uvicorn
