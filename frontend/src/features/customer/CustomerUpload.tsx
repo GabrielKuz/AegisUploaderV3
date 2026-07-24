@@ -15,19 +15,18 @@ import {
   deleteUploadSession,
   getUploadSessions,
   saveUploadSession,
- 
+
   //saveUploadSettings,
-  type UploadSession, 
-  
+  type UploadSession,
 } from "./indexedDb";
 import "./CustomerUpload.css";
 
-
-const HASH_CONCURRENCY = 12;
 const MAX_CHUNK_RETRIES = 3;
 const RETRY_DELAY_MS = 1_500;
-const UPLOAD_CONCURRENCY = 20;
-const MAX_UPLOAD_RESTARTS = 2;
+const HASH_CONCURRENCY = 4;
+const CHUNK_UPLOAD_CONCURRENCY = 4;
+const FILE_UPLOAD_CONCURRENCY = 2;
+const MAX_UPLOAD_RESTARTS = 3;
 
 type SelectedFile = {
   id: string;
@@ -69,7 +68,7 @@ const UPLOAD_ACTIONS: Record<UploadRequestStage, string> = {
 class UploadConflictError extends Error {
   constructor() {
     super(
-      "The upload session became out of sync. Creating a new upload session."
+      "The upload session became out of sync. Creating a new upload session.",
     );
 
     this.name = "UploadConflictError";
@@ -122,7 +121,7 @@ async function getUploadResponseError(
 
     case 409:
       return new UploadConflictError();
-    
+
     case 410:
       return new Error(
         "This upload link has expired and can no longer accept files. Contact support to request a new secure upload link.",
@@ -234,10 +233,7 @@ async function hashBlob(blob: Blob): Promise<string> {
 }
 
 // Builds BLAKE3 Merkle root expected by upload API.
-async function buildFileHash(
-  file: File,
-  chunkSize: number,
-): Promise<string> {
+async function buildFileHash(file: File, chunkSize: number): Promise<string> {
   if (file.size === 0) {
     return hashBlob(file);
   }
@@ -411,18 +407,13 @@ async function uploadAllChunks(
 
   await runWithConcurrency(
     offsets,
-    UPLOAD_CONCURRENCY,
+    CHUNK_UPLOAD_CONCURRENCY,
     async (offset) => {
       await uploadChunkWithRetry(session, offset, onRetry);
 
-      uploadedBytes += Math.min(
-        session.chunkSize,
-        session.file.size - offset,
-      );
+      uploadedBytes += Math.min(session.chunkSize, session.file.size - offset);
 
-      onProgress(
-        calculateProgress(uploadedBytes, session.file.size),
-      );
+      onProgress(calculateProgress(uploadedBytes, session.file.size));
     },
   );
 }
@@ -457,9 +448,7 @@ async function repairMissingChunks(
     );
 
     if (missingOffsets.length === 0) {
-      await delay(500);
-
-      continue;
+      return;
     }
 
     for (const offset of missingOffsets) {
@@ -524,15 +513,10 @@ async function createUploadSession(
   region: "US" | "EU",
   markUploadStarted: () => void,
 ): Promise<UploadSession> {
-
   // Must match backend because backend requires hash before returning config
   const expectedChunkSize = 4 * 1024 * 1024;
 
-  const fileHash = await buildFileHash(
-    file,
-    expectedChunkSize,
-  );
-
+  const fileHash = await buildFileHash(file, expectedChunkSize);
 
   const response = await fetch(`/api/uploadfile/${uuid}/start`, {
     method: "POST",
@@ -544,38 +528,26 @@ async function createUploadSession(
     },
   });
 
-
   if (!response.ok) {
     throw await getUploadResponseError(response, "start");
   }
 
-
   const data = (await response.json()) as Partial<StartUploadResponse>;
 
-
-  if (
-    typeof data.uploadToken !== "string" ||
-    !data.uploadToken
-  ) {
-    throw new Error(
-      "The upload service returned an incomplete session.",
-    );
+  if (typeof data.uploadToken !== "string" || !data.uploadToken) {
+    throw new Error("The upload service returned an incomplete session.");
   }
 
-
   const chunkSize =
-    typeof data.chunkSize === "number" &&
-      data.chunkSize > 0
+    typeof data.chunkSize === "number" && data.chunkSize > 0
       ? data.chunkSize
       : expectedChunkSize;
-
 
   if (chunkSize !== expectedChunkSize) {
     throw new Error(
       "The server returned a different chunk size than expected.",
     );
   }
-
 
   const session: UploadSession = {
     uuid,
@@ -587,7 +559,6 @@ async function createUploadSession(
     file,
     region,
   };
-
 
   await saveUploadSession(session);
 
@@ -627,7 +598,8 @@ function getUploadStateText(state: UploadState): string {
 }
 
 export function CustomerUpload() {
-  const { setUploadStats, uuid, region, markUploadStarted } = useCustomerUpload();
+  const { setUploadStats, uuid, region, markUploadStarted } =
+    useCustomerUpload();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -702,17 +674,14 @@ export function CustomerUpload() {
   }, []);
 
   const attachUploadSession = useCallback(
-    (
-      fileId: string,
-      session?: UploadSession,
-    ): void => {
+    (fileId: string, session?: UploadSession): void => {
       setSelectedFiles((currentFiles) =>
         currentFiles.map((selectedFile) =>
           selectedFile.id === fileId
             ? {
-              ...selectedFile,
-              uploadSession: session,
-            }
+                ...selectedFile,
+                uploadSession: session,
+              }
             : selectedFile,
         ),
       );
@@ -735,7 +704,7 @@ export function CustomerUpload() {
       let currentSession = selectedFile.uploadSession;
 
       for (
-        let uploadAttempt = 1;
+        let uploadAttempt = 0;
         uploadAttempt <= MAX_UPLOAD_RESTARTS;
         uploadAttempt += 1
       ) {
@@ -809,8 +778,8 @@ export function CustomerUpload() {
                   selectedFile.uploadSession.uploadToken,
                 );
               } catch {
-                  console.error("Could not delete old upload session.");
-               }
+                console.error("Could not delete old upload session.");
+              }
             }
 
             attachUploadSession(selectedFile.id, undefined);
@@ -846,7 +815,7 @@ export function CustomerUpload() {
         }
       }
     },
-    [ attachUploadSession, markUploadStarted, region, uuid ],
+    [attachUploadSession, markUploadStarted, region, uuid],
   );
 
   useEffect(() => {
@@ -896,7 +865,7 @@ export function CustomerUpload() {
 
         await runWithConcurrency(
           filesToResume,
-          UPLOAD_CONCURRENCY,
+          FILE_UPLOAD_CONCURRENCY,
           (selectedFile) => processFile(selectedFile, true),
         );
       } catch (error) {
@@ -1067,7 +1036,7 @@ export function CustomerUpload() {
     try {
       await runWithConcurrency(
         filesToUpload,
-        UPLOAD_CONCURRENCY,
+        FILE_UPLOAD_CONCURRENCY,
         (selectedFile) =>
           processFile(selectedFile, Boolean(selectedFile.uploadSession)),
       );

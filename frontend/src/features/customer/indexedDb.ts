@@ -90,10 +90,7 @@ export async function saveUploadSettings(
   const database = await openDatabase();
 
   try {
-    const transaction = database.transaction(
-      "settings",
-      "readwrite",
-    );
+    const transaction = database.transaction("settings", "readwrite");
 
     transaction.objectStore("settings").put(settings);
 
@@ -109,25 +106,20 @@ export async function getUploadSettings(
   const database = await openDatabase();
 
   try {
-    return await new Promise<UploadSettings | null>(
-      (resolve, reject) => {
-        const request = database
-          .transaction("settings", "readonly")
-          .objectStore("settings")
-          .get(uuid);
+    return await new Promise<UploadSettings | null>((resolve, reject) => {
+      const request = database
+        .transaction("settings", "readonly")
+        .objectStore("settings")
+        .get(uuid);
 
-        request.onsuccess = () => {
-          resolve(request.result ?? null);
-        };
+      request.onsuccess = () => {
+        resolve(request.result ?? null);
+      };
 
-        request.onerror = () => {
-          reject(
-            request.error ??
-            new Error("Failed to read upload settings."),
-          );
-        };
-      },
-    );
+      request.onerror = () => {
+        reject(request.error ?? new Error("Failed to read upload settings."));
+      };
+    });
   } finally {
     database.close();
   }
