@@ -404,18 +404,38 @@ async function uploadAllChunks(
   }
 
   let uploadedBytes = 0;
+  const failedOffsets: number[] = [];
 
   await runWithConcurrency(
     offsets,
     CHUNK_UPLOAD_CONCURRENCY,
     async (offset) => {
-      await uploadChunkWithRetry(session, offset, onRetry);
+      try {
+        await uploadChunkWithRetry(session, offset, onRetry);
 
-      uploadedBytes += Math.min(session.chunkSize, session.file.size - offset);
+        uploadedBytes += Math.min(
+          session.chunkSize,
+          session.file.size - offset,
+        );
 
-      onProgress(calculateProgress(uploadedBytes, session.file.size));
+        onProgress(calculateProgress(uploadedBytes, session.file.size));
+      } catch (error) {
+        failedOffsets.push(offset);
+
+        console.error(
+          `[UPLOAD] Chunk ${offset} failed during initial upload:`,
+          error,
+        );
+      }
     },
   );
+
+  if (failedOffsets.length > 0) {
+    console.warn(
+      `[UPLOAD] Initial pass finished with ${failedOffsets.length} failed chunk(s):`,
+      failedOffsets,
+    );
+  }
 }
 
 /**
