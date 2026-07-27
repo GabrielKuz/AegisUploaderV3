@@ -2,6 +2,7 @@ import asyncio
 from io import BytesIO
 import os
 import datetime
+from sqlite3 import OperationalError
 import traceback
 import traceback
 import psycopg
@@ -14,6 +15,7 @@ from typing import Annotated, Literal
 import logging
 
 from sqlalchemy import text, cast
+from psycopg.errors import DeadlockDetected
 from sqlalchemy.dialects.postgresql import JSONB
 from cachetools import TTLCache
 from threading import Lock
@@ -472,6 +474,21 @@ async def upload_file_chunk(
         db.commit()
 
     except HTTPException:
+        db.rollback()
+        raise
+    except OperationalError as e: # Handle database operational errors, such as connection issues or deadlocks
+        db.rollback()
+
+        if isinstance(e.orig, DeadlockDetected): # If a deadlock is detected, raise a 409 Conflict error to indicate that the request could not be completed due to a conflict with the current state of the resource
+            raise HTTPException(
+                status_code=409,
+                detail={
+                    "error": "concurrent_upload",
+                    "retryable": True,
+                },
+                headers={"Retry-After": "0.1"},
+            )
+
         raise
 
     except Exception:
