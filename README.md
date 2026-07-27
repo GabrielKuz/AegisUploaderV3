@@ -31,7 +31,7 @@ This application provides a secure mechanism for customers to upload files assoc
 
 ### Backend
 
-- Python 3.14.5
+- Python 3.14.6
 - FastAPI
 - PostgreSQL (via SQLAlchemy)
 - Alembic
