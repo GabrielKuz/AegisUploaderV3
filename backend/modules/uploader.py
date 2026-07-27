@@ -2,7 +2,7 @@ import asyncio
 from io import BytesIO
 import os
 import datetime
-from sqlite3 import OperationalError
+from psycopg import OperationalError
 import traceback
 import traceback
 import psycopg
@@ -447,6 +447,15 @@ async def upload_file_chunk(
                     UploadSession.link_uuid == link_uuid
                 ).with_for_update().populate_existing().first()
             )
+        except DeadlockDetected as e: # Handle deadlocks by raising a 409 Conflict error to indicate that the request could not be completed due to a conflict with the current state of the resource
+            raise HTTPException(
+                status_code=409,
+                detail={
+                    "error": "concurrent_upload",
+                    "retryable": True,
+                },
+                headers={"Retry-After": "0.1"},
+            )
         except OperationalError as e: # Handle database operational errors, such as connection issues or deadlocks
             if isinstance(e.orig, DeadlockDetected): # If a deadlock is detected, raise a 409 Conflict error to indicate that the request could not be completed due to a conflict with the current state of the resource
                 raise HTTPException(
@@ -457,7 +466,6 @@ async def upload_file_chunk(
                     },
                     headers={"Retry-After": "0.1"},
                 )
-        
 
 
         if upload_session is None:
