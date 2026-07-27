@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   semgrep:
-    name: Scan
+    name: Security Scan
     runs-on: ubuntu-latest
 
     steps:
@@ -22,14 +22,16 @@ jobs:
       - name: Install Semgrep
         run: pip install semgrep
 
-      - name: Run Semgrep scan
+      - name: Run Semgrep
         run: |
           semgrep scan \
-            --config auto \
+            --config p/security-audit \
+            --config p/owasp-top-ten \
+            --config p/secrets \
             --sarif \
             --output semgrep.sarif
 
-      - name: Upload SARIF results
+      - name: Upload SARIF
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: semgrep.sarif
