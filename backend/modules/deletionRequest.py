@@ -35,7 +35,7 @@ def get_db(): # Avoid reusing the same session across requests, which can cause 
         logger.debug("Closed database session")
 
 @router.post("/requestfordeletion/{link_uuid}") #Requests from client side to delete data. Only sends email 
-@rate_limit(limit=5, window=60, key=lambda args: args['link_uuid'])  # Limit to 5 requests per minute per link_uuid
+#@rate_limit(limit=5, window=60, key=lambda args: args['link_uuid'])  # Limit to 5 requests per minute per link_uuid
 async def request_For_Data_Deletion(link_uuid: str, db: Annotated[sqlalchemy.orm.Session, Depends(get_db)]):
     if not IsUUID(link_uuid):
         raise HTTPException(status_code=400, detail="Invalid UUID format")
@@ -51,17 +51,19 @@ async def request_For_Data_Deletion(link_uuid: str, db: Annotated[sqlalchemy.orm
     db.commit()
     try:
         if not os.getenv("TESTING") or os.getenv("TESTING").lower() != "true": # Only send email if not in testing mode
-            session = Session()
-            link_record = session.query(LinkRecord).filter_by(uuid=link_uuid).first()
+            link_record = db.query(LinkRecord).filter_by(uuid=link_uuid).first()
             creator = link_record.creator if link_record else "Unknown"
             company = link_record.customer if link_record else "Unknown"
             itar = link_record.itar if link_record else "Unknown"
             logger.debug(f"Retrieved link record for UUID {link_uuid} in Datadeletion: {link_record}")
-            storage_region = (session.query(UploadRecord.storage_region).filter(UploadRecord.link_uuid == link_uuid).first() if link_record else "Unknown") or "Unknown" # if theirs an uplaod sharing the uuid gets its region else Unknown
+            storage_region = (db.query(UploadRecord.storage_region).filter(UploadRecord.link_uuid == link_uuid).scalar() if link_record else "Unknown") or "Unknown" # if theirs an uplaod sharing the uuid gets its region else Unknown
             status = link_record.status if link_record else "Unknown"
             created_at = link_record.timestamp if link_record else "Unknown"
             case_id = link_record.case_id if link_record else "Unknown"
+            db.close()  # Close the session after retrieving the necessary data
+            logger.info(f"Connection string exists: {bool(CONNECTION_STRING)}")
             async with EmailClient.from_connection_string(CONNECTION_STRING) as client:
+                logger.info("Email client created")
                 message = {
                     "content": {
                         "subject": f"Deletion Request - {case_id}",
@@ -140,22 +142,27 @@ Please review this request and take the appropriate action.
                         "displayName": os.getenv("ACS_HELPDESK_ADDRESS")
                     }
                 ],
-                "cc": [
-                    {"address": creator, "displayName": creator} if creator != "Unknown" else {}
-                ],
+                "cc": 
+                    [{"address": creator, "displayName": creator}] if creator != "Unknown" else []
+                ,
             },
             "senderAddress": os.getenv("ACS_SENDER_ADDRESS", "DoNotReply@aiscorp.com")
         }
 
             try:
-                response = await client.begin_send(message) # can be async
-                await response.result()  # Wait for the operation to complete
-                logger.info(f"Email sent successfully.")
+                await sendDeletionEmail(message)
+                logger.info(f"Deletion request email sent for UUID {link_uuid}")
             except Exception as e:
-                logger.warning(f"Error occurred while sending email: {e}")
+                logger.exception(f"Error occurred while sending email: {e}")
 
         return {"message": "Request for data deletion received. An email has been sent to the administrator for further action."}
 
     except Exception as e:
         logger.error(f"Error processing deletion request for UUID {link_uuid}: {e}")
         raise HTTPException(status_code=400, detail="Internal Server Error")
+    
+async def sendDeletionEmail(message):
+    logger.info("Sending deletion request email...")
+    async with EmailClient.from_connection_string(CONNECTION_STRING) as client:
+        response = await client.begin_send(message)
+        await response.result()
