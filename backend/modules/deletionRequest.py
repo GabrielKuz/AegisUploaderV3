@@ -18,32 +18,12 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
 from Utils import IsUUID
 import logging
+from modules.rateLimit import rate_limit
 from modules import Session
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
 CONNECTION_STRING = os.getenv("ACS_CONNECTION_STRING")
-# Per-upload-token rate limiter
-_upload_status_rate_limit = TTLCache(
-    maxsize=10_000,  # Max tracked tokens
-    ttl=60          #window size
-)
-
-_upload_status_rate_limit_lock = Lock()
-
-
-def check_upload_status_rate_limit(link_uuid: str):
-    with _upload_status_rate_limit_lock:
-        requests = _upload_status_rate_limit.get(link_uuid, 0)
-
-        if requests >= 1: # 10 per minute per upload token
-            raise HTTPException(
-                status_code=429,
-                detail="Too many upload status requests"
-            )
-
-        _upload_status_rate_limit[link_uuid] = requests + 1
-
 def get_db(): # Avoid reusing the same session across requests, which can cause issues with concurrent transactions
     db = Session()
 
@@ -55,8 +35,8 @@ def get_db(): # Avoid reusing the same session across requests, which can cause 
         logger.debug("Closed database session")
 
 @router.post("/requestfordeletion/{link_uuid}") #Requests from client side to delete data. Only sends email 
+@rate_limit(limit=1, window=60, key="link_uuid")  # Limit to 1 request per minute per link_uuid
 async def request_For_Data_Deletion(link_uuid: str, db: Annotated[sqlalchemy.orm.Session, Depends(get_db)]):
-    check_upload_status_rate_limit(link_uuid)
     if not IsUUID(link_uuid):
         raise HTTPException(status_code=400, detail="Invalid UUID format")
     #get upload record from db

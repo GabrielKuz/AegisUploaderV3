@@ -25,6 +25,7 @@ from modules.uploadSchemas import StartUploadResponse, UploadChunkResponse, Uplo
 from datetime import timezone
 from modules import Session
 from fastapi import Request
+from modules.rateLimit import rate_limit
 from pathvalidate import sanitize_filename, validate_filename
 from modules.auth import User, requireRoles
 from modules.models import StorageRegion, UploadChunk, UploadRecord, LinkRecord, UploadSession
@@ -482,34 +483,13 @@ async def upload_file_chunk(
         ranges=upload_session.received_ranges,
     )
 
-# Per-upload-token rate limiter
-_upload_status_rate_limit = TTLCache(
-    maxsize=10_000,  # Max tracked tokens
-    ttl=60          #window size
-)
-
-_upload_status_rate_limit_lock = Lock()
-
-
-def check_upload_status_rate_limit(upload_token: str):
-    with _upload_status_rate_limit_lock:
-        requests = _upload_status_rate_limit.get(upload_token, 0)
-
-        if requests >= 10: # 10 per minute per upload token
-            raise HTTPException(
-                status_code=429,
-                detail="Too many upload status requests"
-            )
-
-        _upload_status_rate_limit[upload_token] = requests + 1
-
 @router.get("/uploadfile/{link_uuid}/{upload_token}/status", response_model=UploadStatusResponse) # Provides enough data for the client to resume an upload or verify the upload status, even if the link has expired
+@rate_limit(limit=10, window=60, key="upload_token") # 10 requests per minute per upload token
 def upload_status(
     link_uuid: str,
     upload_token: str,
     db: Annotated[sqlalchemy.orm.Session, Depends(get_db)]
 ):
-    check_upload_status_rate_limit(upload_token) # Rate limit to prevent abuse and DoS attacks since this endpoint is very expensive
     if not IsUUID(link_uuid):
         raise HTTPException(status_code=400, detail="Invalid uuid")
 
