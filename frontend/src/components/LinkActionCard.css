@@ -55,7 +55,7 @@
   color: var(--theme-accent);
   font-family: var(--font-mono);
   font-size: 25px;
-  font-weight: 500;
+  font-weight: var(--font-medium);
   line-height: 1;
 }
 
@@ -96,7 +96,7 @@
   color: var(--theme-text);
   font-family: var(--font-heading);
   font-size: clamp(27px, 2.4vw, 36px);
-  font-weight: 400;
+  font-weight: var(--font-regular);
   letter-spacing: -0.055em;
   line-height: 1.14;
   margin: 0 0 16px;
@@ -114,7 +114,7 @@
   color: var(--theme-accent);
   display: flex;
   font-size: 15px;
-  font-weight: 700;
+  font-weight: var(--font-bold);
   gap: 14px;
   margin-top: auto;
   padding-top: 36px;

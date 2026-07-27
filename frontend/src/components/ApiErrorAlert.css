@@ -21,7 +21,7 @@
   flex: 0 0 30px;
   font-family: var(--font-heading);
   font-size: 17px;
-  font-weight: 800;
+  font-weight: var(--font-extrabold);
   height: 30px;
   line-height: 1;
   place-items: center;

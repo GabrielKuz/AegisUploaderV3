@@ -22,7 +22,7 @@
   color: var(--theme-text);
   font-family: var(--font-heading);
   font-size: clamp(44px, 6vw, 68px);
-  font-weight: 400;
+  font-weight: var(--font-regular);
   letter-spacing: -0.065em;
   line-height: 1.02;
   margin: 0;
@@ -32,7 +32,7 @@
   color: var(--theme-accent);
   font-size: clamp(18px, 1rem + 1vw, 20px);
   font-style: italic;
-  font-weight: 400;
+  font-weight: var(--font-regular);
   line-height: 1.65;
   margin: 18px 0 0;
   max-width: 680px;

@@ -9,7 +9,7 @@
   display: inline-flex;
   font: inherit;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: var(--font-semibold);
   gap: 8px;
   justify-content: center;
   min-height: 40px;

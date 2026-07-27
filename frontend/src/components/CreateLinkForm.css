@@ -24,7 +24,7 @@
   color: var(--theme-text);
   font-family: var(--font-heading);
   font-size: clamp(46px, 5vw, 68px);
-  font-weight: 400;
+  font-weight: var(--font-regular);
   letter-spacing: -0.055em;
   line-height: 1.04;
   margin: 0;
@@ -37,7 +37,7 @@
   margin: 12px 0 0;
   max-width: 700px;
   font-style: italic;
-  font-weight: 400;
+  font-weight: var(--font-regular);
 }
 
 /* ==========================================================================
@@ -83,7 +83,7 @@
   color: var(--theme-text);
   font-family: var(--font-body);
   font-size: clamp(22px, 2vw, 24px);
-  font-weight: 500;
+  font-weight: var(--font-medium);
   letter-spacing: -0.04em;
   line-height: 1.4;
   padding-bottom: 10px;
@@ -147,7 +147,7 @@
 .create-link-actions button {
   border-radius: var(--radius-md);
   font-size: clamp(14px, 2vw, 16px);
-  font-weight: 600;
+  font-weight: var(--font-semibold);
   min-height: 44px;
   padding: 0 15px;
   transition:
@@ -209,7 +209,7 @@
   border-bottom: 2px solid var(--theme-border-strong);
   font-family: var(--font-body);
   font-size: clamp(22px, 2vw, 24px);
-  font-weight: 500;
+  font-weight: var(--font-medium);
   letter-spacing: -0.04em;
   line-height: 1.4;
   margin: 0 0 12px;
@@ -220,7 +220,7 @@
   font-size: clamp(16px, 2vw, 18px);
   font-family: var(--font-body);
   line-height: 1.5;
-  font-weight: 400;
+  font-weight: var(--font-regular);
   padding-top: 2px;
 }
 
@@ -239,13 +239,13 @@
 }
 
 .create-link-modal {
-  background: var(--theme-surface-but-it-is-not-transparent-because-that-is-really-annoying);
+  background: var(--theme-surface-solid);
   border: 2px solid var(--theme-card-border);
   border-radius: var(--radius-lg);
   box-shadow:
-      0 18px 40px rgba(0, 0, 0, 0.22),
-      0 8px 16px rgba(0, 0, 0, 0.12),
-      var(--theme-card-shadow);
+    0 18px 40px rgba(0, 0, 0, 0.22),
+    0 8px 16px rgba(0, 0, 0, 0.12),
+    var(--theme-card-shadow);
   color: var(--theme-text);
   display: grid;
   gap: 18px;
@@ -258,7 +258,7 @@
   color: var(--theme-text);
   font-family: var(--font-body);
   font-size: clamp(22px, 2vw, 26px);
-  font-weight: 500;
+  font-weight: var(--font-medium);
   letter-spacing: -0.04em;
   line-height: 1.4;
   margin: 0;
@@ -334,7 +334,7 @@
   cursor: pointer;
   font-family: var(--font-body);
   font-size: 16px;
-  font-weight: 600;
+  font-weight: var(--font-semibold);
   justify-self: end;
   min-height: 44px;
   min-width: 120px;

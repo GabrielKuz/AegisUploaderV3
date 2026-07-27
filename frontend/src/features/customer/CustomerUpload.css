@@ -22,7 +22,7 @@
   color: var(--theme-text);
   font-family: var(--font-heading);
   font-size: clamp(42px, 6vw, 64px);
-  font-weight: 400;
+  font-weight: var(--font-regular);
   letter-spacing: -0.06em;
   line-height: 1.02;
   margin: 0;
@@ -32,9 +32,8 @@
   font-size: 17px;
   line-height: 1.65;
   margin: 0;
-
   font-style: italic;
-  font-weight: 400;
+  font-weight: var(--font-regular);
 }
 
 /* ==========================================================================
@@ -69,7 +68,7 @@
   color: var(--theme-text);
   font-size: clamp(16px, 1vw, 18px);
   font-family: var(--font-body);
-  font-weight: 500;
+  font-weight: var(--font-medium);
   margin: 0;
 }
 
@@ -86,7 +85,7 @@
   border: 0;
   border-radius: var(--radius-md);
   color: var(--white);
-  font-weight: 700;
+  font-weight: var(--font-bold);
   min-height: 44px;
   padding: 0 20px;
   transition:
@@ -116,7 +115,7 @@
   border-radius: var(--radius-md);
   color: var(--aegis-red);
   font-size: 13px;
-  font-weight: 700;
+  font-weight: var(--font-bold);
   min-height: 34px;
   padding: 0 12px;
   transition:
@@ -170,7 +169,7 @@
 .selected-file-info span {
   color: var(--theme-text);
   font-size: 14px;
-  font-weight: 700;
+  font-weight: var(--font-bold);
   min-width: 0;
   overflow-wrap: anywhere;
 }
@@ -190,7 +189,7 @@
 .selected-file-actions a {
   color: var(--theme-accent);
   font-size: 13px;
-  font-weight: 700;
+  font-weight: var(--font-bold);
   text-decoration: underline;
   text-underline-offset: 3px;
 }

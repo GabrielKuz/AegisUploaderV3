@@ -25,7 +25,7 @@
   color: var(--theme-text);
   font-family: var(--font-heading);
   font-size: clamp(46px, 5vw, 68px);
-  font-weight: 400;
+  font-weight: var(--font-regular);
   letter-spacing: -0.065em;
   line-height: 1.02;
   margin: 0;
@@ -36,9 +36,8 @@
   font-size: clamp(18px, 1rem + 1vw, 20px);
   line-height: 1.6;
   margin: 12px 0 0;
-
   font-style: italic;
-  font-weight: 400;
+  font-weight: var(--font-regular);
 }
 
 .data-page-action {
@@ -175,7 +174,7 @@
 
 .data-table-primary-link {
   color: var(--theme-accent);
-  font-weight: 600;
+  font-weight: var(--font-semibold);
   overflow-wrap: anywhere;
   text-decoration: underline;
   text-underline-offset: 3px;
@@ -188,8 +187,6 @@
   text-align: left;
   width: 130px;
 }
-
-
 
 .data-table td:first-child,
 .data-table th:first-child {
@@ -277,7 +274,7 @@
   border-radius: var(--radius-pill);
   display: inline-flex;
   font-size: inherit;
-  font-weight: 600;
+  font-weight: var(--font-semibold);
   font-family: inherit;
   padding: 5px 10px;
   display: inline-flex;
@@ -298,13 +295,11 @@
   box-shadow: var(--theme-card-shadow);
   color: var(--theme-text);
   font-size: 16px;
-  font-weight: 500;
+  font-weight: var(--font-medium);
   margin: 0;
   padding: 18px 20px;
   margin-bottom: 16px;
 }
-
-
 
 .upload-link-summary {
   background: var(--theme-surface);
@@ -326,7 +321,7 @@
   color: var(--theme-text);
   font-family: var(--font-body);
   font-size: 14px;
-  font-weight: 600;
+  font-weight: var(--font-semibold);
 }
 
 .upload-link-summary-row span {
@@ -401,7 +396,7 @@
   flex: 0 0 30px;
   font-family: var(--font-heading);
   font-size: 17px;
-  font-weight: 800;
+  font-weight: var(--font-extrabold);
   height: 30px;
   line-height: 1;
   place-items: center;

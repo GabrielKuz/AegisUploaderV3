@@ -234,7 +234,7 @@
   margin: 0;
   color: #ffffff;
   font-size: clamp(34px, 4vw, 64px);
-  font-weight: 400;
+  font-weight: var(--font-regular);
   line-height: 0.98;
   letter-spacing: -0.07em;
 }
@@ -385,7 +385,7 @@
   margin: 0;
   color: var(--theme-text);
   font-size: clamp(30px, 3.8vw, 58px);
-  font-weight: 400;
+  font-weight: var(--font-regular);
   line-height: 1;
   text-align: center;
   letter-spacing: -0.06em;
@@ -780,31 +780,31 @@
    TINY SCREENS
    ========================================================================== */
 
- @media (max-width: 520px) {
-   .sso-button {
-     grid-template-columns: auto 1fr;
-     grid-template-areas:
-       "logo arrow"
-       "text text";
+@media (max-width: 520px) {
+  .sso-button {
+    grid-template-columns: auto 1fr;
+    grid-template-areas:
+      "logo arrow"
+      "text text";
 
-     row-gap: 8px;
-     padding: 14px;
-     text-align: center;
-   }
+    row-gap: 8px;
+    padding: 14px;
+    text-align: center;
+  }
 
-   .sso-button-logo {
-     grid-area: logo;
-   }
+  .sso-button-logo {
+    grid-area: logo;
+  }
 
-   .sso-button-arrow {
-     grid-area: arrow;
-     justify-self: end;
-   }
+  .sso-button-arrow {
+    grid-area: arrow;
+    justify-self: end;
+  }
 
-   .sso-button-label {
-     grid-area: text;
-   }
- }
+  .sso-button-label {
+    grid-area: text;
+  }
+}
 @media (max-width: 420px) {
   .login-header {
     padding-inline: 14px;
