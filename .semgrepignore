@@ -4,3 +4,5 @@ vendor/
 dist/
 build/
 .venv/
+backend/tests/
+tests/
