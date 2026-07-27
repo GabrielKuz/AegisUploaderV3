@@ -297,7 +297,7 @@ async def start_upload(
     }
 
 @router.post("/uploadfile/{link_uuid}/{upload_token}", response_model=UploadChunkResponse) # Even if link is expired, allow the upload to continue if it was started before expiration
-@rate_limit(limit=20, window=60, key="upload_token")
+@rate_limit(limit=150, window=60, key="upload_token")
 async def upload_file_chunk(
     link_uuid: str,
     upload_token: str,
