@@ -6,6 +6,7 @@ from fastapi import HTTPException
 from limits import RateLimitItemPerSecond
 from limits.storage import MemoryStorage
 from limits.strategies import FixedWindowRateLimiter
+import os
 
 
 def rate_limit(*, limit: int, window: int, key: str | Callable):
@@ -21,6 +22,9 @@ def rate_limit(*, limit: int, window: int, key: str | Callable):
         def check_rate_limit(args, kwargs):
             bound = sig.bind(*args, **kwargs)
             bound.apply_defaults()
+
+            if (os.getenv("TESTING", "false").lower() == "true"):
+                return
 
             if isinstance(key, str):
                 identifier = bound.arguments[key]

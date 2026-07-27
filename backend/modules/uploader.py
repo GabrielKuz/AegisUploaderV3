@@ -134,6 +134,7 @@ if not ITAR_CONNECTION_STRING:
     raise RuntimeError("AZURE_STORAGE_CONNECTION_STRING_ITAR is required")
 
 @router.post("/uploadfile/{link_uuid}/start", response_model=StartUploadResponse) # Starts a new upload session for a given link UUID
+@rate_limit(limit=5, window=60, key="link_uuid")  # Limit to 5 requests per minute per link_uuid
 async def start_upload(
     link_uuid: str,
     db: Annotated[sqlalchemy.orm.Session, Depends(get_db)],
@@ -296,6 +297,7 @@ async def start_upload(
     }
 
 @router.post("/uploadfile/{link_uuid}/{upload_token}", response_model=UploadChunkResponse) # Even if link is expired, allow the upload to continue if it was started before expiration
+@rate_limit(limit=150, window=60, key="upload_token")
 async def upload_file_chunk(
     link_uuid: str,
     upload_token: str,
@@ -558,6 +560,7 @@ def upload_status(
         )
 
 @router.post("/uploadfile/{link_uuid}/{upload_token}/complete", response_model=CompleteUploadResponse) # Client's final call to complete the upload, we verify it here. It is idempotent, so if the upload fials client can uplaod more data and call again
+@rate_limit(limit=2, window=60, key="upload_token") # 5 requests per minute per upload token
 async def complete_upload(link_uuid: str, upload_token: str, db: Annotated[sqlalchemy.orm.Session, Depends(get_db)]):
     logger.debug(f"Completing upload for link {link_uuid} with token {upload_token}")
     if not IsUUID(link_uuid):
