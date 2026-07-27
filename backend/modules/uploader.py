@@ -440,12 +440,24 @@ async def upload_file_chunk(
         raise HTTPException(status_code=400, detail="Chunk exceeds expected file size")
 
     try:
-        upload_session = ( # Lock the upload session to prevent concurrent updates to the received ranges and size
-            db.query(UploadSession).filter(
-                UploadSession.upload_token == upload_token,
-                UploadSession.link_uuid == link_uuid
-            ).with_for_update().populate_existing().first()
-        )
+        try:
+            upload_session = ( # Lock the upload session to prevent concurrent updates to the received ranges and size
+                db.query(UploadSession).filter(
+                    UploadSession.upload_token == upload_token,
+                    UploadSession.link_uuid == link_uuid
+                ).with_for_update().populate_existing().first()
+            )
+        except OperationalError as e: # Handle database operational errors, such as connection issues or deadlocks
+            if isinstance(e.orig, DeadlockDetected): # If a deadlock is detected, raise a 409 Conflict error to indicate that the request could not be completed due to a conflict with the current state of the resource
+                raise HTTPException(
+                    status_code=409,
+                    detail={
+                        "error": "concurrent_upload",
+                        "retryable": True,
+                    },
+                    headers={"Retry-After": "0.1"},
+                )
+        
 
 
         if upload_session is None:
