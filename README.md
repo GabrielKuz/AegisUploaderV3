@@ -33,7 +33,7 @@ This application provides a secure mechanism for customers to upload files assoc
 
 - Python 3.14.5
 - FastAPI
-- PostgreSQL
+- PostgreSQL (via SQLAlchemy)
 - Alembic
 - Docker & Docker Compose
 - Nginx
