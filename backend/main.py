@@ -33,13 +33,13 @@ app.include_router(deletionRequest_router)
 #setup_telemetry(app)  # init opentelemetry
 #app.add_middleware(TelemetryMiddleware)
 @app.post("/links/create/")
-@rate_limit(limit=5, window=60, key=lambda args: args['current_user'].get('username', 'unknown'))
+@rate_limit(limit=5, window=60, key=lambda args: getattr(args.get("current_user"), "username", "unknown"))  # Limit to 5 requests per minute per user
 def create_link(link_request: LinkRequest, current_user: Annotated[User, Depends(requireRoles("User", "Admin"))]):  # TODO: Change to getCurrentActiveUser after testing
     #authentication: bool = userAuthenticated(getCurrentUser())
     return generate_links(link_request, current_user)
 
 @app.get("/links/")
-@rate_limit(limit=15, window=60, key=lambda args: args['current_user'].get('username', 'unknown'))
+@rate_limit(limit=15, window=60, key=lambda args: getattr(args.get("current_user"), "username", "unknown"))
 def get_links(current_user: Annotated[User, Depends(requireRoles("User", "Admin"))]):  # TODO: Change to getCurrentActiveUser after testing
     return get_all_links(current_user)
 
