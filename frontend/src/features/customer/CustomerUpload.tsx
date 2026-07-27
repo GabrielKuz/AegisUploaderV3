@@ -23,9 +23,10 @@ import "./CustomerUpload.css";
 
 const MAX_CHUNK_RETRIES = 3;
 const RETRY_DELAY_MS = 1_500;
-const HASH_CONCURRENCY = 8;
-const CHUNK_UPLOAD_CONCURRENCY = 12;
-const FILE_UPLOAD_CONCURRENCY = 2;
+// Temporary Change
+const HASH_CONCURRENCY = 4;
+const CHUNK_UPLOAD_CONCURRENCY = 1;
+const FILE_UPLOAD_CONCURRENCY = 1;
 const MAX_UPLOAD_RESTARTS = 4;
 
 type SelectedFile = {
