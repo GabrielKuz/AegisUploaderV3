@@ -35,7 +35,7 @@ def get_db(): # Avoid reusing the same session across requests, which can cause 
         logger.debug("Closed database session")
 
 @router.post("/requestfordeletion/{link_uuid}") #Requests from client side to delete data. Only sends email 
-@rate_limit(limit=1, window=60, key="link_uuid")  # Limit to 1 request per minute per link_uuid
+@rate_limit(limit=5, window=60, key=lambda args: args['link_uuid'])  # Limit to 5 requests per minute per link_uuid
 async def request_For_Data_Deletion(link_uuid: str, db: Annotated[sqlalchemy.orm.Session, Depends(get_db)]):
     if not IsUUID(link_uuid):
         raise HTTPException(status_code=400, detail="Invalid UUID format")
