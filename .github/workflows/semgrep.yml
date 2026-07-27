@@ -1,0 +1,37 @@
+name: Semgrep
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  semgrep:
+    name: Security Scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Semgrep
+        run: pip install semgrep
+
+      - name: Run Semgrep
+        run: |
+          semgrep scan \
+            --config p/security-audit \
+            --config p/owasp-top-ten \
+            --config p/secrets \
+            --sarif \
+            --output semgrep.sarif
+
+      - name: Upload SARIF
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: semgrep.sarif
