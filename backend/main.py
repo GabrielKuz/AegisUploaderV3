@@ -66,14 +66,6 @@ def main(): # start the app when run directly and not through docker
 
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=False)
 
-@app.get("/links/{uuid}/download")
-@deprecated("use /uploads/{upload_id}/download instead. This assumes only one uploaded file per link")
-def download_link(uuid: str, currentUser: Annotated[User, Depends(requireRoles("User", "Admin"))]):  
-    uploads = listFiles(uuid, currentUser)
-    if len(uploads) == 1:
-        return downloadData(uploads[0]["upload_id"], currentUser)
-    if not uploads:
-        raise HTTPException(status_code=404, detail="No uploads found for this link")
 
 if __name__ == "__main__": # Doesnt get run by docker
     setup_logging()
