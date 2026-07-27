@@ -15,8 +15,8 @@ import {
   deleteUploadSession,
   getUploadSessions,
   saveUploadSession,
-
   //saveUploadSettings,
+  type StoredUploadSession,
   type UploadSession,
 } from "./indexedDb";
 import "./CustomerUpload.css";
@@ -607,6 +607,8 @@ export function CustomerUpload() {
 
   const resumedUuidRef = useRef<string | null>(null);
 
+  const savedSessionsRef = useRef<StoredUploadSession[]>([]);
+
   const dragDepthRef = useRef(0);
 
   const [selectedFiles, setSelectedFiles] = useState<SelectedFile[]>([]);
@@ -825,61 +827,43 @@ export function CustomerUpload() {
 
     resumedUuidRef.current = uuid;
 
-    async function resumeSavedUploads(): Promise<void> {
+    async function loadSavedUploadSessions(): Promise<void> {
       setResuming(true);
 
       try {
-        const savedSessions = await getUploadSessions(uuid);
-
-        if (savedSessions.length === 0) {
-          return;
-        }
-
-        const resumedFiles = savedSessions.map((session) =>
-          createSelectedFile(session.file, session),
-        );
-
-        const existingTokens = new Set(
-          selectedFilesRef.current
-            .map(({ uploadSession }) => uploadSession?.uploadToken)
-            .filter((token): token is string => Boolean(token)),
-        );
-
-        const filesToResume = resumedFiles.filter(({ uploadSession }) =>
-          Boolean(
-            uploadSession && !existingTokens.has(uploadSession.uploadToken),
-          ),
-        );
-
-        resumedFiles
-          .filter(({ uploadSession }) =>
-            Boolean(
-              uploadSession && existingTokens.has(uploadSession.uploadToken),
-            ),
-          )
-          .forEach(({ preview }) => {
-            URL.revokeObjectURL(preview);
-          });
-
-        setSelectedFiles((currentFiles) => [...currentFiles, ...filesToResume]);
-
-        await runWithConcurrency(
-          filesToResume,
-          FILE_UPLOAD_CONCURRENCY,
-          (selectedFile) => processFile(selectedFile, true),
-        );
+        savedSessionsRef.current = await getUploadSessions(uuid);
       } catch (error) {
-        console.error("Failed to resume interrupted uploads:", error);
+        console.error("Failed to load interrupted upload sessions:", error);
+
+        savedSessionsRef.current = [];
       } finally {
         setResuming(false);
       }
     }
 
-    void resumeSavedUploads();
-  }, [processFile, uuid]);
+    void loadSavedUploadSessions();
+  }, [uuid]);
 
   function handleBrowseClick(): void {
     fileInputRef.current?.click();
+  }
+
+  function getSavedSessionForFile(file: File): UploadSession | undefined {
+    const storedSession = savedSessionsRef.current.find(
+      (session) =>
+        session.uuid === uuid &&
+        session.fileName === file.name &&
+        session.fileSize === file.size,
+    );
+
+    if (!storedSession) {
+      return undefined;
+    }
+
+    return {
+      ...storedSession,
+      file,
+    };
   }
 
   function addFiles(files: FileList | File[]): void {
@@ -901,9 +885,10 @@ export function CustomerUpload() {
 
         existingKeys.add(fileKey);
 
-        filesToAdd.push(createSelectedFile(file));
-      });
+        const savedSession = getSavedSessionForFile(file);
 
+        filesToAdd.push(createSelectedFile(file, savedSession));
+      });
       return filesToAdd.length > 0
         ? [...currentFiles, ...filesToAdd]
         : currentFiles;
