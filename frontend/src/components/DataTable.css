@@ -196,9 +196,9 @@
   width: 140px;
   min-width: 140px;
 }
-
-.data-table td:nth-child(2),
-.data-table th:nth-child(2) {
+/* Only the View Links page needs a wider Upload Link column */
+.links-table td:nth-child(2),
+.links-table th:nth-child(2) {
   width: 330px;
   min-width: 330px;
 }
