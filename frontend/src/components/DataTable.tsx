@@ -231,7 +231,7 @@ export function DataTable({
     });
   }, [links, sortDirection, sortKey]);
 
-  const showActions = Boolean(uploadActionPathPrefix);
+  /*const showActions = Boolean(uploadActionPathPrefix);*/
 
   async function copyUploadLink(uuid: string): Promise<void> {
     const uploadLink = `${window.location.origin}/uploads/${uuid}`;
@@ -309,14 +309,13 @@ export function DataTable({
                 </th>
                 <th
                   scope="col"
-                  aria-sort={getAriaSort("uuid", sortKey, sortDirection)}
                 >
                   <button
                     className="data-table-sort-button"
                     type="button"
                     onClick={() => handleSort("uuid")}
                   >
-                    Upload Link {getSortIcon("uuid", sortKey, sortDirection)}
+                    Link Actions {getSortIcon("uuid", sortKey, sortDirection)}
                   </button>
                 </th>
 
@@ -404,7 +403,7 @@ export function DataTable({
                   </button>
                 </th>
 
-                {showActions && <th scope="col">Actions</th>}
+                {/*{showActions && <th scope="col">Actions</th>}*/}
               </tr>
             </thead>
 
@@ -415,6 +414,16 @@ export function DataTable({
                   <td>{supportLink.case_id}</td>
                   <td>
                     <div className="data-table-link-container">
+                      {uploadActionPathPrefix && (
+                        <Link
+                          className="data-table-action-link"
+                          to={`${uploadActionPathPrefix}/${supportLink.uuid}`}
+                          state={{ caseId: supportLink.case_id }}
+                        >
+                          View Uploads
+                        </Link>
+                      )}
+
                       <Link
                         className="data-table-action-link"
                         to={`/uploads/${supportLink.uuid}`}
@@ -464,17 +473,6 @@ export function DataTable({
 
                   <td>{formatDate(supportLink.expiration_date)}</td>
 
-                  {uploadActionPathPrefix && (
-                    <td>
-                      <Link
-                        className="data-table-action-link"
-                        to={`${uploadActionPathPrefix}/${supportLink.uuid}`}
-                        state={{ caseId: supportLink.case_id }}
-                      >
-                        View Uploads
-                      </Link>
-                    </td>
-                  )}
                 </tr>
               ))}
             </tbody>
