@@ -199,17 +199,18 @@
 
 .data-table td:nth-child(2),
 .data-table th:nth-child(2) {
-  width: 180px;
-  min-width: 180px;
+  width: 330px;
+  min-width: 330px;
 }
 
 .data-table-link-container {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   /*width: 100%;*/
-  width: auto;
-  justify-content: flex-start;
+  /*width: auto;*/
+  /*justify-content: flex-start;*/
+  flex-wrap: nowrap;
 }
 
 .data-table-link-uuid {
