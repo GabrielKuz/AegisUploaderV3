@@ -110,6 +110,23 @@ def validate_file_hash(contents: bytes, file_hash_clientside: str | None) -> str
     return computed_hash
 
 
+def _is_deadlock_error(error: Exception) -> bool:
+    return isinstance(error, DeadlockDetected) or (
+        isinstance(error, OperationalError) and isinstance(error.orig, DeadlockDetected)
+    )
+
+
+def _concurrent_upload_http_exception() -> HTTPException:
+    return HTTPException(
+        status_code=503,
+        detail={
+            "error": "concurrent_upload",
+            "retryable": True,
+        },
+        headers={"Retry-After": "0.1"},
+    )
+
+
 
 def find_link_entry(link_uuid: str, db): # Query the db to find the record matching the link UUID
     logger.debug(f"Finding link entry for UUID: {link_uuid}")
@@ -310,6 +327,7 @@ async def upload_file_chunk(
     chunk_hash: Annotated[str | None, Header(alias="X-Chunk-Hash")] = None,
 ):
     received_size = int(request.headers.get("Content-Length", 0)) # Content length is harder to spoof than the X-Chunk-Size header, so we use it to validate the chunk size
+    normalized_chunk_hash = chunk_hash.strip().lower() if chunk_hash else None
     if not IsUUID(link_uuid):
         raise HTTPException(status_code=400, detail="Invalid uuid")
 
@@ -330,14 +348,24 @@ async def upload_file_chunk(
 
     if upload_session is None:
         raise HTTPException(status_code=404, detail="Upload session not found")
-    
-    if chunk_offset != 0 and chunk_offset % upload_session.chunk_size != 0 and chunk_offset + received_size != upload_session.expected_size: # Raise unless final chunk, which can be smaller than the chunk size
+
+    upload_session_id = upload_session.upload_id
+    upload_session_case_id = upload_session.case_id
+    upload_session_blob_name = upload_session.blob_name
+    upload_session_expected_size = upload_session.expected_size
+    upload_session_chunk_size = upload_session.chunk_size
+    upload_session_completed = upload_session.completed
+    upload_session_itar_status = upload_session.itar_status
+    upload_session_storage_region = upload_session.storage_region
+    upload_session_received_ranges = list(upload_session.received_ranges or [])
+
+    if chunk_offset != 0 and chunk_offset % upload_session_chunk_size != 0 and chunk_offset + received_size != upload_session_expected_size: # Raise unless final chunk, which can be smaller than the chunk size
         raise HTTPException(status_code=400, detail="Chunk offset must align with upload chunk size")
 
-    if upload_session.completed: # Prevent reusing stale upload sessions
+    if upload_session_completed: # Prevent reusing stale upload sessions
         raise HTTPException(status_code=400, detail="Upload already completed")
 
-    if chunk_offset >= upload_session.expected_size: # Prevent invalid storage writes
+    if chunk_offset >= upload_session_expected_size: # Prevent invalid storage writes
         raise HTTPException(status_code=400, detail="Chunk offset outside file size")
     
     link_entry = find_link_entry(link_uuid, db) # Grab link db entry
@@ -353,31 +381,33 @@ async def upload_file_chunk(
             raise
 
     existing_chunk = db.query(UploadChunk).filter( # Check if the chunk has already been uploaded to prevent duplicate uploads and ensure data integrity
-            UploadChunk.upload_id == upload_session.upload_id,
+            UploadChunk.upload_id == upload_session_id,
             UploadChunk.offset == chunk_offset,
         ).first()
     
 
     if existing_chunk:
-        if existing_chunk.hash.lower() != chunk_hash.strip().lower(): # If the chunk has already been uploaded but the hash is different, raise an error to prevent overwriting existing data with potentially corrupted data
-            logger.info(f"Chunk offset {chunk_offset} already uploaded with different content for upload session {upload_session.upload_id}")
-            raise HTTPException(status_code=409, detail="Chunk offset already uploaded with different content")
+        existing_chunk_hash = existing_chunk.hash
+        existing_chunk_size = existing_chunk.size
+        existing_chunk_offset = existing_chunk.offset
+        db.rollback()
 
-        return UploadChunkResponse(
-            received=existing_chunk.size,
-            offset=existing_chunk.offset,
-            hash=existing_chunk.hash,
-            ranges=upload_session.received_ranges,
-        )
+        if existing_chunk_hash.lower() != normalized_chunk_hash: # If the chunk has already been uploaded but the hash is different, raise an error to prevent overwriting existing data with potentially corrupted data
+            logger.info(f"Chunk offset {chunk_offset} already uploaded with different content for upload session {upload_session_id}")
+            raise HTTPException(status_code=409, detail="Chunk offset already uploaded with different content") # TODO: Check if still needed
 
-    if chunk_offset + upload_session.chunk_size > upload_session.expected_size: # Handle the final chunk, which can be smaller than the chunk size, but ensure it does not exceed the expected file size
-        logger.info(f"Final chunk detected for upload session {upload_session.upload_id}")
-        if chunk_offset + received_size != upload_session.expected_size: # 
+        return UploadChunkResponse(received=existing_chunk_size, offset=existing_chunk_offset, hash=existing_chunk_hash, ranges=upload_session_received_ranges)
+
+    if chunk_offset + upload_session_chunk_size > upload_session_expected_size: # Handle the final chunk, which can be smaller than the chunk size, but ensure it does not exceed the expected file size
+        logger.info(f"Final chunk detected for upload session {upload_session_id}")
+        if chunk_offset + received_size != upload_session_expected_size: # 
             raise HTTPException(status_code=400, detail="Invalid chunk size")
 
-    if upload_session.itar_status: # Select the appropriate storage provider based on the ITAR status and storage region of the upload session
+    db.rollback()
+
+    if upload_session_itar_status: # Select the appropriate storage provider based on the ITAR status and storage region of the upload session
         service_client = itarFileStorageProvider
-    elif upload_session.storage_region == StorageRegion.EU:
+    elif upload_session_storage_region == StorageRegion.EU:
         service_client = euFileStorageProvider
     else:
         service_client = usFileStorageProvider
@@ -406,120 +436,147 @@ async def upload_file_chunk(
 
             yield chunk
 
-    if received_size > upload_session.chunk_size:
+    if received_size > upload_session_chunk_size:
         raise HTTPException(status_code=400, detail="Chunk exceeds expected chunk size")
+
+    expected_end = chunk_offset + received_size
+
+    if expected_end > upload_session_expected_size:
+        raise HTTPException(status_code=400, detail="Chunk exceeds expected file size")
 
     try:
         await service_client.write_stream_range( # Begin streaming the range over to the storage provider, using the buffered stream to avoid loading the entire chunk into memory at once
             buffered_stream(),
-            f"{upload_session.case_id}/{upload_session.blob_name}", # Path
+            f"{upload_session_case_id}/{upload_session_blob_name}", # Path
             chunk_offset,
             received_size, # For the storage provider to know how much data to expect, and to validate the range
         )
-        chunk_index = chunk_offset // upload_session.chunk_size # Get the index to store in the db and for the merkle tree to compute the root hash later
-
-        chunk_record = UploadChunk(
-            upload_id=upload_session.upload_id,
-            offset=chunk_offset,
-            size=received_size,
-            chunk_index=chunk_index,
-            hash=server_hash,
-            algorithm="blake3",
-        )
-
-        db.merge(chunk_record) # Merge the chunk record into the session to handle both new and existing records, ensuring that the database reflects the latest state of the upload
-
     except Exception:
-        logger.info(f"Failed to write upload chunk for upload session {upload_session.upload_id} at offset {chunk_offset}")
+        logger.info(f"Failed to write upload chunk for upload session {upload_session_id} at offset {chunk_offset}")
         traceback.print_exc()
         raise HTTPException(status_code=500, detail="Failed to write upload chunk")
 
-    expected_end = chunk_offset + received_size
+    response_ranges = upload_session_received_ranges
+    max_database_attempts = 3
 
-    if expected_end > upload_session.expected_size:
-        raise HTTPException(status_code=400, detail="Chunk exceeds expected file size")
-
-    try:
+    for attempt in range(max_database_attempts):
         try:
-            upload_session = ( # Lock the upload session to prevent concurrent updates to the received ranges and size
-                db.query(UploadSession).filter(
-                    UploadSession.upload_token == upload_token,
-                    UploadSession.link_uuid == link_uuid
-                ).with_for_update().populate_existing().first()
-            )
-        except DeadlockDetected as e: # Handle deadlocks by raising a 409 Conflict error to indicate that the request could not be completed due to a conflict with the current state of the resource
-            raise HTTPException(
-                status_code=409,
-                detail={
-                    "error": "concurrent_upload",
-                    "retryable": True,
-                },
-                headers={"Retry-After": "0.1"},
-            )
-        except OperationalError as e: # Handle database operational errors, such as connection issues or deadlocks
-            if isinstance(e.orig, DeadlockDetected): # If a deadlock is detected, raise a 409 Conflict error to indicate that the request could not be completed due to a conflict with the current state of the resource
-                raise HTTPException(
-                    status_code=409,
-                    detail={
-                        "error": "concurrent_upload",
-                        "retryable": True,
-                    },
-                    headers={"Retry-After": "0.1"},
+            with db.begin():
+                upload_session = (
+                    db.query(UploadSession)
+                    .filter(
+                        UploadSession.upload_token == upload_token,
+                        UploadSession.link_uuid == link_uuid,
+                    )
+                    .with_for_update()
+                    .populate_existing()
+                    .first()
                 )
 
+                if upload_session is None:
+                    raise HTTPException(status_code=404, detail="Upload session not found")
 
-        if upload_session is None:
-            raise HTTPException(status_code=404, detail="Upload session not found")
+                if upload_session.completed:
+                    raise HTTPException(status_code=400, detail="Upload already completed")
 
-        ranges = upload_session.received_ranges or [] # Collect existing ranges
+                chunk_record = UploadChunk(
+                    upload_id=upload_session.upload_id,
+                    offset=chunk_offset,
+                    size=received_size,
+                    chunk_index=chunk_offset // upload_session.chunk_size,
+                    hash=server_hash,
+                    algorithm="blake3",
+                )
 
-        ranges.append([chunk_offset, expected_end]) # Add the new chunk
+                db.add(chunk_record)
+                db.flush()
 
-        ranges.sort(key=lambda x: x[0]) # Sort by their starting offset to prepare for merging overlapping ranges
+                ranges = list(upload_session.received_ranges or [])
+                ranges.append([chunk_offset, expected_end])
+                ranges.sort(key=lambda x: x[0])
 
-        merged_ranges = []
+                merged_ranges = []
 
-        for start, end in ranges: # Merge overlapping ranges to limit DB JSON size
-            if not merged_ranges or start > merged_ranges[-1][1]: # If they dont overlap append them as is
-                merged_ranges.append([start, end])
-            else: # If they overlap, merge them by extending the end of the last range to the max of the two overlapping ranges
-                merged_ranges[-1][1] = max(merged_ranges[-1][1], end) 
+                for start, end in ranges:
+                    if not merged_ranges or start > merged_ranges[-1][1]:
+                        merged_ranges.append([start, end])
+                    else:
+                        merged_ranges[-1][1] = max(merged_ranges[-1][1], end)
 
-        upload_session.received_ranges = merged_ranges # Update DB
-        upload_session.received_size = sum( #Accumlate the total received size from the merged ranges 
-            end - start for start, end in merged_ranges
-        )
-        upload_session.last_activity = datetime.datetime.now(tz=datetime.timezone.utc) 
+                upload_session.received_ranges = merged_ranges
+                upload_session.received_size = sum(end - start for start, end in merged_ranges)
+                upload_session.last_activity = datetime.datetime.now(tz=datetime.timezone.utc)
+                response_ranges = merged_ranges
 
-        db.commit()
+            break
 
-    except HTTPException:
-        db.rollback()
-        raise
-    except OperationalError as e: # Handle database operational errors, such as connection issues or deadlocks
-        db.rollback()
+        except sqlalchemy.exc.IntegrityError:
+            db.rollback()
 
-        if isinstance(e.orig, DeadlockDetected): # If a deadlock is detected, raise a 409 Conflict error to indicate that the request could not be completed due to a conflict with the current state of the resource
-            raise HTTPException(
-                status_code=409,
-                detail={
-                    "error": "concurrent_upload",
-                    "retryable": True,
-                },
-                headers={"Retry-After": "0.1"},
+            existing_chunk = (
+                db.query(UploadChunk)
+                .filter(
+                    UploadChunk.upload_id == upload_session_id,
+                    UploadChunk.offset == chunk_offset,
+                )
+                .first()
             )
 
-        raise
+            if existing_chunk is None:
+                raise HTTPException(status_code=500, detail="Failed to record upload chunk")
 
-    except Exception:
-        db.rollback()
-        traceback.print_exc()
-        raise HTTPException(status_code=500, detail="Failed to update upload session")
+            if existing_chunk.hash.lower() != server_hash.lower():
+                raise HTTPException(status_code=409, detail="Chunk offset already uploaded with different content")
+
+            current_session = (
+                db.query(UploadSession)
+                .filter(
+                    UploadSession.upload_token == upload_token,
+                    UploadSession.link_uuid == link_uuid,
+                )
+                .first()
+            )
+
+            if current_session is None:
+                raise HTTPException(status_code=404, detail="Upload session not found")
+
+            return UploadChunkResponse(
+                received=existing_chunk.size,
+                offset=existing_chunk.offset,
+                hash=existing_chunk.hash,
+                ranges=current_session.received_ranges,
+            )
+
+        except HTTPException:
+            db.rollback()
+            raise
+
+        except OperationalError as error:
+            db.rollback()
+
+            if _is_deadlock_error(error):
+                if attempt < max_database_attempts - 1:
+                    await asyncio.sleep(0.05 * (attempt + 1))
+                    continue
+
+                raise _concurrent_upload_http_exception()
+
+            raise
+
+        except Exception:
+            db.rollback()
+            logger.error(
+                f"Database update failed after Azure write for upload {upload_session_id}, "
+                f"offset {chunk_offset}. Retry is safe."
+            )
+            traceback.print_exc()
+            raise HTTPException(status_code=503, detail="Failed to update upload session", headers={"Retry-After": "0.1"})
+
     return UploadChunkResponse(
         received=received_size,
         offset=chunk_offset,
         hash=server_hash,
-        ranges=upload_session.received_ranges,
+        ranges=response_ranges,
     )
 
 @router.get("/uploadfile/{link_uuid}/{upload_token}/status", response_model=UploadStatusResponse) # Provides enough data for the client to resume an upload or verify the upload status, even if the link has expired
