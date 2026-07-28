@@ -160,7 +160,6 @@ async def start_upload(
     filename: Annotated[str | None, Header(alias="X-File-Name")] = None,
     file_hash: Annotated[str | None, Header(alias="X-File-Hash")] = None,
     file_size: Annotated[int | None, Header(alias="X-File-Size")] = None,
-    userLocation: Literal["US", "EU"] = Header(default="US", alias="X-User-Location"),
 ):
     #Check for required headers and validate inputs
     if not IsUUID(link_uuid):
@@ -198,6 +197,8 @@ async def start_upload(
     itar_status = bool(link_entry.itar) if link_entry else False # Grab ITAR status from the link entry (Link entry pulled it from HubSpot)
 
     logger.info(f"ITAR status for link {link_entry.uuid}: {itar_status}")
+
+    userLocation = "EU" if link_entry.storage_region == StorageRegion.EU else "US" # Grab the storage region from the link entry (Link entry pulled it from HubSpot)
 
     #Select storage provider based on itar status and user lcoation
     if itar_status: 
@@ -768,6 +769,7 @@ async def complete_upload(link_uuid: str, upload_token: str, db: Annotated[sqlal
     )
 
 @router.post("/uploads/{upload_id}/mark_for_deletion", response_model=MarkForDeletionResponse)
+@rate_limit(limit=5, window=60, key="upload_id")  # Limit to 5 requests per minute per upload_id
 def mark_for_deletion(upload_id: str, current_user: Annotated[User, Depends(requireRoles("Admin", strict=True))], db: Annotated[sqlalchemy.orm.Session, Depends(get_db)]):
     if not IsUUID(upload_id):
         badUUID = HTTPException(400,detail={"message": "Invalid uuid"})
@@ -966,6 +968,7 @@ The uploaded file is now available for review at {viewURL}.
         logger.warning(f"Error occurred while preparing to send completion email: {e}")
 
 @router.post("/links/{link_uuid}/mark_all_for_deletion", response_model=MarkForDeletionResponse)
+@rate_limit(limit=5, window=60, key="link_uuid")  # Limit to 5 requests per minute per link_uuid
 def mark_all_for_deletion(link_uuid: str, current_user: Annotated[User, Depends(requireRoles("Admin", strict=True))], db: Annotated[sqlalchemy.orm.Session, Depends(get_db)]):
     if not IsUUID(link_uuid):
         raise HTTPException(status_code=400, detail="Invalid uuid")

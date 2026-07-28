@@ -9,9 +9,10 @@ from modules import Session
 from Utils import IsCaseID
 from sqlalchemy import select
 from modules.models import UploadRecord, LinkRecord, update_similar_between_LinkDB_and_UploadDB
-from typing import Dict
+from typing import Dict, Literal
 import uuid
 from datetime import datetime, timezone
+from modules.models import StorageRegion
 from modules.auth import User
 import os
 import logging
@@ -23,6 +24,7 @@ if DATABASE_URL is None:
 
 class LinkRequest(BaseModel): # structure of a link request from the client
     case_id: str = Field(..., description="ID of the case associated with the link")
+    storage_region: Literal["US", "EU"] = Field(..., description="Storage region for the link") # Should be a string enum of the storage regions available in the StorageRegion class
 
 
 link_data: Dict[str, LinkRequest] = {} # mapping uuid to case info
@@ -79,7 +81,8 @@ def store_link(link_request: LinkRequest, uuid_str: str, current_user: User):
             users_with_access=[current_user.username], # TODO: Change to inclide the admin list
             expired=False,
             customer=get_caseCompany(link_request.case_id) or "Unknown",
-            status=get_caseStatus(link_request.case_id) or "Unknown"
+            status=get_caseStatus(link_request.case_id) or "Unknown",
+            storage_region=link_request.storage_region
         )
 
         session.add(record) # add new reccord to session
@@ -106,6 +109,7 @@ def _serialize_link_record(record: LinkRecord):
         "expired": record.expired,
         "expiration_date": expiration_date,
         "customer": record.customer,
+        "storage_region": record.storage_region,
         "status": record.status
     }
 
@@ -147,6 +151,7 @@ def get_link(uuid_str: str, current_user: User,):
             "users_with_access":
                 record.users_with_access,
             "expired": record.expired,
+            "storage_region": record.storage_region,
             "customer": record.customer,
             "status": record.status,
         }

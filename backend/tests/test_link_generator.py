@@ -28,6 +28,7 @@ app.dependency_overrides[requireRoles] = lambda *roles, strict=False: override_g
 def test_generate_links_returns_link_and_uuid(monkeypatch):
     link_request = LinkRequest(
         case_id="AIS-1234",
+        storage_region="US"
     )
     monkeypatch.setattr("modules.LinkGenerator.caseIDExists", lambda case_id: True)
     monkeypatch.setattr("modules.LinkGenerator.get_caseITARstatus", lambda case_id: False) 
@@ -45,6 +46,7 @@ def test_generate_links_returns_link_and_uuid(monkeypatch):
 def test_create_link_endpoint_returns_generated_link(monkeypatch):
     payload = {
         "case_id": "AIS-1234",
+        "storage_region": "US"
     }
     monkeypatch.setattr("modules.LinkGenerator.caseIDExists", lambda case_id: True)
     monkeypatch.setattr("modules.LinkGenerator.get_caseCompany", lambda case_id: "Test Company")
@@ -61,6 +63,7 @@ def test_create_link_endpoint_returns_generated_link(monkeypatch):
 def test_store_link_persists_data(monkeypatch):
     link_request = LinkRequest(
         case_id="AIS-4567",
+        storage_region="US"
     )
     monkeypatch.setattr("modules.LinkGenerator.caseIDExists", lambda case_id: True)
     monkeypatch.setattr("modules.LinkGenerator.get_caseITARstatus", lambda case_id: False)  
@@ -88,6 +91,7 @@ def test_get_all_links_returns_links_for_user(monkeypatch):
     # Create a link for the test user
     link_request = LinkRequest(
         case_id="AIS-7890",
+        storage_region="US"
     )
     monkeypatch.setattr("modules.LinkGenerator.caseIDExists", lambda case_id: True)
     monkeypatch.setattr("modules.LinkGenerator.get_caseITARstatus", lambda case_id: False)  
@@ -154,6 +158,7 @@ def test_get_files_for_link(monkeypatch):
 
     link_request = LinkRequest(
         case_id="AIS-1234",
+        storage_region="US"
     )
     result = generate_links(link_request, current_user)
     link_uuid = result["uuid"]
@@ -202,6 +207,7 @@ def test_updating_link_update_other_from_self(monkeypatch):
             uuid=str(uuid.uuid4()),
             link="https://example.test/link",
             case_id="AIS-100",
+            storage_region="US",
             itar=True,
             creator=current_user.username,
             timestamp=datetime.now(),
@@ -252,6 +258,7 @@ def test_updating_link_update_similar_between_LinkDB_and_UploadDB(monkeypatch):
             uuid=str(uuid.uuid4()),
             link="https://example.test/link",
             case_id="AIS-6767",
+            storage_region="US",
             itar=True,
             creator=current_user.username,
             timestamp=datetime.now(),

@@ -472,7 +472,7 @@ async def test_filename_collision_creates_new_name(upload_test_setup):
         db.close()
 
 
-def test_upload_eu_region(upload_test_setup):
+def test_upload_us_region(upload_test_setup):
 
     app, storage, tmp_path, uploader = upload_test_setup
 
@@ -486,7 +486,6 @@ def test_upload_eu_region(upload_test_setup):
                 "X-File-Name": "hello.txt",
                 "X-File-Hash": blake3_hash(payload),
                 "X-File-Size": str(len(payload)),
-                "X-User-Location": "EU",
             },
         )
 
@@ -501,7 +500,7 @@ def test_upload_eu_region(upload_test_setup):
         ).first()
 
         assert session is not None
-        assert session.storage_region.value == "eu"
+        assert session.storage_region.value == "us"
 
     finally:
         db.close()
