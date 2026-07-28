@@ -530,8 +530,7 @@ async function completeUploadSession(session: UploadSession): Promise<void> {
 async function createUploadSession(
   uuid: string,
   file: File,
-  region: "US" | "EU",
-  markUploadStarted: () => void,
+  
 ): Promise<UploadSession> {
   // Must match backend because backend requires hash before returning config
   const expectedChunkSize = 4 * 1024 * 1024;
@@ -544,7 +543,7 @@ async function createUploadSession(
       "X-File-Hash": fileHash,
       "X-File-Name": file.name,
       "X-File-Size": file.size.toString(),
-      "X-User-Location": region,
+     
     },
   });
 
@@ -577,12 +576,11 @@ async function createUploadSession(
     fileSize: file.size,
     chunkSize,
     file,
-    region,
+   
   };
 
   await saveUploadSession(session);
 
-  markUploadStarted();
 
   return session;
 }
@@ -618,7 +616,7 @@ function getUploadStateText(state: UploadState): string {
 }
 
 export function CustomerUpload() {
-  const { setUploadStats, uuid, region, markUploadStarted } =
+  const { setUploadStats, uuid } =
     useCustomerUpload();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -738,8 +736,6 @@ export function CustomerUpload() {
             session = await createUploadSession(
               uuid,
               selectedFile.file,
-              region,
-              markUploadStarted,
             );
 
             attachUploadSession(selectedFile.id, session);
@@ -837,7 +833,7 @@ export function CustomerUpload() {
         }
       }
     },
-    [attachUploadSession, markUploadStarted, region, uuid],
+    [attachUploadSession, uuid],
   );
 
   useEffect(() => {

@@ -25,6 +25,8 @@ export function CreateLinkForm({
 
   const [caseId, setCaseId] = useState("");
 
+  const [storageRegion, setStorageRegion] = useState<"US" | "EU">("US");
+
   const [error, setError] = useState<UserFacingError | null>(null);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -73,6 +75,7 @@ export function CreateLinkForm({
         },
         body: JSON.stringify({
           case_id: trimmedCaseId,
+          storage_region: storageRegion,
         }),
       });
 
@@ -162,6 +165,24 @@ export function CreateLinkForm({
               }}
               required
             />
+          </div>
+          
+          <div className="create-link-field">
+            <label htmlFor="storage-region">
+              Storage Region
+            </label>
+
+            <select
+              id="storage-region"
+              value={storageRegion}
+              disabled={isSubmitting}
+              onChange={(event) =>
+                setStorageRegion(event.target.value as "US" | "EU")
+              }
+            >
+              <option value="US">United States</option>
+              <option value="EU">Europe</option>
+            </select>
           </div>
 
           <div className="create-link-actions">

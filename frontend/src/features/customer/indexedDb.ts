@@ -6,7 +6,7 @@ export type UploadSession = {
   fileSize: number;
   chunkSize: number;
   file: File;
-  region: "US" | "EU";
+
 };
 
 export type StoredUploadSession = {
@@ -16,13 +16,11 @@ export type StoredUploadSession = {
   fileHash: string;
   fileSize: number;
   chunkSize: number;
-  region: "US" | "EU";
+
 };
 
 export type UploadSettings = {
   uuid: string;
-  region: "US" | "EU";
-  uploadStarted: boolean;
   deletionRequested: boolean;
 };
 

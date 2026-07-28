@@ -11,21 +11,16 @@ import {
   getUploadSettings,
   saveUploadSettings,
 } from "./indexedDb";
-type UploadRegion = "US" | "EU";
+
 
 type CustomerUploadContextValue = {
   uploadedCount: number;
   uploadedBytes: number;
   uuid: string;
 
-  region: "US" | "EU";
-  uploadStarted: boolean;
-
-  setRegion: (region: "US" | "EU") => void;
-  markUploadStarted: () => void;
 
   setUploadStats: (count: number, bytes: number) => void;
-  settingsLoaded: boolean;
+  
   deletionRequested: boolean;
   markDeletionRequested: () => void;
 };
@@ -45,11 +40,11 @@ export function CustomerUploadProvider({
   const [uploadedCount, setUploadedCount] = useState(0);
   const [uploadedBytes, setUploadedBytes] = useState(0);
 
-  const [region, setRegionState] = useState<UploadRegion>("US");
+  
 
-  const [uploadStarted, setUploadStarted] = useState(false);
+
   const [deletionRequested, setDeletionRequested] = useState(false);
-  const [settingsLoaded, setSettingsLoaded] = useState(false);
+
   const setUploadStats = useCallback(
     (count: number, bytes: number): void => {
       setUploadedCount(count);
@@ -57,40 +52,16 @@ export function CustomerUploadProvider({
     },
     [],
   );
-  const setRegion = useCallback(
-    (newRegion: UploadRegion): void => {
-      setRegionState(newRegion);
 
-      void saveUploadSettings({
-        uuid,
-        region: newRegion,
-        uploadStarted,
-        deletionRequested,
-      });
-    },
-    [uuid, uploadStarted],
-  );
-  const markUploadStarted = useCallback((): void => {
-    setUploadStarted(true);
-
-    void saveUploadSettings({
-      uuid,
-      region,
-      uploadStarted: true,
-      deletionRequested,
-    });
-  }, [uuid, region]);
   
   const markDeletionRequested = useCallback(() => {
     setDeletionRequested(true);
 
     void saveUploadSettings({
       uuid,
-      region,
-      uploadStarted,
       deletionRequested: true,
     });
-  }, [uuid, region, uploadStarted]);
+  }, [uuid]);
 
   const contextValue = useMemo(
     () => ({
@@ -98,14 +69,7 @@ export function CustomerUploadProvider({
       uploadedCount,
       uuid,
 
-      region,
-      setRegion,
-
-      uploadStarted,
-      markUploadStarted,
-
       setUploadStats,
-      settingsLoaded,
 
       deletionRequested,
       markDeletionRequested,
@@ -114,11 +78,9 @@ export function CustomerUploadProvider({
       uploadedBytes,
       uploadedCount,
       uuid,
-      region,
-      uploadStarted,
-      markUploadStarted,
       setUploadStats,
-      settingsLoaded,
+      deletionRequested,
+      markDeletionRequested,
     ],
   );
   useEffect(() => {
@@ -126,18 +88,14 @@ export function CustomerUploadProvider({
       const settings = await getUploadSettings(uuid);
 
       if (settings) {
-        setRegionState(settings.region);
-
-        if (settings.uploadStarted) {
-          setUploadStarted(true);
-        }
+        
 
         if (settings.deletionRequested) {
           setDeletionRequested(true);
         }
       }
 
-      setSettingsLoaded(true);
+   
     }
 
     void restoreSettings();
