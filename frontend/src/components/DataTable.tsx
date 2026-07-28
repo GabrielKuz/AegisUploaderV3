@@ -292,7 +292,7 @@ export function DataTable({
 
       {!isLoading && !error && sortedLinks.length > 0 && (
         <div className="data-table-wrapper">
-          <table className="data-table">
+          <table className="data-table links-table">
             <thead>
               <tr>
                 <th
