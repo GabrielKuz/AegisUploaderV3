@@ -134,7 +134,7 @@ docker compose exec postgres psql -U <username> -d <Database>
 
 ### Database Migrations
 
-After modifying SQLAlchemy models, generate a new migration:
+After modifying SQLAlchemy models, generate a new migration while containers are running:
 
 ```powershell
 Scripts/migrateDB.ps1 "MigrationName"
