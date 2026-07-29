@@ -1,17 +1,18 @@
+import os
 import sys
 from pathlib import Path
 
+import pytest
 from alembic import command
 from alembic.config import Config
-import pytest
 
-import os
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 os.environ["TESTING"] = "true"
+
 
 @pytest.fixture(scope="session", autouse=True)
 def migrate_database():

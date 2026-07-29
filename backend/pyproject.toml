@@ -38,3 +38,27 @@ dependencies = [
     "slowapi>=0.1.10",
     "cachetools>=7.1.6",
 ]
+[dependency-groups]
+dev = [
+    "ruff>=0.11.0",
+]
+
+[tool.ruff]
+line-length = 256
+target-version = "py314"
+
+[tool.ruff.lint]
+ignore = [
+    "B904",
+]
+select = [
+    "E",
+    "F",
+    "I",
+    "UP",
+    "B",
+    "ASYNC"
+]
+
+[tool.ruff.format]
+quote-style = "double"

@@ -1,20 +1,19 @@
 import datetime
 import os
 import sys
+import threading
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
-import threading
-import time
-from concurrent.futures import ThreadPoolExecutor
+import pytest
 from blake3 import blake3
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-import pytest
 
 import AppConstants
+import modules.StorageProvider as StorageProvider
 from modules import Session
-from modules.models import StorageRegion, UploadSession, UploadRecord, UploadChunk
-
+from modules.models import StorageRegion, UploadChunk, UploadRecord, UploadSession
 
 TEST_LINK_UUID = "55340765-5e4f-4215-a416-05fe0b0a12f4"
 
@@ -29,40 +28,21 @@ def cleanup_upload_test_records():
     db = Session()
 
     try:
-        db.query(UploadChunk).filter(
-            UploadChunk.upload_id.in_(
-                db.query(UploadSession.upload_id).filter(
-                    UploadSession.link_uuid == TEST_LINK_UUID
-                )
-            )
-        ).delete(
-            synchronize_session=False
-        )
+        db.query(UploadChunk).filter(UploadChunk.upload_id.in_(db.query(UploadSession.upload_id).filter(UploadSession.link_uuid == TEST_LINK_UUID))).delete(synchronize_session=False)
 
-        db.query(UploadSession).filter(
-            UploadSession.link_uuid == TEST_LINK_UUID
-        ).delete(
-            synchronize_session=False
-        )
+        db.query(UploadSession).filter(UploadSession.link_uuid == TEST_LINK_UUID).delete(synchronize_session=False)
 
-        db.query(UploadRecord).filter(
-            UploadRecord.link_uuid == TEST_LINK_UUID
-        ).delete(
-            synchronize_session=False
-        )
+        db.query(UploadRecord).filter(UploadRecord.link_uuid == TEST_LINK_UUID).delete(synchronize_session=False)
 
         db.commit()
 
         yield
 
     finally:
-
         try:
             db.rollback()
 
-            db.query(UploadChunk).filter(UploadChunk.upload_id.in_(db.query(UploadSession.upload_id).filter(
-                        UploadSession.link_uuid == TEST_LINK_UUID
-                    ))).delete(synchronize_session=False)
+            db.query(UploadChunk).filter(UploadChunk.upload_id.in_(db.query(UploadSession.upload_id).filter(UploadSession.link_uuid == TEST_LINK_UUID))).delete(synchronize_session=False)
 
             db.query(UploadSession).filter(UploadSession.link_uuid == TEST_LINK_UUID).delete(synchronize_session=False)
 
@@ -73,23 +53,15 @@ def cleanup_upload_test_records():
         finally:
             db.close()
 
+
 @pytest.fixture
 def upload_test_setup(monkeypatch, tmp_path):
 
-    os.environ.setdefault(
-        "AZURE_STORAGE_CONNECTION_STRING_US",
-        "fake"
-    )
+    os.environ.setdefault("AZURE_STORAGE_CONNECTION_STRING_US", "fake")
 
-    os.environ.setdefault(
-        "AZURE_STORAGE_CONNECTION_STRING_EU",
-        "fake"
-    )
+    os.environ.setdefault("AZURE_STORAGE_CONNECTION_STRING_EU", "fake")
 
-    os.environ.setdefault(
-        "AZURE_STORAGE_CONNECTION_STRING_ITAR",
-        "fake"
-    )
+    os.environ.setdefault("AZURE_STORAGE_CONNECTION_STRING_ITAR", "fake")
 
     sys.modules.pop("modules.uploader", None)
 
@@ -103,8 +75,8 @@ def upload_test_setup(monkeypatch, tmp_path):
         case_id="AIS-1234",
         itar=False,
         users_with_access=["testuser"],
-        timestamp=datetime.datetime.now(datetime.timezone.utc),
-        expiration_date=datetime.datetime.now(datetime.timezone.utc) + AppConstants.LINK_EXPIRATION_TIME,
+        timestamp=datetime.datetime.now(datetime.UTC),
+        expiration_date=datetime.datetime.now(datetime.UTC) + AppConstants.LINK_EXPIRATION_TIME,
         expired=False,
     )
 
@@ -114,9 +86,7 @@ def upload_test_setup(monkeypatch, tmp_path):
         lambda *args, **kwargs: fake_link_record,
     )
 
-    storage = uploader.LocalStorageProvider(
-        base_path=str(tmp_path / "us")
-    )
+    storage = StorageProvider.LocalStorageProvider(base_path=str(tmp_path / "us"))
 
     monkeypatch.setattr(
         uploader,
@@ -138,6 +108,7 @@ def upload_test_setup(monkeypatch, tmp_path):
 
     return app, storage, tmp_path, uploader
 
+
 @pytest.mark.asyncio
 async def test_resumable_upload_flow(upload_test_setup):
 
@@ -148,7 +119,6 @@ async def test_resumable_upload_flow(upload_test_setup):
     file_hash = blake3_hash(payload)
 
     with TestClient(app) as client:
-
         response = client.post(
             f"/uploadfile/{TEST_LINK_UUID}/start",
             headers={
@@ -164,7 +134,7 @@ async def test_resumable_upload_flow(upload_test_setup):
         start_body = response.json()
 
         assert "uploadToken" in start_body
-        assert start_body["chunkSize"] == 4*1024*1024
+        assert start_body["chunkSize"] == 4 * 1024 * 1024
 
         token = start_body["uploadToken"]
 
@@ -189,9 +159,7 @@ async def test_resumable_upload_flow(upload_test_setup):
         assert chunk_body["hash"] == chunk_hash
         assert chunk_body["ranges"] == [[0, len(payload)]]
 
-        response = client.post(
-            f"/uploadfile/{TEST_LINK_UUID}/{token}/complete"
-        )
+        response = client.post(f"/uploadfile/{TEST_LINK_UUID}/{token}/complete")
 
         assert response.status_code == 200
 
@@ -202,16 +170,11 @@ async def test_resumable_upload_flow(upload_test_setup):
         assert complete_body["file_hash"] == file_hash
         assert complete_body["completed"] is True
 
-
-    stored_file = (
-        Path(tmp_path)
-        / "us"
-        / "AIS-1234"
-        / "hello.txt"
-    )
+    stored_file = Path(tmp_path) / "us" / "AIS-1234" / "hello.txt"
 
     assert stored_file.exists()
     assert stored_file.read_bytes() == payload
+
 
 @pytest.mark.asyncio
 async def test_upload_start_missing_filename(upload_test_setup):
@@ -219,7 +182,6 @@ async def test_upload_start_missing_filename(upload_test_setup):
     app, storage, tmp_path, uploader = upload_test_setup
 
     with TestClient(app) as client:
-
         response = client.post(
             f"/uploadfile/{TEST_LINK_UUID}/start",
             headers={
@@ -231,13 +193,13 @@ async def test_upload_start_missing_filename(upload_test_setup):
     assert response.status_code == 400
     assert "x-file-name" in response.json()["detail"].lower()
 
+
 @pytest.mark.asyncio
 async def test_upload_start_missing_hash(upload_test_setup):
 
     app, storage, tmp_path, uploader = upload_test_setup
 
     with TestClient(app) as client:
-
         response = client.post(
             f"/uploadfile/{TEST_LINK_UUID}/start",
             headers={
@@ -255,7 +217,6 @@ def test_upload_invalid_uuid(upload_test_setup):
     app, storage, tmp_path, uploader = upload_test_setup
 
     with TestClient(app) as client:
-
         response = client.post(
             "/uploadfile/not-a-uuid/start",
             headers={
@@ -275,7 +236,6 @@ def test_chunk_hash_mismatch(upload_test_setup):
     payload = b"hello world"
 
     with TestClient(app) as client:
-
         start = client.post(
             f"/uploadfile/{TEST_LINK_UUID}/start",
             headers={
@@ -300,6 +260,7 @@ def test_chunk_hash_mismatch(upload_test_setup):
     assert response.status_code == 400
     assert "hash mismatch" in response.json()["detail"].lower()
 
+
 def test_status_after_start(upload_test_setup):
 
     app, storage, tmp_path, uploader = upload_test_setup
@@ -307,7 +268,6 @@ def test_status_after_start(upload_test_setup):
     payload = b"hello"
 
     with TestClient(app) as client:
-
         start = client.post(
             f"/uploadfile/{TEST_LINK_UUID}/start",
             headers={
@@ -321,9 +281,7 @@ def test_status_after_start(upload_test_setup):
 
         token = start.json()["uploadToken"]
 
-        response = client.get(
-            f"/uploadfile/{TEST_LINK_UUID}/{token}/status"
-        )
+        response = client.get(f"/uploadfile/{TEST_LINK_UUID}/{token}/status")
 
     body = response.json()
 
@@ -343,7 +301,6 @@ def test_complete_without_upload_fails(upload_test_setup):
     payload = b"hello"
 
     with TestClient(app) as client:
-
         start = client.post(
             f"/uploadfile/{TEST_LINK_UUID}/start",
             headers={
@@ -355,9 +312,7 @@ def test_complete_without_upload_fails(upload_test_setup):
 
         token = start.json()["uploadToken"]
 
-        response = client.post(
-            f"/uploadfile/{TEST_LINK_UUID}/{token}/complete"
-        )
+        response = client.post(f"/uploadfile/{TEST_LINK_UUID}/{token}/complete")
 
     assert response.status_code == 400
     assert "incomplete" in response.json()["detail"].lower()
@@ -370,7 +325,6 @@ def test_duplicate_chunk_does_not_duplicate_range(upload_test_setup):
     payload = b"hello"
 
     with TestClient(app) as client:
-
         start = client.post(
             f"/uploadfile/{TEST_LINK_UUID}/start",
             headers={
@@ -405,6 +359,7 @@ def test_duplicate_chunk_does_not_duplicate_range(upload_test_setup):
     assert second.status_code == 200
     assert second.json()["ranges"] == [[0, len(payload)]]
 
+
 @pytest.mark.asyncio
 async def test_filename_collision_creates_new_name(upload_test_setup):
 
@@ -413,7 +368,7 @@ async def test_filename_collision_creates_new_name(upload_test_setup):
     await storage.prepare_file(
         "AIS-1234/hello.txt",
         5,
-    ) 
+    )
     # add to database to simulate existing file with same name
     db = Session()
     try:
@@ -428,12 +383,11 @@ async def test_filename_collision_creates_new_name(upload_test_setup):
             hash_algorithm="blake3",
             received_ranges=[],
             received_size=0,
-            chunk_size=4*1024*1024,
+            chunk_size=4 * 1024 * 1024,
             completed=False,
             itar_status=False,
             storage_region=StorageRegion.US,
         )
-
 
         db.add(existing_session)
         db.commit()
@@ -443,7 +397,6 @@ async def test_filename_collision_creates_new_name(upload_test_setup):
     payload = b"hello"
 
     with TestClient(app) as client:
-
         response = client.post(
             f"/uploadfile/{TEST_LINK_UUID}/start",
             headers={
@@ -458,15 +411,10 @@ async def test_filename_collision_creates_new_name(upload_test_setup):
     db = Session()
 
     try:
-        sessions = db.query(UploadSession).filter(
-            UploadSession.link_uuid == TEST_LINK_UUID
-        ).all()
+        sessions = db.query(UploadSession).filter(UploadSession.link_uuid == TEST_LINK_UUID).all()
 
         assert len(sessions) == 2
-        assert any(
-            session.blob_name != "hello.txt"
-            for session in sessions
-        )
+        assert any(session.blob_name != "hello.txt" for session in sessions)
 
     finally:
         db.close()
@@ -479,7 +427,6 @@ def test_upload_us_region(upload_test_setup):
     payload = b"hello"
 
     with TestClient(app) as client:
-
         response = client.post(
             f"/uploadfile/{TEST_LINK_UUID}/start",
             headers={
@@ -494,10 +441,7 @@ def test_upload_us_region(upload_test_setup):
     db = Session()
 
     try:
-
-        session = db.query(UploadSession).filter(
-            UploadSession.link_uuid == TEST_LINK_UUID
-        ).first()
+        session = db.query(UploadSession).filter(UploadSession.link_uuid == TEST_LINK_UUID).first()
 
         assert session is not None
         assert session.storage_region.value == "us"
@@ -513,7 +457,6 @@ def test_complete_rejects_wrong_merkle_hash(upload_test_setup):
     payload = b"hello"
 
     with TestClient(app) as client:
-
         start = client.post(
             f"/uploadfile/{TEST_LINK_UUID}/start",
             headers={
@@ -537,9 +480,7 @@ def test_complete_rejects_wrong_merkle_hash(upload_test_setup):
 
         assert upload.status_code == 200
 
-        response = client.post(
-            f"/uploadfile/{TEST_LINK_UUID}/{token}/complete"
-        )
+        response = client.post(f"/uploadfile/{TEST_LINK_UUID}/{token}/complete")
 
     assert response.status_code == 400
     assert "hash" in response.json()["detail"].lower()
@@ -549,7 +490,7 @@ def test_multi_chunk_merkle_completion(upload_test_setup):
 
     app, storage, tmp_path, uploader = upload_test_setup
 
-    chunk_size = 4*1024*1024
+    chunk_size = 4 * 1024 * 1024
 
     chunk_one = b"a" * chunk_size
     chunk_two = b"b" * 100
@@ -562,7 +503,6 @@ def test_multi_chunk_merkle_completion(upload_test_setup):
     )
 
     with TestClient(app) as client:
-
         start = client.post(
             f"/uploadfile/{TEST_LINK_UUID}/start",
             headers={
@@ -610,10 +550,11 @@ def test_multi_chunk_merkle_completion(upload_test_setup):
     assert body["file_hash"] == expected_hash
     assert body["size"] == len(chunk_one) + len(chunk_two)
 
+
 def test_resume_upload_after_partial_completion(upload_test_setup):
     app, storage, tmp_path, uploader = upload_test_setup
 
-    chunk_one = b"a" * (4*1024*1024)
+    chunk_one = b"a" * (4 * 1024 * 1024)
     chunk_two = b"b" * 100
 
     expected_hash = uploader.compute_merkle_root(
@@ -649,9 +590,7 @@ def test_resume_upload_after_partial_completion(upload_test_setup):
 
         assert first.status_code == 200
 
-        status = client.get(
-            f"/uploadfile/{TEST_LINK_UUID}/{token}/status"
-        )
+        status = client.get(f"/uploadfile/{TEST_LINK_UUID}/{token}/status")
 
         assert status.status_code == 200
 
@@ -672,9 +611,7 @@ def test_resume_upload_after_partial_completion(upload_test_setup):
 
         assert second.status_code == 200
 
-        complete = client.post(
-            f"/uploadfile/{TEST_LINK_UUID}/{token}/complete"
-        )
+        complete = client.post(f"/uploadfile/{TEST_LINK_UUID}/{token}/complete")
 
         assert complete.status_code == 200
 
@@ -682,7 +619,7 @@ def test_resume_upload_after_partial_completion(upload_test_setup):
 def test_chunks_can_upload_out_of_order(upload_test_setup):
     app, storage, tmp_path, uploader = upload_test_setup
 
-    chunk_one = b"a" * (4*1024*1024)
+    chunk_one = b"a" * (4 * 1024 * 1024)
     chunk_two = b"b" * 100
 
     expected_hash = uploader.compute_merkle_root(
@@ -728,9 +665,7 @@ def test_chunks_can_upload_out_of_order(upload_test_setup):
 
         assert first.status_code == 200
 
-        complete = client.post(
-            f"/uploadfile/{TEST_LINK_UUID}/{token}/complete"
-        )
+        complete = client.post(f"/uploadfile/{TEST_LINK_UUID}/{token}/complete")
 
         assert complete.status_code == 200
 
@@ -742,7 +677,7 @@ def test_chunks_can_upload_out_of_order(upload_test_setup):
 def test_complete_rejects_missing_chunk(upload_test_setup):
     app, storage, tmp_path, uploader = upload_test_setup
 
-    chunk_one = b"a" * (4*1024*1024)
+    chunk_one = b"a" * (4 * 1024 * 1024)
     chunk_two = b"b" * 100
 
     expected_hash = uploader.compute_merkle_root(
@@ -776,9 +711,7 @@ def test_complete_rejects_missing_chunk(upload_test_setup):
 
         assert upload.status_code == 200
 
-        complete = client.post(
-            f"/uploadfile/{TEST_LINK_UUID}/{token}/complete"
-        )
+        complete = client.post(f"/uploadfile/{TEST_LINK_UUID}/{token}/complete")
 
     assert complete.status_code == 400
     assert "incomplete" in complete.json()["detail"].lower()
@@ -856,9 +789,7 @@ def test_upload_after_completion_fails(upload_test_setup):
 
         assert upload.status_code == 200
 
-        complete = client.post(
-            f"/uploadfile/{TEST_LINK_UUID}/{token}/complete"
-        )
+        complete = client.post(f"/uploadfile/{TEST_LINK_UUID}/{token}/complete")
 
         assert complete.status_code == 200
 
@@ -884,8 +815,8 @@ def test_upload_itar_region(upload_test_setup, monkeypatch):
         case_id="AIS-1234",
         itar=True,
         users_with_access=["testuser"],
-        timestamp=datetime.datetime.now(datetime.timezone.utc),
-        expiration_date=datetime.datetime.now(datetime.timezone.utc) + AppConstants.LINK_EXPIRATION_TIME,
+        timestamp=datetime.datetime.now(datetime.UTC),
+        expiration_date=datetime.datetime.now(datetime.UTC) + AppConstants.LINK_EXPIRATION_TIME,
         expired=False,
     )
 
@@ -912,9 +843,7 @@ def test_upload_itar_region(upload_test_setup, monkeypatch):
     db = Session()
 
     try:
-        session = db.query(UploadSession).filter(
-            UploadSession.link_uuid == TEST_LINK_UUID
-        ).first()
+        session = db.query(UploadSession).filter(UploadSession.link_uuid == TEST_LINK_UUID).first()
 
         assert session is not None
         assert session.itar_status is True
@@ -924,13 +853,12 @@ def test_upload_itar_region(upload_test_setup, monkeypatch):
         db.close()
 
 
-def test_concurrent_filename_collision(upload_test_setup): # run twice to be safe
+def test_concurrent_filename_collision(upload_test_setup):  # run twice to be safe
     app, storage, tmp_path, uploader = upload_test_setup
 
     payload = b"hello"
 
     with TestClient(app) as client:
-
         first = client.post(
             f"/uploadfile/{TEST_LINK_UUID}/start",
             headers={
@@ -955,14 +883,9 @@ def test_concurrent_filename_collision(upload_test_setup): # run twice to be saf
     db = Session()
 
     try:
-        sessions = db.query(UploadSession).filter(
-            UploadSession.link_uuid == TEST_LINK_UUID
-        ).all()
+        sessions = db.query(UploadSession).filter(UploadSession.link_uuid == TEST_LINK_UUID).all()
 
-        filenames = [
-            session.blob_name
-            for session in sessions
-        ]
+        filenames = [session.blob_name for session in sessions]
 
         assert len(filenames) == 2
         assert len(set(filenames)) == 2
@@ -970,10 +893,11 @@ def test_concurrent_filename_collision(upload_test_setup): # run twice to be saf
     finally:
         db.close()
 
+
 def test_resume_upload_after_interruption(upload_test_setup):
     app, storage, tmp_path, uploader = upload_test_setup
 
-    chunk_one = b"a" * (4*1024*1024)
+    chunk_one = b"a" * (4 * 1024 * 1024)
     chunk_two = b"b" * 100
 
     full_hash = uploader.compute_merkle_root(
@@ -984,7 +908,6 @@ def test_resume_upload_after_interruption(upload_test_setup):
     )
 
     with TestClient(app) as client:
-
         start = client.post(
             f"/uploadfile/{TEST_LINK_UUID}/start",
             headers={
@@ -1010,9 +933,7 @@ def test_resume_upload_after_interruption(upload_test_setup):
 
         assert first.status_code == 200
 
-        status = client.get(
-            f"/uploadfile/{TEST_LINK_UUID}/{token}/status"
-        )
+        status = client.get(f"/uploadfile/{TEST_LINK_UUID}/{token}/status")
 
         assert status.status_code == 200
 
@@ -1035,9 +956,7 @@ def test_resume_upload_after_interruption(upload_test_setup):
 
         assert second.status_code == 200
 
-        complete = client.post(
-            f"/uploadfile/{TEST_LINK_UUID}/{token}/complete"
-        )
+        complete = client.post(f"/uploadfile/{TEST_LINK_UUID}/{token}/complete")
 
         assert complete.status_code == 200
 
@@ -1047,7 +966,6 @@ def test_upload_with_wrong_token_fails(upload_test_setup):
     app, storage, tmp_path, uploader = upload_test_setup
 
     with TestClient(app) as client:
-
         response = client.post(
             f"/uploadfile/{TEST_LINK_UUID}/not-a-real-token",
             content=b"hello",
@@ -1067,7 +985,6 @@ def test_upload_token_cannot_be_used_with_other_link(upload_test_setup):
     fake_other_link = "55340765-5e4f-4215-a416-05fe0b0a12f5"
 
     with TestClient(app) as client:
-
         start = client.post(
             f"/uploadfile/{TEST_LINK_UUID}/start",
             headers={
@@ -1099,7 +1016,6 @@ def test_filename_path_traversal_is_sanitized(upload_test_setup):
     payload = b"hello"
 
     with TestClient(app) as client:
-
         start = client.post(
             f"/uploadfile/{TEST_LINK_UUID}/start",
             headers={
@@ -1125,18 +1041,14 @@ def test_filename_path_traversal_is_sanitized(upload_test_setup):
 
         assert upload.status_code == 200
 
-        complete = client.post(
-            f"/uploadfile/{TEST_LINK_UUID}/{token}/complete"
-        )
+        complete = client.post(f"/uploadfile/{TEST_LINK_UUID}/{token}/complete")
 
         assert complete.status_code == 200
 
     db = Session()
 
     try:
-        session = db.query(UploadSession).filter(
-            UploadSession.upload_token == token
-        ).first()
+        session = db.query(UploadSession).filter(UploadSession.upload_token == token).first()
 
         assert session is not None
 
@@ -1154,7 +1066,6 @@ def test_complete_endpoint_cannot_be_called_twice(upload_test_setup):
     payload = b"hello"
 
     with TestClient(app) as client:
-
         start = client.post(
             f"/uploadfile/{TEST_LINK_UUID}/start",
             headers={
@@ -1178,15 +1089,11 @@ def test_complete_endpoint_cannot_be_called_twice(upload_test_setup):
 
         assert upload.status_code == 200
 
-        first_complete = client.post(
-            f"/uploadfile/{TEST_LINK_UUID}/{token}/complete"
-        )
+        first_complete = client.post(f"/uploadfile/{TEST_LINK_UUID}/{token}/complete")
 
         assert first_complete.status_code == 200
 
-        second_complete = client.post(
-            f"/uploadfile/{TEST_LINK_UUID}/{token}/complete"
-        )
+        second_complete = client.post(f"/uploadfile/{TEST_LINK_UUID}/{token}/complete")
 
     assert second_complete.status_code == 400
     assert "already completed" in second_complete.json()["detail"].lower()
@@ -1199,7 +1106,6 @@ def test_concurrent_duplicate_chunk_uploads_are_safe(upload_test_setup):
     payload = b"hello world"
 
     with TestClient(app) as client:
-
         start = client.post(
             f"/uploadfile/{TEST_LINK_UUID}/start",
             headers={
@@ -1216,7 +1122,6 @@ def test_concurrent_duplicate_chunk_uploads_are_safe(upload_test_setup):
         def upload_chunk():
 
             with TestClient(app) as thread_client:
-
                 barrier.wait()
 
                 return thread_client.post(
@@ -1230,7 +1135,6 @@ def test_concurrent_duplicate_chunk_uploads_are_safe(upload_test_setup):
                 )
 
         with ThreadPoolExecutor(max_workers=2) as executor:
-
             results = list(
                 executor.map(
                     lambda _: upload_chunk(),
@@ -1238,25 +1142,15 @@ def test_concurrent_duplicate_chunk_uploads_are_safe(upload_test_setup):
                 )
             )
 
-    statuses = [
-        response.status_code
-        for response in results
-    ]
+    statuses = [response.status_code for response in results]
 
-    assert all(
-        status in (200, 400, 409)
-        for status in statuses
-    )
+    assert all(status in (200, 400, 409) for status in statuses)
 
     db = Session()
 
     try:
-        upload = db.query(UploadSession).filter(
-            UploadSession.upload_token == token
-        ).first()
-        chunks = db.query(UploadChunk).filter(
-            UploadChunk.upload_id == upload.upload_id
-        ).all()
+        upload = db.query(UploadSession).filter(UploadSession.upload_token == token).first()
+        chunks = db.query(UploadChunk).filter(UploadChunk.upload_id == upload.upload_id).all()
 
         assert len(chunks) <= 1
 

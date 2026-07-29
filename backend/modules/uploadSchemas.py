@@ -1,7 +1,8 @@
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, Field, UUID4, ConfigDict
+from pydantic import UUID4, BaseModel, ConfigDict, Field
+
 
 # POST /uploadfile/{link_uuid}/start
 class StartUploadHeaders(BaseModel):
@@ -14,6 +15,7 @@ class StartUploadHeaders(BaseModel):
         alias="X-User-Location",
     )
 
+
 class StartUploadResponse(BaseModel):
     uploadToken: str
     chunkSize: int
@@ -23,8 +25,9 @@ class StartUploadResponse(BaseModel):
 class UploadChunkHeaders(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
     chunk_offset: int = Field(alias="X-Chunk-Offset", ge=0)
-    chunk_size: int = Field(alias="X-Chunk-Size", gt=0, le=4*1024*1024)
+    chunk_size: int = Field(alias="X-Chunk-Size", gt=0, le=4 * 1024 * 1024)
     chunk_hash: str = Field(alias="X-Chunk-Hash")
+
 
 class UploadChunkResponse(BaseModel):
     received: int
@@ -51,8 +54,7 @@ class CompleteUploadResponse(BaseModel):
     completed: bool
 
 
-
-# GET 
+# GET
 class UploadedFileInfo(BaseModel):
     upload_id: UUID4
     filename: str
@@ -66,6 +68,7 @@ class UploadedFileInfo(BaseModel):
 # POST /uploads/{upload_id}/mark_for_deletion
 class MarkForDeletionResponse(BaseModel):
     message: str
+
 
 # POST /uploads/{upload_id}/extend_expiration
 class ExtendExpirationResponse(BaseModel):

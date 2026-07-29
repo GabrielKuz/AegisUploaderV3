@@ -1,12 +1,12 @@
+import os
+from collections.abc import Callable
 from functools import wraps
 from inspect import iscoroutinefunction, signature
-from collections.abc import Callable
 
 from fastapi import HTTPException
 from limits import RateLimitItemPerSecond
 from limits.storage import MemoryStorage
 from limits.strategies import FixedWindowRateLimiter
-import os
 
 
 def rate_limit(*, limit: int, window: int, key: str | Callable):
@@ -23,7 +23,7 @@ def rate_limit(*, limit: int, window: int, key: str | Callable):
             bound = sig.bind(*args, **kwargs)
             bound.apply_defaults()
 
-            if (os.getenv("TESTING", "false").lower() == "true"):
+            if os.getenv("TESTING", "false").lower() == "true":
                 return
 
             if isinstance(key, str):
@@ -35,11 +35,13 @@ def rate_limit(*, limit: int, window: int, key: str | Callable):
                 raise HTTPException(status_code=429, detail="Rate limit exceeded")
 
         if iscoroutinefunction(func):
+
             @wraps(func)
             async def wrapper(*args, **kwargs):
                 check_rate_limit(args, kwargs)
                 return await func(*args, **kwargs)
         else:
+
             @wraps(func)
             def wrapper(*args, **kwargs):
                 check_rate_limit(args, kwargs)

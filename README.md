@@ -130,6 +130,13 @@ docker compose exec backend python test.py
 docker compose exec backend sh
 docker compose exec postgres psql -U <username> -d <Database>
 ```
+### Ruff Linting & Formatting
+
+```bash
+uv run ruff check .              # Check for lint issues
+uv run ruff check . --fix        # Automatically fix lint issues
+uv run ruff format .             # Format code
+```
 
 ### Database Migrations
 

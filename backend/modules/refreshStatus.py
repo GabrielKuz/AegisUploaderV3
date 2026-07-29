@@ -1,22 +1,15 @@
-#go through all the links in the database and update their status from hubspot regardless of expiration status
-from fastapi import HTTPException, status
-from pydantic import BaseModel, Field
-import uuid
-from datetime import datetime, timedelta, timezone
-from sqlalchemy import create_engine, select, update
-from typing import Dict
-from modules.HubSpotIntegration import get_caseITARstatus, caseIDExists, get_caseCompany, get_caseStatus, get_caseStatus_scheduler
-from modules.auth import User
-from modules.models import LinkRecord, UploadRecord, update_other_from_self, update_similar_between_LinkDB_and_UploadDB
-import os
-import AppConstants
-from warnings import warn, deprecated
-from modules import Session, engine
-import time
-from Utils import IsCaseID
+# go through all the links in the database and update their status from hubspot regardless of expiration status
 import logging
 
+from sqlalchemy import select
+
+from modules import Session
+from modules.HubSpotIntegration import get_caseStatus_scheduler
+from modules.models import LinkRecord
+
 logger = logging.getLogger(__name__)
+
+
 def update_link_status_from_hubspot():
     with Session() as session:
         links = session.scalars(select(LinkRecord)).all()
@@ -40,4 +33,3 @@ def update_link_status_from_hubspot():
                 logger.warning(f"No case ID associated with link UUID: {link.uuid}")
 
         session.commit()
-
