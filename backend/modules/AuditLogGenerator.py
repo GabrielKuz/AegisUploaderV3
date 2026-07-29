@@ -25,12 +25,9 @@ TRUNCATED_FIELDS = {
     "upload_token",
 }
 
-def serialize(key:str, value):
+def serialize_value(value):
     if value is None:
         return None
-
-    if key in TRUNCATED_FIELDS and isinstance(value, str):
-        return truncateMiddle(value)
 
     if isinstance(value, (str, int, float, bool)):
         return value
@@ -44,7 +41,6 @@ def serialize(key:str, value):
     if isinstance(value, Enum):
         return value.value
 
-    # User object
     if hasattr(value, "username"):
         return value.username
 
@@ -132,7 +128,7 @@ def auditLog(location: Literal["US", "EU", "ITAR"] | None = None, fromParameter:
     def decorator_function(func):
         @wraps(func)
         async def wrapper(*args, **kwargs):
-            if os.getenv("TESTING").lower() == "true":
+            if os.getenv("TESTING", "").lower() == "true":
                 if inspect.iscoroutinefunction(func):
                     return await func(*args, **kwargs)
                 else:
@@ -158,16 +154,23 @@ def auditLog(location: Literal["US", "EU", "ITAR"] | None = None, fromParameter:
             if current_user is not None:
                 user = current_user.username
 
+            details = {}
+
+            for key, value in arguments.items():
+                if key in EXCLUDED_FIELDS:
+                    continue
+
+                if key in TRUNCATED_FIELDS and isinstance(value, str):
+                    details[key] = truncateMiddle(value)
+                else:
+                    details[key] = serialize_value(value)
+
             log_entry = LogEntry(
                 timestamp=datetime.datetime.now(datetime.timezone.utc),
                 action=func.__name__,
                 case_id=case_id,
                 user=user,
-                details={
-                    key: serialize(key, value)
-                    for key, value in arguments.items()
-                    if key not in EXCLUDED_FIELDS
-                },
+                details=details
             )
 
             if location is not None:
@@ -205,6 +208,6 @@ async def appendAuditLog(log_entry, location: Literal["US", "EU", "ITAR"]):
     await storage_provider.append(f"logs/{log_entry.case_id}.jsonl",
         json.dumps(
             asdict(log_entry),
-            default=serialize,
+            default=serialize_value,
             separators=(",", ":"),
         ))
