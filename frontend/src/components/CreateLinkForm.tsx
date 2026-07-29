@@ -226,28 +226,32 @@ export function CreateLinkForm({
           >
             <h2 id="link-created-heading">Upload link created</h2>
 
-            <p>The customer upload link has been created successfully.</p>
+            <p>
+              The customer upload link has been created successfully.
+            </p>
 
-            <code>{createdLink}</code>
+            <div className="created-link-display">
+              <code>{createdLink}</code>
+
+              <button
+                type="button"
+                className="copy-link-button"
+                onClick={() => void copyCreatedLink()}
+                title="Copy upload link"
+                aria-label="Copy upload link"
+              >
+                {linkCopied ? "✓" : "❐"}
+              </button>
+            </div>
 
             <button
               type="button"
-              className="copy-link-button"
-              onClick={() => void copyCreatedLink()}
-              title="Copy upload link"
-              aria-label="Copy upload link"
+              className="create-link-modal-submit"
+              onClick={() => navigate(successPath)}
             >
-              {linkCopied ? "✓" : "❐"}
+              Continue
             </button>
           </div>
-
-          <button
-            type="button"
-            className="create-link-modal-submit"
-            onClick={() => navigate(successPath)}
-          >
-            Continue
-          </button>
         </div>
       )}
     </section>

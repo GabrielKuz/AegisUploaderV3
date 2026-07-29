@@ -254,10 +254,11 @@
     0 8px 16px rgba(0, 0, 0, 0.12),
     var(--theme-card-shadow);
   color: var(--theme-text);
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 18px;
   padding: clamp(24px, 4vw, 34px);
-  width: min(500px, 90%);
+  width: min(500px, 90vw);
 }
 
 .create-link-modal h2 {
@@ -288,7 +289,7 @@
   box-shadow: var(--theme-control-shadow);
   display: flex;
   gap: 10px;
-  margin: 4px 0;
+  /*margin: 4px 0;*/
   padding: 10px 12px;
 }
 
@@ -298,6 +299,7 @@
   font-family: var(--font-mono);
   font-size: 13px;
   overflow-wrap: anywhere;
+  word-break: break-all;
 }
 
 .copy-link-button {
@@ -307,8 +309,8 @@
   border-radius: var(--radius-md);
   color: var(--theme-text);
   cursor: pointer;
-  display: inline-flex;
-  font-size: 18px;
+  display: flex;
+  /*font-size: 18px;*/
   height: 36px;
   justify-content: center;
   transition:
@@ -316,6 +318,7 @@
     border-color var(--transition-fast),
     transform var(--transition-fast);
   width: 36px;
+  flex-shrink: 0;
 }
 
 .copy-link-button:hover {
@@ -340,9 +343,9 @@
   color: var(--theme-button-text);
   cursor: pointer;
   font-family: var(--font-body);
-  font-size: 16px;
+  /*font-size: 16px;*/
   font-weight: 600;
-  justify-self: end;
+  /*justify-self: end;*/
   min-height: 44px;
   min-width: 120px;
   padding: 0 18px;
@@ -351,6 +354,8 @@
     border-color var(--transition-fast),
     color var(--transition-fast),
     transform var(--transition-fast);
+
+  align-self: flex-end;
 }
 
 .create-link-modal-submit:hover {
