@@ -166,11 +166,9 @@ export function CreateLinkForm({
               required
             />
           </div>
-          
+
           <div className="create-link-field">
-            <label htmlFor="storage-region">
-              Storage Region
-            </label>
+            <label htmlFor="storage-region">Storage Region</label>
 
             <select
               id="storage-region"
@@ -180,8 +178,12 @@ export function CreateLinkForm({
                 setStorageRegion(event.target.value as "US" | "EU")
               }
             >
-              <option value="US">United States</option>
-              <option value="EU">Europe</option>
+              <option className="option" value="US">
+                United States
+              </option>
+              <option className="option" value="EU">
+                Europe
+              </option>
             </select>
           </div>
 
@@ -222,36 +224,30 @@ export function CreateLinkForm({
             aria-modal="true"
             aria-labelledby="link-created-heading"
           >
-            <h2 id="link-created-heading">
-              Upload link created
-            </h2>
+            <h2 id="link-created-heading">Upload link created</h2>
 
-            <p>
-              The customer upload link has been created successfully.
-            </p>
+            <p>The customer upload link has been created successfully.</p>
 
-            <div className="created-link-display">
-              <code>{createdLink}</code>
-
-              <button
-                type="button"
-                className="copy-link-button"
-                onClick={() => void copyCreatedLink()}
-                title="Copy upload link"
-                aria-label="Copy upload link"
-              >
-                {linkCopied ? "✓" : "❐"}
-              </button>
-            </div>
+            <code>{createdLink}</code>
 
             <button
               type="button"
-              className="create-link-modal-submit"
-              onClick={() => navigate(successPath)}
+              className="copy-link-button"
+              onClick={() => void copyCreatedLink()}
+              title="Copy upload link"
+              aria-label="Copy upload link"
             >
-              Continue
+              {linkCopied ? "✓" : "❐"}
             </button>
           </div>
+
+          <button
+            type="button"
+            className="create-link-modal-submit"
+            onClick={() => navigate(successPath)}
+          >
+            Continue
+          </button>
         </div>
       )}
     </section>

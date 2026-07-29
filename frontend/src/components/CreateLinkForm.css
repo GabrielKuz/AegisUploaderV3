@@ -91,7 +91,8 @@
   margin: 0 0 12px;
 }
 
-.create-link-field input, .create-link-field select {
+.create-link-field input,
+.create-link-field select {
   font-family: var(--font-body);
   font-size: clamp(16px, 2vw, 18px);
   background: var(--theme-control-bg);
@@ -112,15 +113,21 @@
   color: var(--theme-muted);
 }
 
-.create-link-field input:hover:not(:disabled), .create-link-field select:hover:not(:disabled) {
+.create-link-field input:hover:not(:disabled),
+.create-link-field select:hover:not(:disabled) {
   border-color: var(--theme-control-border-hover);
 }
 
-.create-link-field input:focus-visible, .create-link-field select:focus-visible {
+.create-link-field input:focus-visible,
+.create-link-field select:focus-visible {
   border-color: var(--theme-accent);
   box-shadow: none;
   outline: 3px solid var(--theme-focus-ring);
   outline-offset: 1px;
+}
+
+.option {
+  background: var(--theme-surface);
 }
 
 .create-link-field input:disabled {
@@ -239,13 +246,13 @@
 }
 
 .create-link-modal {
-  background: var(--theme-surface-but-it-is-not-transparent-because-that-is-really-annoying);
+  background: var(--theme-surface-solid);
   border: 2px solid var(--theme-card-border);
   border-radius: var(--radius-lg);
   box-shadow:
-      0 18px 40px rgba(0, 0, 0, 0.22),
-      0 8px 16px rgba(0, 0, 0, 0.12),
-      var(--theme-card-shadow);
+    0 18px 40px rgba(0, 0, 0, 0.22),
+    0 8px 16px rgba(0, 0, 0, 0.12),
+    var(--theme-card-shadow);
   color: var(--theme-text);
   display: grid;
   gap: 18px;
