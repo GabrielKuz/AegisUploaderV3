@@ -6,8 +6,8 @@ from sqlalchemy import create_engine
 from modules.StorageProvider import LocalStorageProvider, AzureFileStorageProvider
 engine = create_engine(
     os.environ['DATABASE_URL'],    
-    pool_size=15,
-    max_overflow=5,
+    pool_size=10,
+    max_overflow=4,
     pool_timeout=20,
     pool_pre_ping=True,
     pool_recycle=1800,
