@@ -19,6 +19,7 @@ from psycopg.errors import DeadlockDetected
 from sqlalchemy.dialects.postgresql import JSONB
 from cachetools import TTLCache
 from threading import Lock
+from modules.AuditLogGenerator import auditLog, getCaseIdFromLinkID, getCaseIdFromUploadID, getRegionFromUploadID, getCaseIdFromUploadID, getRegionFromlinkID, getCaseIdFromLinkID
 from modules.StorageProvider import StorageProvider, LocalStorageProvider
 from modules import usFileStorageProvider, euFileStorageProvider, itarFileStorageProvider
 from fastapi import APIRouter, Depends, Header, HTTPException
@@ -50,6 +51,7 @@ def get_db(): # Avoid reusing the same session across requests, which can cause 
     finally:
         db.close()
         logger.debug("Closed database session")
+
 
 def hash_bytes(data: bytes) -> str: # Blake3 hash
     return blake3(data).hexdigest()
@@ -154,6 +156,7 @@ if not ITAR_CONNECTION_STRING:
 
 @router.post("/uploadfile/{link_uuid}/start", response_model=StartUploadResponse) # Starts a new upload session for a given link UUID
 @rate_limit(limit=5, window=60, key="link_uuid")  # Limit to 5 requests per minute per link_uuid
+@auditLog(fromParameter="link_uuid", parameterToRegionFunction=getRegionFromlinkID, parameterToCaseIdFunction=getCaseIdFromLinkID)
 async def start_upload(
     link_uuid: str,
     db: Annotated[sqlalchemy.orm.Session, Depends(get_db)],
@@ -582,6 +585,7 @@ async def upload_file_chunk(
 
 @router.get("/uploadfile/{link_uuid}/{upload_token}/status", response_model=UploadStatusResponse) # Provides enough data for the client to resume an upload or verify the upload status, even if the link has expired
 @rate_limit(limit=10, window=60, key="upload_token") # 10 requests per minute per upload token
+@auditLog(fromParameter="link_uuid", parameterToRegionFunction=getRegionFromlinkID, parameterToCaseIdFunction=getCaseIdFromLinkID)
 def upload_status(
     link_uuid: str,
     upload_token: str,
@@ -656,6 +660,7 @@ def upload_status(
 
 @router.post("/uploadfile/{link_uuid}/{upload_token}/complete", response_model=CompleteUploadResponse) # Client's final call to complete the upload, we verify it here. It is idempotent, so if the upload fials client can uplaod more data and call again
 @rate_limit(limit=2, window=60, key="upload_token") # 5 requests per minute per upload token
+@auditLog(fromParameter="link_uuid", parameterToRegionFunction=getRegionFromlinkID, parameterToCaseIdFunction=getCaseIdFromLinkID)
 async def complete_upload(link_uuid: str, upload_token: str, db: Annotated[sqlalchemy.orm.Session, Depends(get_db)]):
     logger.debug(f"Completing upload for link {link_uuid} with token {upload_token}")
     if not IsUUID(link_uuid):
@@ -770,6 +775,7 @@ async def complete_upload(link_uuid: str, upload_token: str, db: Annotated[sqlal
 
 @router.post("/uploads/{upload_id}/mark_for_deletion", response_model=MarkForDeletionResponse)
 @rate_limit(limit=5, window=60, key="upload_id")  # Limit to 5 requests per minute per upload_id
+@auditLog(fromParameter="upload_id", parameterToRegionFunction=getRegionFromUploadID, parameterToCaseIdFunction=getCaseIdFromUploadID)
 def mark_for_deletion(upload_id: str, current_user: Annotated[User, Depends(requireRoles("Admin", strict=True))], db: Annotated[sqlalchemy.orm.Session, Depends(get_db)]):
     if not IsUUID(upload_id):
         badUUID = HTTPException(400,detail={"message": "Invalid uuid"})
@@ -782,6 +788,7 @@ def mark_for_deletion(upload_id: str, current_user: Annotated[User, Depends(requ
     return MarkForDeletionResponse(message=f"Upload {upload_id} marked for deletion")
 
 @router.get("/links/{linkUUID}/files", response_model=list[UploadedFileInfo])
+@auditLog(fromParameter="linkUUID", parameterToRegionFunction=getRegionFromlinkID, parameterToCaseIdFunction=getCaseIdFromLinkID)
 def listFiles(linkUUID: str,
     current_user: Annotated[User, Depends(requireRoles("User", "Admin"))],
     db: Annotated[sqlalchemy.orm.Session, Depends(get_db)],
@@ -839,6 +846,7 @@ def listFiles(linkUUID: str,
     ]
 
 @router.post("/uploads/{upload_id}/extend_expiration", response_model=ExtendExpirationResponse) # Extend the expiration of a file upload by a specified number of additional days
+@auditLog(fromParameter="upload_id", parameterToRegionFunction=getRegionFromUploadID, parameterToCaseIdFunction=getCaseIdFromUploadID)
 def extendFileExpiration(upload_id: str, additional_days: Annotated[int, Query(gt=0, le=365)], current_user: Annotated[User, Depends(requireRoles("Admin", strict=True))], db: Annotated[sqlalchemy.orm.Session, Depends(get_db)]):  # Only admin can extend expiration
     if type(additional_days) is not int: 
         raise HTTPException(status_code=400, detail="Additional days must be an integer")
@@ -969,6 +977,7 @@ The uploaded file is now available for review at {viewURL}.
 
 @router.post("/links/{link_uuid}/mark_all_for_deletion", response_model=MarkForDeletionResponse)
 @rate_limit(limit=5, window=60, key="link_uuid")  # Limit to 5 requests per minute per link_uuid
+@auditLog(fromParameter="link_uuid", parameterToRegionFunction=getRegionFromlinkID, parameterToCaseIdFunction=getCaseIdFromLinkID)
 def mark_all_for_deletion(link_uuid: str, current_user: Annotated[User, Depends(requireRoles("Admin", strict=True))], db: Annotated[sqlalchemy.orm.Session, Depends(get_db)]):
     if not IsUUID(link_uuid):
         raise HTTPException(status_code=400, detail="Invalid uuid")

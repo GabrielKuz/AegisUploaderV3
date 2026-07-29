@@ -20,6 +20,10 @@ class StorageProvider(ABC):
     @abstractmethod
     def download_file(self, source_path: str) -> bytes:
         pass
+
+    @abstractmethod
+    async def append(self, file_path: str, data: str) -> None: #Opens a file and appends data to it, creating the file if it doesn't exist
+        pass
     
     @abstractmethod
     async def upload_stream(self, stream: AsyncIterator[bytes], destination_path: str) -> None:
@@ -83,6 +87,15 @@ class LocalStorageProvider(StorageProvider):
         with open(destination, "wb") as f:
             f.write(file)
         logger.debug(f"Uploaded file to {destination}")
+
+    async def append(self, file_path: str, data: str) -> None:
+        path = self._resolve_path(file_path)
+
+        path.parent.mkdir(parents=True, exist_ok=True)
+
+        with open(path, "a") as f:
+            f.write(data + "\n")
+        logger.debug(f"Appended data to {path}")
     
     def get_file_stream(self, file_path: str) -> BinaryIO:
         try:
@@ -230,6 +243,23 @@ class AzureFileStorageProvider(StorageProvider):
                 pass
             finally:
                 await directory_client.close()
+    async def append(self, file_path: str, data: str) -> None:
+        logger.info(f"Appending data to {file_path}")
+        directory = str(Path(self.base_path) / Path(file_path).parent).replace("\\", "/")
+
+        await self._ensure_directory_exists(directory)
+
+        client = self._get_client(file_path)
+
+        try:
+            await client.get_file_properties()
+            existing_content = await client.download_file().readall()
+            new_content = existing_content + (data + "\n").encode()
+            await client.upload_file(new_content)
+        except ResourceNotFoundError:
+            await client.upload_file((data + "\n").encode())
+        finally:
+            await client.close()
 
     async def upload_file(self, file: bytes, destination_path: str) -> None:
         directory = str(Path(self.base_path) / Path(destination_path).parent).replace("\\", "/")
