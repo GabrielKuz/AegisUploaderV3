@@ -10,7 +10,7 @@ from uuid import UUID
 from enum import Enum
 from functools import wraps
 from modules import usFileStorageProvider, euFileStorageProvider, itarFileStorageProvider, Session
-from modules.models import StorageRegion, LinkRecord, UploadSession
+from modules.models import StorageRegion, LinkRecord, UploadRecord, UploadSession
 
 
 EXCLUDED_FIELDS = {
@@ -61,7 +61,9 @@ def getRegionFromUploadID(upload_id: str) -> StorageRegion: # Get the storage re
     try:
         upload_session = db.query(UploadSession).filter(UploadSession.upload_id == upload_id).first()
         if upload_session is None:
-            raise ValueError(f"No upload session found for upload_id: {upload_id}")
+            upload_session = db.query(UploadRecord).filter(UploadRecord.upload_id == upload_id).first()
+        if upload_session is None:
+            raise ValueError(f"No upload session or record found for upload_id: {upload_id}")
         return upload_session.storage_region
     finally:
         db.close()
@@ -91,7 +93,9 @@ def getCaseIdFromUploadID(upload_id: str) -> str: # Get the case id for a given 
     try:
         upload_session = db.query(UploadSession).filter(UploadSession.upload_id == upload_id).first()
         if upload_session is None:
-            raise ValueError(f"No upload session found for upload_id: {upload_id}")
+            upload_session = db.query(UploadRecord).filter(UploadRecord.upload_id == upload_id).first()
+        if upload_session is None:
+            raise ValueError(f"No upload session or record found for upload_id: {upload_id}")
         return upload_session.case_id
     finally:
         db.close()

@@ -253,7 +253,8 @@ class AzureFileStorageProvider(StorageProvider):
 
         try:
             await client.get_file_properties()
-            existing_content = await client.download_file().readall()
+            downloader = await client.download_file()
+            existing_content = await downloader.readall()
             new_content = existing_content + (data + "\n").encode()
             await client.upload_file(new_content)
         except ResourceNotFoundError:
@@ -275,7 +276,8 @@ class AzureFileStorageProvider(StorageProvider):
         client = self._get_client(source_path)
 
         try:
-            return await client.download_file().readall()
+            downloader = await client.download_file()
+            return await downloader.readall()
         except ResourceNotFoundError:
             raise FileNotFoundError(f"File '{source_path}' does not exist.") from None
         finally:
