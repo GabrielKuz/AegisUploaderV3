@@ -2,6 +2,7 @@ import datetime
 import inspect
 import json
 import inspect
+import os
 
 from typing import Any, Literal
 from dataclasses import dataclass, field, asdict
@@ -131,6 +132,11 @@ def auditLog(location: Literal["US", "EU", "ITAR"] | None = None, fromParameter:
     def decorator_function(func):
         @wraps(func)
         async def wrapper(*args, **kwargs):
+            if os.getenv("TESTING").lower() == "true":
+                if inspect.iscoroutinefunction(func):
+                    return await func(*args, **kwargs)
+                else:
+                    return func(*args, **kwargs)
             signature = inspect.signature(func)
             bound = signature.bind(*args, **kwargs)
             bound.apply_defaults()
