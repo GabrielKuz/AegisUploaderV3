@@ -1,6 +1,5 @@
 version: 2 
 
-
 updates:
   - package-ecosystem: "uv"
     open-pull-requests-limit: 3
