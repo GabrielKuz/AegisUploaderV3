@@ -28,8 +28,8 @@ class LinkRequest(BaseModel):  # structure of a link request from the client
 
 link_data: dict[str, LinkRequest] = {}  # mapping uuid to case info
 
-standard_url = f"https://{os.getenv('FRONTEND_URL') or 'localhost'}/uploads/"  # base url to be concatenated with the uuid
-itar_url = f"https://{os.getenv('BACKEND_ITAR_SUBDOMAIN') or 'localhost'}/uploads/"  # base url to be concatenated with the uuid for ITAR links
+url = f"https://{os.getenv('FRONTEND_URL') or 'localhost'}/uploads/"  # base url to be concatenated with the uuid
+
 
 def generate_links(link_request: LinkRequest, current_user: User):
     """
@@ -45,9 +45,8 @@ def generate_links(link_request: LinkRequest, current_user: User):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Case-ID not found")
 
     uuid_str = str(uuid.uuid4())  # New uuidv4 on every link. We assume no collissions due to large space and link expiration
-    url = itar_url if get_caseITARstatus(link_request.case_id) else standard_url  # Use ITAR URL if case is ITAR, else standard URL
 
-    store_link(link_request, url, uuid_str, current_user)  # add to db
+    store_link(link_request, uuid_str, current_user)  # add to db
     logger.info(f"Link generated successfully: {url + uuid_str} for case ID: {link_request.case_id}")
 
     if not url or not uuid_str:
@@ -56,8 +55,7 @@ def generate_links(link_request: LinkRequest, current_user: User):
     return {"link": url + uuid_str, "uuid": uuid_str}
 
 
-
-def store_link(link_request: LinkRequest, url: str, uuid_str: str, current_user: User):
+def store_link(link_request: LinkRequest, uuid_str: str, current_user: User):
     """
     Stores generated link in the SQL database with metadata.
     """
