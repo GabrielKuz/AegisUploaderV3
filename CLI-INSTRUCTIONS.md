@@ -2,7 +2,7 @@
 
 A command-line interface for interacting with UploaderV3.
 
-To use, download `uploaderV3-cli.py` and add it to your working directory or `PATH`.
+To use, download [`uploaderV3-cli.py`](https://github.com/GabrielKuz/AegisUploaderV3/blob/main/uploaderV3-cli.py) and add it to your working directory or `PATH`.
 
 ## Global Options
 
