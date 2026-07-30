@@ -63,6 +63,11 @@ class User(BaseModel):  # structure of a user object
 
 
 async def getCurrentUser(credentials: Annotated[HTTPAuthorizationCredentials, Depends(scheme)]):  # get the current user from the token
+    if (os.getenv("IS_ITAR_DOMAIN", "false").lower() == "true"):
+        return HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied: ITAR domain is not allowed to access this resource",
+        )
     token = credentials.credentials
     if os.getenv("TESTING", "false").lower() == "true":
         return User(username="testuser", disabled=False)
