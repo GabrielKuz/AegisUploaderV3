@@ -1,123 +1,33 @@
 import { getPartyModeDefinition } from "./partyModeConfig";
 import { usePartyMode } from "./PartyModeContext";
 
-/**
- * Static particles avoid generating different random values
- * on every React render.
- */
 const OTHER_SIDE_PARTICLES = [
-  {
-    left: "4%",
-    delay: "-1s",
-    duration: "12s",
-  },
-  {
-    left: "11%",
-    delay: "-7s",
-    duration: "15s",
-  },
-  {
-    left: "18%",
-    delay: "-3s",
-    duration: "11s",
-  },
-  {
-    left: "27%",
-    delay: "-9s",
-    duration: "17s",
-  },
-  {
-    left: "36%",
-    delay: "-2s",
-    duration: "13s",
-  },
-  {
-    left: "44%",
-    delay: "-6s",
-    duration: "18s",
-  },
-  {
-    left: "52%",
-    delay: "-4s",
-    duration: "12s",
-  },
-  {
-    left: "61%",
-    delay: "-10s",
-    duration: "16s",
-  },
-  {
-    left: "69%",
-    delay: "-5s",
-    duration: "14s",
-  },
-  {
-    left: "77%",
-    delay: "-8s",
-    duration: "19s",
-  },
-  {
-    left: "85%",
-    delay: "-2s",
-    duration: "13s",
-  },
-  {
-    left: "93%",
-    delay: "-6s",
-    duration: "16s",
-  },
+  ["4%", "-1s", "14s"],
+  ["11%", "-9s", "18s"],
+  ["19%", "-4s", "13s"],
+  ["27%", "-12s", "20s"],
+  ["36%", "-2s", "16s"],
+  ["45%", "-8s", "19s"],
+  ["53%", "-5s", "14s"],
+  ["62%", "-11s", "21s"],
+  ["71%", "-3s", "15s"],
+  ["79%", "-10s", "18s"],
+  ["87%", "-6s", "16s"],
+  ["95%", "-13s", "22s"],
+] as const;
+
+const PANDA_LEAVES = [
+  ["16%", "-4s", "19s"],
+  ["39%", "-12s", "23s"],
+  ["67%", "-7s", "21s"],
+  ["88%", "-16s", "25s"],
 ] as const;
 
 /**
- * Decorative leaves for Bamboo Guardian.
+ * Visual backgrounds and active-mode controls.
  *
- * These positions are intentionally predefined so React
- * does not generate new random positions after every render.
- */
-const BAMBOO_LEAVES = [
-  {
-    left: "12%",
-    delay: "-2s",
-    duration: "14s",
-    size: "12px",
-  },
-  {
-    left: "28%",
-    delay: "-8s",
-    duration: "18s",
-    size: "9px",
-  },
-  {
-    left: "46%",
-    delay: "-5s",
-    duration: "16s",
-    size: "13px",
-  },
-  {
-    left: "63%",
-    delay: "-11s",
-    duration: "20s",
-    size: "10px",
-  },
-  {
-    left: "79%",
-    delay: "-4s",
-    duration: "17s",
-    size: "12px",
-  },
-  {
-    left: "91%",
-    delay: "-9s",
-    duration: "19s",
-    size: "8px",
-  },
-] as const;
-
-/**
- * Visual overlays for non-terminal modes.
- *
- * The overlay layer uses pointer-events: none, while the
- * control panel restores pointer-events so its buttons work.
+ * Decorative layers are aria-hidden. Interactive controls
+ * remain outside that hidden subtree.
  */
 export function PartyModeEffects() {
   const {
@@ -135,104 +45,103 @@ export function PartyModeEffects() {
   const definition = getPartyModeDefinition(activeMode);
 
   return (
-    <div
-      className={`party-effects party-effects--${activeMode}`}
-      aria-hidden="true"
-    >
-      {activeMode === "other-side" && (
-        <>
-          <div className="other-side-vignette" />
-          <div className="other-side-lightning" />
-
-          <div className="other-side-particles">
-            {OTHER_SIDE_PARTICLES.map((particle, index) => (
-              <span
-                key={index}
-                style={{
-                  left: particle.left,
-                  animationDelay: particle.delay,
-                  animationDuration: particle.duration,
-                }}
-              />
-            ))}
-          </div>
-
-          <div className="other-side-message">
-            <span>OTHER SIDE CONNECTION</span>
-            <strong>The shield is holding.</strong>
-          </div>
-        </>
-      )}
-
-      {activeMode === "battle-royale" && (
-        <>
-          <div className="royale-sky" />
-          <div className="royale-storm-ring" />
-
-          <div className="royale-hud">
-            <span>AEGIS ROYALE</span>
-
-            <strong>PARTY STORM ACTIVE</strong>
-
-            <small>Visual theme only</small>
-          </div>
-
-          <div className="royale-rarity-bar">
-            <span />
-            <span />
-            <span />
-            <span />
-            <span />
-          </div>
-        </>
-      )}
-
-      {activeMode === "kung-fu-panda" && (
-        <>
-          <div className="bamboo-column bamboo-column--left" />
-          <div className="bamboo-column bamboo-column--right" />
-
-          <div className="bamboo-leaves">
-            {BAMBOO_LEAVES.map((leaf, index) => (
-              <span
-                key={index}
-                style={{
-                  left: leaf.left,
-                  animationDelay: leaf.delay,
-                }}
-              >
-                🍃
-              </span>
-            ))}
-          </div>
-
-          <div className="kung-fu-panda-badge">
-            <span aria-hidden="true">🐼</span>
-
-            <div>
-              <strong>Kung Fu Panda</strong>
-
-              <small>Balance. Focus. Debug.</small>
-            </div>
-          </div>
-        </>
-      )}
-
-      {/*
-       * This control bar remains outside #root through a
-       * React portal, so it stays upright and clickable even
-       * when The Other Side rotates the application.
-       */}
-      <aside
-        className="party-mode-controls"
-        aria-label="Party Mode controls"
-        aria-hidden="false"
+    <>
+      <div
+        className={`party-effects party-effects--${activeMode}`}
+        aria-hidden="true"
       >
+        {activeMode === "other-side" && (
+          <>
+            <div className="other-side-atmosphere" />
+            <div className="other-side-veins" />
+            <div className="other-side-vignette" />
+            <div className="other-side-interference" />
+
+            <div className="other-side-particles">
+              {OTHER_SIDE_PARTICLES.map(([left, delay, duration], index) => (
+                <span
+                  key={index}
+                  style={{
+                    left,
+                    animationDelay: delay,
+                    animationDuration: duration,
+                  }}
+                />
+              ))}
+            </div>
+          </>
+        )}
+
+        {activeMode === "battle-royale" && (
+          <>
+            <div className="royale-sky" />
+            <div className="royale-grid" />
+            <div className="royale-storm royale-storm--outer" />
+            <div className="royale-storm royale-storm--inner" />
+            <div className="royale-energy royale-energy--one" />
+            <div className="royale-energy royale-energy--two" />
+          </>
+        )}
+
+        {activeMode === "kung-fu-panda" && (
+          <>
+            <div className="panda-sky" />
+            <div className="panda-sun" />
+
+            <div className="panda-mountain panda-mountain--far" />
+            <div className="panda-mountain panda-mountain--near" />
+
+            <div className="panda-bamboo panda-bamboo--left">
+              <span />
+              <span />
+              <span />
+            </div>
+
+            <div className="panda-bamboo panda-bamboo--right">
+              <span />
+              <span />
+            </div>
+
+            <div className="panda-leaves">
+              {PANDA_LEAVES.map(([left, delay, duration], index) => (
+                <span
+                  key={index}
+                  style={{
+                    left,
+                    animationDelay: delay,
+                    animationDuration: duration,
+                  }}
+                />
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+
+      <div
+        className={`party-mode-banner party-mode-banner--${activeMode}`}
+        aria-hidden="true"
+      >
+        <span className="party-mode-banner__icon">{definition.icon}</span>
+
         <div>
-          <span>{definition.icon}</span>
+          <small>{definition.category}</small>
+
+          <strong>{definition.title}</strong>
+
+          <span>{definition.tagline}</span>
+        </div>
+      </div>
+
+      <aside
+        className={`party-mode-controls party-mode-controls--${activeMode}`}
+        aria-label="Party Mode controls"
+      >
+        <div className="party-mode-controls__identity">
+          <span aria-hidden="true">{definition.icon}</span>
 
           <div>
-            <small>Active mode</small>
+            <small>Active experience</small>
             <strong>{definition.shortTitle}</strong>
           </div>
         </div>
@@ -240,7 +149,7 @@ export function PartyModeEffects() {
         <div className="party-mode-controls__buttons">
           {activeMode === "other-side" && (
             <button type="button" onClick={toggleOtherSideInversion}>
-              {isOtherSideInverted ? "Restore Orientation" : "Invert Views"}
+              {isOtherSideInverted ? "Restore Reality" : "Invert Reality"}
             </button>
           )}
 
@@ -253,10 +162,10 @@ export function PartyModeEffects() {
             className="party-mode-controls__exit"
             onClick={exitMode}
           >
-            Exit Party Mode
+            Exit
           </button>
         </div>
       </aside>
-    </div>
+    </>
   );
 }

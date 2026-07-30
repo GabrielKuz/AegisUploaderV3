@@ -1,10 +1,7 @@
 import { usePartyMode } from "./PartyModeContext";
 
 /**
- * Visible Party Mode launcher.
- *
- * It only appears when no mode or hub currently needs its
- * own controls.
+ * Main Party Mode entry point.
  */
 export function PartyModeLauncher() {
   const { activeMode, currentLevel, isHubOpen, openHub } = usePartyMode();
@@ -19,14 +16,18 @@ export function PartyModeLauncher() {
       className="party-launcher"
       onClick={openHub}
       title="Open Party Mode — Alt + Shift + P"
+      aria-label={`Open Party Mode. Current level: ${currentLevel.level}, ${currentLevel.title}`}
     >
       <span className="party-launcher__icon" aria-hidden="true">
-        🎉
+        ✦
       </span>
 
-      <span className="party-launcher__label">Party Mode</span>
+      <span className="party-launcher__text">
+        <strong>Party Mode</strong>
+        <small>{currentLevel.title}</small>
+      </span>
 
-      <span className="party-launcher__level">Lv. {currentLevel.level}</span>
+      <span className="party-launcher__level">LV {currentLevel.level}</span>
     </button>
   );
 }

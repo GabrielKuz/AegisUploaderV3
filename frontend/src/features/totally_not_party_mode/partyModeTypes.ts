@@ -1,7 +1,9 @@
 /**
  * Every supported Party Mode.
  *
- * Add new modes here before using them anywhere else.
+ * Keep these values synchronized with partyModeConfig.ts,
+ * PartyModeProvider.tsx, terminalCommands.ts, and
+ * PartyModeEffects.tsx.
  */
 export type PartyModeId =
   | "terminal"
@@ -12,17 +14,21 @@ export type PartyModeId =
 /**
  * Cosmetic Party Mode progression.
  *
- * This remains in sessionStorage and is never sent to the backend.
+ * Progress is stored only in sessionStorage. Nothing is sent
+ * to the backend.
+ *
+ * createdLinkIds prevents the same successful API response
+ * from awarding XP more than once.
  */
 export type PartyProgress = {
   xp: number;
   visitedModes: PartyModeId[];
+  createdLinkIds: string[];
 };
 
 /**
- * A level shown in the Party Hub.
- *
- * Levels do not lock modes. All modes are immediately available.
+ * A cosmetic Party Mode level.
+ * Levels never restrict application functionality.
  */
 export type PartyLevel = {
   level: number;
@@ -30,7 +36,5 @@ export type PartyLevel = {
   title: string;
 };
 
-/**
- * Color options supported by the terminal.
- */
+// Color palettes available inside Terminal Mode.
 export type TerminalColorTheme = "green" | "amber" | "blue";

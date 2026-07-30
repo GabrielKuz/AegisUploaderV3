@@ -1,27 +1,44 @@
+import { useOptionalPartyMode } from "../features/totally_not_party_mode/PartyModeContext";
 import { useTheme } from "./ThemeContext";
+
 import "./ThemeToggle.css";
 
 export function ThemeToggle() {
   const { isDarkMode, toggleTheme } = useTheme();
 
+  const partyMode = useOptionalPartyMode();
+
+  const isThemeLocked = partyMode?.activeMode != null;
+
   const nextTheme = isDarkMode ? "light" : "dark";
-  const label = `Switch to ${nextTheme} mode`;
 
   return (
     <button
-      className="theme-toggle"
       type="button"
+      className="theme-toggle"
       onClick={toggleTheme}
-      aria-label={label}
-      aria-pressed={isDarkMode}
-      title={label}
+      disabled={isThemeLocked}
+      title={
+        isThemeLocked
+          ? "The application theme is controlled by the active Party Mode."
+          : `Switch to ${nextTheme} mode`
+      }
+      aria-label={
+        isThemeLocked
+          ? "Theme locked while Party Mode is active"
+          : `Switch to ${nextTheme} mode`
+      }
     >
       <span className="theme-toggle-icon" aria-hidden="true">
-        {isDarkMode ? "☀" : "☾"}
+        {isThemeLocked ? "✦" : isDarkMode ? "☀" : "☾"}
       </span>
 
       <span className="theme-toggle-label">
-        {isDarkMode ? "Light Mode" : "Dark Mode"}
+        {isThemeLocked
+          ? "Theme Locked"
+          : isDarkMode
+            ? "Light Mode"
+            : "Dark Mode"}
       </span>
     </button>
   );

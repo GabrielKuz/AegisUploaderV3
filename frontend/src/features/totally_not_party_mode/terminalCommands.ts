@@ -368,7 +368,7 @@ export function executeTerminalCommand(
       const destinations: Record<string, string> = {
         home: context.basePath,
         links: `${context.basePath}/links`,
-        create: `${context.basePath}/create-link`,
+        create: `${context.basePath}/links/new`,
         tribute: `${context.basePath}/intern-tribute-2026`,
       };
 
@@ -407,9 +407,9 @@ export function executeTerminalCommand(
           output: [
             "Available modes:",
             "mode terminal",
-            "mode other-side",
-            "mode battle-royale",
-            "mode kung-fu-panda",
+            "mode other",
+            "mode royale",
+            "mode panda",
             "mode normal",
           ],
         };
@@ -421,14 +421,21 @@ export function executeTerminalCommand(
         };
       }
 
-      if (
-        requestedMode === "terminal" ||
-        requestedMode === "other-side" ||
-        requestedMode === "battle-royale" ||
-        requestedMode === "kung-fu-panda"
-      ) {
+      const modeAliases: Record<string, PartyModeId> = {
+        terminal: "terminal",
+        other: "other-side",
+        "other-side": "other-side",
+        royale: "battle-royale",
+        "battle-royale": "battle-royale",
+        panda: "kung-fu-panda",
+        "kung-fu-panda": "kung-fu-panda",
+      };
+
+      const matchingMode = modeAliases[requestedMode];
+
+      if (matchingMode) {
         return {
-          setMode: requestedMode,
+          setMode: matchingMode,
         };
       }
 

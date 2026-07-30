@@ -1,7 +1,15 @@
 import type { PartyLevel, PartyModeId } from "./partyModeTypes";
 
 /**
- * Information displayed on each Party Hub card.
+ * XP awarded after the backend successfully creates a unique
+ * upload link.
+ *
+ * Change this one value to rebalance the progression system.
+ */
+export const LINK_CREATION_XP = 25;
+
+/**
+ * Information displayed for each Party Mode.
  */
 export type PartyModeDefinition = {
   id: PartyModeId;
@@ -10,13 +18,13 @@ export type PartyModeDefinition = {
   icon: string;
   category: "Interactive" | "Visual Theme";
   description: string;
-  firstVisitXp: number;
+  tagline: string;
 };
 
 /**
- * All modes are immediately available.
+ * All Party Modes are immediately available.
  *
- * Changing the order here changes their order in the Party Hub.
+ * Progression is cosmetic and never locks functionality.
  */
 export const PARTY_MODES: readonly PartyModeDefinition[] = [
   {
@@ -25,9 +33,9 @@ export const PARTY_MODES: readonly PartyModeDefinition[] = [
     shortTitle: "Terminal",
     icon: ">_",
     category: "Interactive",
+    tagline: "Secure shell. Maximum vibes.",
     description:
-      "Open a functional Aegis command terminal with navigation, command history, themes, and hidden files.",
-    firstVisitXp: 20,
+      "Enter a safe, fictional Aegis command environment with navigation, command history, hidden files, and terminal themes.",
   },
   {
     id: "other-side",
@@ -35,9 +43,9 @@ export const PARTY_MODES: readonly PartyModeDefinition[] = [
     shortTitle: "Other Side",
     icon: "◉",
     category: "Visual Theme",
+    tagline: "Reality appears to be unstable.",
     description:
-      "Send the application into a dark alternate reality with spores, distortion, and inverted views.",
-    firstVisitXp: 15,
+      "Transform the portal into a dark alternate environment with drifting spores, red interference, and optional inversion.",
   },
   {
     id: "battle-royale",
@@ -45,26 +53,33 @@ export const PARTY_MODES: readonly PartyModeDefinition[] = [
     shortTitle: "Battle Royale",
     icon: "⚡",
     category: "Visual Theme",
+    tagline: "The storm has entered the portal.",
     description:
-      "Transform the application with a colorful storm, competitive HUD, rarity styling, and victory energy.",
-    firstVisitXp: 15,
+      "Apply a bright competitive game interface with storm energy, rarity colors, bold panels, and an Aegis combat HUD.",
   },
   {
     id: "kung-fu-panda",
     title: "Kung Fu Panda 2",
-    shortTitle: "Kung Fu Panda",
+    shortTitle: "Kung Fu Panda 2",
     icon: "🐼",
     category: "Visual Theme",
+    tagline: "Balance. Focus. Debug.",
     description:
-      "Enter the martial-arts world of Kung Fu Panda (copyright hehe) with parchment panels, bamboo, jade accents, and floating leaves.",
-    firstVisitXp: 15,
+      "Enter cinematic jade training grounds with parchment surfaces, mountain silhouettes, bamboo framing, and warm red accents.",
   },
 ] as const;
 
 /**
- * Cosmetic level system.
+ * Creating one link awards 25 XP.
  *
- * Modes are never locked behind these levels.
+ * These thresholds correspond to:
+ *
+ * Level 2:  1 link
+ * Level 3:  3 links
+ * Level 4:  6 links
+ * Level 5: 10 links
+ * Level 6: 16 links
+ * Level 7: 24 links
  */
 export const PARTY_LEVELS: readonly PartyLevel[] = [
   {
@@ -79,41 +94,35 @@ export const PARTY_LEVELS: readonly PartyLevel[] = [
   },
   {
     level: 3,
-    minimumXp: 50,
+    minimumXp: 75,
     title: "Stack Tracer",
   },
   {
     level: 4,
-    minimumXp: 90,
+    minimumXp: 150,
     title: "Shield Engineer",
   },
   {
     level: 5,
-    minimumXp: 140,
+    minimumXp: 250,
     title: "Senior Vibe Architect",
   },
   {
     level: 6,
-    minimumXp: 200,
+    minimumXp: 400,
     title: "Guardian of Production",
   },
   {
     level: 7,
-    minimumXp: 275,
+    minimumXp: 600,
     title: "Aegis Legend",
   },
 ] as const;
 
-/**
- * Keep this false until the clicker component is ready.
- *
- * The Party Hub will display it as a future mini-game without
- * accidentally launching an unfinished experience.
- */
 export const AEGIS_CLICKER_ENABLED = false;
 
 /**
- * Returns the user's current cosmetic level.
+ * Returns the current cosmetic level for an XP total.
  */
 export function getPartyLevel(xp: number): PartyLevel {
   for (let index = PARTY_LEVELS.length - 1; index >= 0; index -= 1) {
@@ -128,9 +137,7 @@ export function getPartyLevel(xp: number): PartyLevel {
 }
 
 /**
- * Returns the level after the current level.
- *
- * Returns null after the maximum level is reached.
+ * Returns the level immediately after the current level.
  */
 export function getNextPartyLevel(currentLevel: PartyLevel): PartyLevel | null {
   return (
@@ -139,7 +146,7 @@ export function getNextPartyLevel(currentLevel: PartyLevel): PartyLevel | null {
 }
 
 /**
- * Finds configuration for one mode.
+ * Finds the configuration for one Party Mode.
  */
 export function getPartyModeDefinition(
   modeId: PartyModeId,

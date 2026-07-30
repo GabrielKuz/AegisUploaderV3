@@ -363,6 +363,54 @@
 .create-link-modal-submit:active {
   transform: translateY(0);
 }
+
+.create-link-modal__heading {
+  align-items: flex-start;
+  display: flex;
+  gap: var(--space-lg);
+  justify-content: space-between;
+}
+
+.create-link-modal__heading h2 {
+  margin-bottom: var(--space-sm);
+}
+
+.create-link-modal__heading p {
+  margin: 0;
+}
+
+.create-link-xp-award {
+  align-items: center;
+  background: linear-gradient(
+    135deg,
+    var(--theme-accent),
+    var(--theme-accent-hover)
+  );
+  border: 1px solid var(--theme-accent-border);
+  border-radius: var(--radius-pill);
+  box-shadow: 0 8px 24px var(--theme-focus-ring);
+  color: var(--white);
+  display: inline-flex;
+  flex: 0 0 auto;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  font-weight: var(--font-extrabold);
+  min-height: 36px;
+  padding: 0 13px;
+  white-space: nowrap;
+}
+
+@media (max-width: 480px) {
+  .create-link-modal__heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .create-link-xp-award {
+    align-self: flex-start;
+  }
+}
+
 /* ==========================================================================
    RESPONSIVE
    ========================================================================== */
