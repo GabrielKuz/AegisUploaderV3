@@ -38,90 +38,6 @@ body.party-mode-active .app-main {
 }
 
 /* ==========================================================================
-   PARTY MODE LAUNCHER
-   ========================================================================== */
-
-.party-launcher {
-  align-items: center;
-  background:
-    radial-gradient(
-      circle at 18% 0%,
-      rgba(120, 197, 232, 0.3),
-      transparent 38%
-    ),
-    linear-gradient(135deg, #082f40, #061d28);
-  border: 1px solid rgba(120, 197, 232, 0.45);
-  border-radius: 18px;
-  bottom: clamp(16px, 2vw, 28px);
-  box-shadow:
-    0 20px 52px rgba(0, 0, 0, 0.35),
-    inset 0 1px rgba(255, 255, 255, 0.08);
-  color: #ffffff;
-  display: grid;
-  gap: 11px;
-  grid-template-columns: auto 1fr auto;
-  min-height: 58px;
-  padding: 9px 11px;
-  position: fixed;
-  right: clamp(16px, 2vw, 28px);
-  text-align: left;
-  transition:
-    border-color var(--transition-fast),
-    box-shadow var(--transition-fast),
-    transform var(--transition-fast);
-  z-index: var(--party-layer-launcher);
-}
-
-.party-launcher:hover {
-  border-color: #8ed9f6;
-  box-shadow:
-    0 24px 60px rgba(0, 0, 0, 0.42),
-    0 0 34px rgba(120, 197, 232, 0.18);
-  transform: translateY(-3px);
-}
-
-.party-launcher:focus-visible {
-  outline: 3px solid #8ed9f6;
-  outline-offset: 4px;
-}
-
-.party-launcher__icon {
-  align-items: center;
-  background: linear-gradient(135deg, #ef3b32, #a92b26);
-  border-radius: 12px;
-  display: flex;
-  font-size: 1.1rem;
-  height: 38px;
-  justify-content: center;
-  width: 38px;
-}
-
-.party-launcher__text {
-  display: grid;
-  gap: 2px;
-}
-
-.party-launcher__text strong {
-  font-size: 0.82rem;
-}
-
-.party-launcher__text small {
-  color: #a8c3ce;
-  font-size: 0.65rem;
-}
-
-.party-launcher__level {
-  background: rgba(255, 255, 255, 0.09);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: var(--radius-pill);
-  color: #8ed9f6;
-  font-family: var(--font-mono);
-  font-size: 0.66rem;
-  font-weight: var(--font-extrabold);
-  padding: 5px 8px;
-}
-
-/* ==========================================================================
    PARTY HUB
    ========================================================================== */
 
@@ -1677,6 +1593,27 @@ body.party-theme--kung-fu-panda .upload-link-summary {
   text-align: center;
 }
 
+.intern-tribute-photo {
+  display: flex;
+  justify-content: center;
+
+  margin: 0 auto 48px;
+}
+
+.intern-tribute-photo img {
+  width: min(900px, 100%);
+  max-height: 520px;
+
+  object-fit: cover;
+
+  border-radius: 24px;
+
+  border: 3px solid rgba(120, 197, 232, 0.35);
+
+  box-shadow:
+    0 24px 60px rgba(0, 0, 0, 0.35),
+    0 0 32px rgba(120, 197, 232, 0.18);
+}
 /* ==========================================================================
    RESPONSIVE PARTY MODE
    ========================================================================== */
@@ -1760,10 +1697,6 @@ body.party-theme--kung-fu-panda .upload-link-summary {
 }
 
 @media (max-width: 560px) {
-  .party-launcher__text {
-    display: none;
-  }
-
   .party-mode-card {
     grid-template-columns: 92px minmax(0, 1fr);
   }
@@ -1782,7 +1715,6 @@ body.party-theme--kung-fu-panda .upload-link-summary {
    ========================================================================== */
 
 @media (prefers-reduced-motion: reduce) {
-  .party-launcher,
   .party-mode-card,
   .party-icon-button,
   .party-progress-panel__track span,

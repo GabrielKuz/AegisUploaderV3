@@ -19,7 +19,6 @@ import {
 } from "./PartyModeContext";
 import { PartyModeEffects } from "./PartyModeEffects";
 import { PartyModeHub } from "./PartyModeHub";
-import { PartyModeLauncher } from "./PartyModeLauncher";
 import { TerminalMode } from "./TerminalMode";
 
 import type { PartyModeId, PartyProgress } from "./partyModeTypes";
@@ -389,7 +388,6 @@ export function PartyModeProvider({ children }: PartyModeProviderProps) {
       {typeof document !== "undefined" &&
         createPortal(
           <>
-            <PartyModeLauncher />
             <PartyModeHub />
             <PartyModeEffects />
             <TerminalMode />

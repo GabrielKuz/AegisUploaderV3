@@ -466,6 +466,45 @@
     width: 132px;
   }
 
+  /* ==========================================================================
+   HIDDEN PARTY MODE LOGO TRIGGER
+   ========================================================================== */
+
+  /*
+ * On Support and Admin pages, the Aegis logo secretly opens
+ * the Party Mode hub.
+ *
+ * The button reset keeps it visually identical to the normal
+ * non-interactive logo.
+ */
+
+  .app-logo-party-trigger {
+    flex: 0 1 auto;
+
+    margin: 0;
+    padding: 0;
+
+    display: block;
+
+    border: 0;
+    border-radius: var(--radius-sm);
+
+    color: inherit;
+    background: transparent;
+
+    line-height: 0;
+    cursor: default;
+  }
+
+  .app-logo-party-trigger:hover {
+    background: transparent;
+  }
+
+  .app-logo-party-trigger:focus-visible {
+    outline: 2px solid var(--theme-mode);
+    outline-offset: 5px;
+  }
+
   .app-divider,
   .app-title,
   .app-user-details {

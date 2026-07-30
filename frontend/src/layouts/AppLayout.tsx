@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { useMsal } from "@azure/msal-react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
-
+import { useOptionalPartyMode } from "../features/totally_not_party_mode/PartyModeContext";
 import { isEntraConfigured } from "../features/auth/authConfig";
 import { getDevUser, signOutDevUser } from "../features/auth/devAuth";
 import { getActiveAccount } from "../features/auth/entraAuth";
@@ -47,6 +47,8 @@ export function AppLayout({
   const navigate = useNavigate();
   const { instance } = useMsal();
 
+  const partyMode = useOptionalPartyMode();
+
   const account = isEntraConfigured ? getActiveAccount(instance) : null;
 
   const devUser = isEntraConfigured ? null : getDevUser();
@@ -86,11 +88,23 @@ export function AppLayout({
     <div className={layoutClassName}>
       <header className="app-header">
         <div className="app-brand">
-          <img
-            className="app-logo"
-            src="/images/Aegis-Logo.png"
-            alt="Aegis Software"
-          />
+          {partyMode ? (
+            <button
+              type="button"
+              className="app-logo-party-trigger"
+              onClick={partyMode.openHub}
+              aria-label="Aegis Software"
+              title="Aegis Software"
+            >
+              <img className="app-logo" src="/images/Aegis-Logo.png" alt="" />
+            </button>
+          ) : (
+            <img
+              className="app-logo"
+              src="/images/Aegis-Logo.png"
+              alt="Aegis Software"
+            />
+          )}
 
           <div className="app-divider" aria-hidden="true" />
 
