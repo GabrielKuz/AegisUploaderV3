@@ -7,7 +7,7 @@ import sys
 import urllib.error
 import urllib.request
 
-BASE_URL = "https://localhost/api"
+BASE_URL = "https://dataportal.aiscorp.com/api"
 DEFAULT_TIMEOUT = 30
 
 
