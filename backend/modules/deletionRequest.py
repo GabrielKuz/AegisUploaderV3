@@ -153,3 +153,4 @@ async def sendDeletionEmail(message):
     async with EmailClient.from_connection_string(CONNECTION_STRING) as client:
         response = await client.begin_send(message)
         await response.result()
+
