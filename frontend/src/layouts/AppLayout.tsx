@@ -1,13 +1,24 @@
-import type { ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import { useMsal } from "@azure/msal-react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
-
+import { useOptionalPartyMode } from "../features/totally_not_party_mode/PartyModeContext";
 import { isEntraConfigured } from "../features/auth/authConfig";
 import { getDevUser, signOutDevUser } from "../features/auth/devAuth";
 import { getActiveAccount } from "../features/auth/entraAuth";
 import { ThemeToggle } from "../theme/ThemeToggle";
 
 import "./AppLayout.css";
+
+/**
+ * Number of logo clicks needed to reveal Party Mode.
+ */
+const PARTY_MODE_REQUIRED_CLICKS = 5;
+
+/**
+ * The click count resets when the user waits longer than
+ * this amount of time between clicks.
+ */
+const PARTY_MODE_CLICK_RESET_MS = 2_000;
 
 type AppNavItem = {
   to: string;
@@ -47,6 +58,60 @@ export function AppLayout({
   const navigate = useNavigate();
   const { instance } = useMsal();
 
+  const partyMode = useOptionalPartyMode();
+  /**
+   * Stores the current secret-logo click count without causing
+   * the layout to rerender after every click.
+   */
+  const partyLogoClickCountRef = useRef(0);
+
+  /**
+   * Stores the timer that resets the secret click sequence.
+   */
+  const partyLogoResetTimerRef = useRef<number | null>(null);
+
+  /**
+   * Clears the timer if the layout unmounts.
+   */
+  useEffect(() => {
+    return () => {
+      if (partyLogoResetTimerRef.current !== null) {
+        window.clearTimeout(partyLogoResetTimerRef.current);
+      }
+    };
+  }, []);
+
+  /**
+   * Opens Party Mode after five reasonably quick logo clicks.
+   *
+   * Waiting more than two seconds between clicks resets the
+   * sequence back to zero.
+   */
+  function handlePartyLogoClick(): void {
+    if (!partyMode) {
+      return;
+    }
+
+    partyLogoClickCountRef.current += 1;
+
+    if (partyLogoResetTimerRef.current !== null) {
+      window.clearTimeout(partyLogoResetTimerRef.current);
+    }
+
+    if (partyLogoClickCountRef.current >= PARTY_MODE_REQUIRED_CLICKS) {
+      partyLogoClickCountRef.current = 0;
+      partyLogoResetTimerRef.current = null;
+
+      partyMode.openHub();
+
+      return;
+    }
+
+    partyLogoResetTimerRef.current = window.setTimeout(() => {
+      partyLogoClickCountRef.current = 0;
+      partyLogoResetTimerRef.current = null;
+    }, PARTY_MODE_CLICK_RESET_MS);
+  }
   const account = isEntraConfigured ? getActiveAccount(instance) : null;
 
   const devUser = isEntraConfigured ? null : getDevUser();
@@ -86,11 +151,23 @@ export function AppLayout({
     <div className={layoutClassName}>
       <header className="app-header">
         <div className="app-brand">
-          <img
-            className="app-logo"
-            src="/images/Aegis-Logo.png"
-            alt="Aegis Software"
-          />
+          {partyMode ? (
+            <button
+              type="button"
+              className="app-logo-party-trigger"
+              onClick={handlePartyLogoClick}
+              aria-label="Aegis Software"
+              title="Aegis Software"
+            >
+              <img className="app-logo" src="/images/Aegis-Logo.png" alt="" />
+            </button>
+          ) : (
+            <img
+              className="app-logo"
+              src="/images/Aegis-Logo.png"
+              alt="Aegis Software"
+            />
+          )}
 
           <div className="app-divider" aria-hidden="true" />
 

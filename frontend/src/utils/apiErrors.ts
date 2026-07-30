@@ -222,6 +222,26 @@ export function getUnexpectedError(
   error: unknown,
   action: string,
 ): UserFacingError {
+  if (error instanceof Error) {
+    const errorCode =
+      "errorCode" in error && typeof error.errorCode === "string"
+        ? error.errorCode
+        : "";
+
+    const errorMessage = error.message.toLowerCase();
+
+    if (
+      errorCode === "timed_out" ||
+      errorCode === "monitor_window_timeout" ||
+      errorMessage.includes("timed_out")
+    ) {
+      return {
+        title: "Session expired",
+        message: "Session has expired, please sign back in.",
+      };
+    }
+  }
+
   if (error instanceof TypeError) {
     return {
       title: "Unable to reach the server",

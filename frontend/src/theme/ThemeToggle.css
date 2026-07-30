@@ -19,22 +19,31 @@
     background-color var(--transition-fast),
     border-color var(--transition-fast),
     color var(--transition-fast),
+    opacity var(--transition-fast),
     transform var(--transition-fast);
 }
 
-.theme-toggle:hover {
+.theme-toggle:hover:not(:disabled) {
   border-color: var(--theme-mode);
   color: var(--theme-mode);
   transform: translateY(-1px);
 }
 
-.theme-toggle:active {
+.theme-toggle:active:not(:disabled) {
   transform: translateY(0);
 }
 
 .theme-toggle:focus-visible {
   outline: 3px solid var(--theme-focus-ring);
   outline-offset: 3px;
+}
+
+.theme-toggle:disabled {
+  border-color: rgba(255, 255, 255, 0.2);
+  box-shadow: none;
+  cursor: not-allowed;
+  opacity: 0.62;
+  transform: none;
 }
 
 .theme-toggle-icon {
@@ -44,19 +53,17 @@
 
 @media (max-width: 520px) {
   .theme-toggle {
-    width: 42px;
     padding: 0;
+    width: 42px;
   }
 
   .theme-toggle-label {
-    position: absolute;
-
-    width: 1px;
+    clip-path: inset(50%);
     height: 1px;
     overflow: hidden;
-
-    clip-path: inset(50%);
+    position: absolute;
     white-space: nowrap;
+    width: 1px;
   }
 }
 

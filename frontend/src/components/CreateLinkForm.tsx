@@ -1,12 +1,15 @@
 import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
+
 import { useApiAccessToken } from "../features/auth/useApiAccessToken";
+import { useOptionalPartyMode } from "../features/totally_not_party_mode/PartyModeContext";
 import {
   getUnexpectedError,
   readApiError,
   type UserFacingError,
 } from "../utils/apiErrors";
 import { ApiErrorAlert } from "./ApiErrorAlert";
+
 import "./CreateLinkForm.css";
 
 type CreateLinkFormProps = {
@@ -14,7 +17,13 @@ type CreateLinkFormProps = {
   successPath: string;
 };
 
-// Creates temporary customer upload link for support case.
+type CreateLinkResponse = {
+  uuid?: unknown;
+};
+
+/**
+ * Creates a temporary customer upload link.
+ */
 export function CreateLinkForm({
   cancelPath,
   successPath,
@@ -22,6 +31,8 @@ export function CreateLinkForm({
   const navigate = useNavigate();
 
   const getAccessToken = useApiAccessToken();
+
+  const partyMode = useOptionalPartyMode();
 
   const [caseId, setCaseId] = useState("");
 
@@ -33,12 +44,19 @@ export function CreateLinkForm({
 
   const [createdLink, setCreatedLink] = useState<string | null>(null);
 
+  const [awardedXp, setAwardedXp] = useState(0);
+
   const [linkCopied, setLinkCopied] = useState(false);
 
   async function handleSubmit(
     event: FormEvent<HTMLFormElement>,
   ): Promise<void> {
     event.preventDefault();
+
+    if (isSubmitting) {
+      return;
+    }
+
     const trimmedCaseId = caseId.trim();
 
     if (!trimmedCaseId) {
@@ -52,6 +70,7 @@ export function CreateLinkForm({
 
     setError(null);
     setIsSubmitting(true);
+    setAwardedXp(0);
 
     try {
       const accessToken = await getAccessToken();
@@ -81,13 +100,33 @@ export function CreateLinkForm({
 
       if (!response.ok) {
         setError(await readApiError(response, "create the upload link"));
+
         return;
       }
 
-      const payload = await response.json();
+      const payload = (await response.json()) as CreateLinkResponse;
 
-      const uploadLink = `${window.location.origin}/uploads/${payload.uuid}`;
+      if (typeof payload.uuid !== "string" || !payload.uuid.trim()) {
+        throw new Error(
+          "The link service did not return a valid upload-link ID.",
+        );
+      }
 
+      const normalizedUuid = payload.uuid.trim();
+
+      const uploadLink =
+        `${window.location.origin}` + `/uploads/${normalizedUuid}`;
+
+      /*
+       * XP is recorded only after:
+       *
+       * 1. The request succeeds.
+       * 2. The API returns a valid UUID.
+       * 3. That UUID has not already been rewarded.
+       */
+      const xpEarned = partyMode?.recordCreatedLink(normalizedUuid) ?? 0;
+
+      setAwardedXp(xpEarned);
       setCreatedLink(uploadLink);
     } catch (requestError) {
       setError(getUnexpectedError(requestError, "create the upload link"));
@@ -117,6 +156,7 @@ export function CreateLinkForm({
       });
     }
   }
+
   return (
     <section className="create-link-page" aria-labelledby="create-link-heading">
       <header className="create-link-header">
@@ -151,10 +191,8 @@ export function CreateLinkForm({
               onChange={(event) => {
                 let value = event.target.value;
 
-                // Normalize the AIS prefix.
                 value = value.replace(/^ais/i, "AIS");
 
-                // Automatically insert the hyphen if the user types AIS1234.
                 value = value.replace(/^AIS(?!-)(\d)/, "AIS-$1");
 
                 setCaseId(value);
@@ -181,6 +219,7 @@ export function CreateLinkForm({
               <option className="option" value="US">
                 United States
               </option>
+
               <option className="option" value="EU">
                 Europe
               </option>
@@ -216,6 +255,7 @@ export function CreateLinkForm({
           </p>
         </aside>
       </div>
+
       {createdLink && (
         <div className="create-link-modal-overlay">
           <div
@@ -224,11 +264,19 @@ export function CreateLinkForm({
             aria-modal="true"
             aria-labelledby="link-created-heading"
           >
-            <h2 id="link-created-heading">Upload link created</h2>
+            <div className="create-link-modal__heading">
+              <div>
+                <h2 id="link-created-heading">Upload link created</h2>
 
-            <p>
-              The customer upload link has been created successfully.
-            </p>
+                <p>The customer upload link was created successfully.</p>
+              </div>
+
+              {awardedXp > 0 && (
+                <span className="create-link-xp-award" role="status">
+                  +{awardedXp} XP
+                </span>
+              )}
+            </div>
 
             <div className="created-link-display">
               <code>{createdLink}</code>
@@ -237,8 +285,10 @@ export function CreateLinkForm({
                 type="button"
                 className="copy-link-button"
                 onClick={() => void copyCreatedLink()}
-                title="Copy upload link"
-                aria-label="Copy upload link"
+                title={linkCopied ? "Upload link copied" : "Copy upload link"}
+                aria-label={
+                  linkCopied ? "Upload link copied" : "Copy upload link"
+                }
               >
                 {linkCopied ? "✓" : "❐"}
               </button>

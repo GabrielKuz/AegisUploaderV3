@@ -11,6 +11,9 @@ import { RoleAwareRedirect } from "./features/auth/RoleAwareRedirect";
 
 import { CustomerUpload } from "./features/customer/CustomerUpload";
 
+import { PartyModeProvider } from "./features/totally_not_party_mode/PartyModeProvider";
+import { TributePage } from "./features/totally_not_party_mode/TributePage";
+
 import { SupportCreateLink } from "./features/support/SupportCreateLink";
 import { SupportHome } from "./features/support/SupportHome";
 import { SupportUpload } from "./features/support/SupportUpload";
@@ -24,9 +27,12 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
+        {/* ================================================================
+            PUBLIC ROUTES
+            ================================================================ */}
+
         <Route path="/" element={<Login />} />
 
-        {/* Public customer upload page. */}
         <Route path="/uploads/:uuid" element={<CustomerLayout />}>
           <Route index element={<CustomerUpload />} />
         </Route>
@@ -40,12 +46,17 @@ export default function App() {
           }
         />
 
-        {/* Private customer support page. */}
+        {/* ================================================================
+            SUPPORT ROUTES
+            ================================================================ */}
+
         <Route
           path="/support"
           element={
             <RequireEntraUser requiredRole="support">
-              <SupportLayout />
+              <PartyModeProvider>
+                <SupportLayout />
+              </PartyModeProvider>
             </RequireEntraUser>
           }
         >
@@ -56,14 +67,21 @@ export default function App() {
           <Route path="links/new" element={<SupportCreateLink />} />
 
           <Route path="view-uploads/:uuid" element={<SupportUpload />} />
+
+          <Route path="intern-tribute-2026" element={<TributePage />} />
         </Route>
 
-        {/* Private admin page. */}
+        {/* ================================================================
+            ADMIN ROUTES
+            ================================================================ */}
+
         <Route
           path="/admin"
           element={
             <RequireEntraUser requiredRole="admin">
-              <AdminLayout />
+              <PartyModeProvider>
+                <AdminLayout />
+              </PartyModeProvider>
             </RequireEntraUser>
           }
         >
@@ -74,8 +92,15 @@ export default function App() {
           <Route path="links/new" element={<AdminCreateLink />} />
 
           <Route path="view-uploads/:uuid" element={<AdminUpload />} />
+
+          <Route path="intern-tribute-2026" element={<TributePage />} />
         </Route>
 
+        {/* ================================================================
+            FALLBACK
+            ================================================================ */}
+
+        {/* Send unknown URLs back to the login/root page. */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
