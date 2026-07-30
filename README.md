@@ -24,6 +24,7 @@ This application provides a secure mechanism for customers to upload files assoc
 - Microsoft Entra authentication
 - Azure File Storage integration
 - Automatic ITAR data routing
+- Frontend with Light and Dark Mode
 - REST API with Swagger/OpenAPI documentation
 - CLI interface (See `CLI-INSTRUCTIONS.md`)
 ---
