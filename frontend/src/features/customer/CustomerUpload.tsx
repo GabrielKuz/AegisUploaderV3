@@ -103,6 +103,7 @@ async function getUploadResponseError(
           "This upload link could not be found. Verify that you opened the complete link provided by support.",
         );
       }
+      
 
       return new Error(
         "The previous upload session could not be found on the server. Remove the file, select it again, and start a new upload.",
