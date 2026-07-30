@@ -171,19 +171,13 @@ export function PartyModeProvider({ children }: PartyModeProviderProps) {
   }, []);
 
   /**
-   * Activating a mode records it as visited but does not
-   * award XP.
-   *
+   * Activating a mode records it as visited but does not award XP.
    * XP is earned through successful link creation.
    */
   const activateMode = useCallback(
     (mode: PartyModeId) => {
       setActiveMode(mode);
       setIsHubOpen(false);
-
-      /*
-       * The Other Side now begins upright.
-       */
       setIsOtherSideInverted(false);
 
       commitProgress((currentProgress) => {
@@ -210,9 +204,7 @@ export function PartyModeProvider({ children }: PartyModeProviderProps) {
     setIsOtherSideInverted((currentValue) => !currentValue);
   }, []);
 
-  /**
-   * Awards XP for one unique backend-created upload link.
-   */
+  // Awards XP for one unique backend-created upload link.
   const recordCreatedLink = useCallback(
     (linkId: string): number => {
       const normalizedLinkId = linkId.trim();
@@ -258,9 +250,8 @@ export function PartyModeProvider({ children }: PartyModeProviderProps) {
     }
   }, []);
 
-  /**
-   * Saves harmless cosmetic progress.
-   */
+  // Saves harmless cosmetic progress.
+
   useEffect(() => {
     if (!isPartyModeEnabled) {
       return;
@@ -272,9 +263,7 @@ export function PartyModeProvider({ children }: PartyModeProviderProps) {
     );
   }, [isPartyModeEnabled, progress]);
 
-  /**
-   * Applies the active mode to document.body.
-   */
+  // Applies the active mode to document.body.
   useEffect(() => {
     removePartyBodyClasses();
 
@@ -296,7 +285,6 @@ export function PartyModeProvider({ children }: PartyModeProviderProps) {
 
   /**
    * Keyboard shortcuts:
-   *
    * Alt + Shift + P: open Party Hub
    * Escape: close hub or exit active mode
    */
@@ -336,10 +324,7 @@ export function PartyModeProvider({ children }: PartyModeProviderProps) {
     };
   }, [activeMode, closeHub, exitMode, isHubOpen, isPartyModeEnabled, openHub]);
 
-  /**
-   * Always clean global classes after sign-out or route
-   * changes that unmount the provider.
-   */
+  // Always clean global classes after sign-out or route changes that unmount the provider.
   useEffect(() => {
     return removePartyBodyClasses;
   }, []);

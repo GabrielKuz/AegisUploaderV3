@@ -377,7 +377,6 @@
 .customer-delete-button {
   width: 100%;
   min-height: 42px;
-
   background: var(--theme-button-bg-variation);
   border: 2px solid var(--theme-button-border);
   border-radius: var(--radius-md);
@@ -466,45 +465,6 @@
     width: 132px;
   }
 
-  /* ==========================================================================
-   HIDDEN PARTY MODE LOGO TRIGGER
-   ========================================================================== */
-
-  /*
- * On Support and Admin pages, the Aegis logo secretly opens
- * the Party Mode hub.
- *
- * The button reset keeps it visually identical to the normal
- * non-interactive logo.
- */
-
-  .app-logo-party-trigger {
-    flex: 0 1 auto;
-
-    margin: 0;
-    padding: 0;
-
-    display: block;
-
-    border: 0;
-    border-radius: var(--radius-sm);
-
-    color: inherit;
-    background: transparent;
-
-    line-height: 0;
-    cursor: default;
-  }
-
-  .app-logo-party-trigger:hover {
-    background: transparent;
-  }
-
-  .app-logo-party-trigger:focus-visible {
-    outline: 2px solid var(--theme-mode);
-    outline-offset: 5px;
-  }
-
   .app-divider,
   .app-title,
   .app-user-details {
@@ -565,4 +525,81 @@
   .app-sign-out:active {
     transform: none;
   }
+}
+
+button.app-logo-party-trigger {
+  appearance: none !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+/* ==========================================================================
+   HIDDEN PARTY MODE LOGO BUTTON RESET
+   ========================================================================== */
+
+/*
+ * This button must visually behave exactly like the original image.
+ *
+ * The important declarations protect it from shared/global button
+ * styles loaded elsewhere in the application.
+ */
+button.app-logo-party-trigger {
+  appearance: none !important;
+  -webkit-appearance: none !important;
+
+  width: auto !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  height: auto !important;
+
+  margin: 0 !important;
+  padding: 0 !important;
+
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex: 0 1 auto !important;
+
+  border: 0 !important;
+  border-radius: 0 !important;
+
+  color: inherit !important;
+  background: transparent !important;
+  box-shadow: none !important;
+
+  line-height: 0 !important;
+  cursor: pointer !important;
+
+  transform: none !important;
+}
+
+button.app-logo-party-trigger:hover,
+button.app-logo-party-trigger:active {
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+button.app-logo-party-trigger .app-logo {
+  width: clamp(144px, 18vw, 181px) !important;
+  max-width: none !important;
+  height: auto !important;
+
+  margin: 0 !important;
+  padding: 0 !important;
+
+  display: block !important;
+
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+button.app-logo-party-trigger:focus-visible {
+  border-radius: var(--radius-sm) !important;
+  outline: 2px solid var(--theme-mode) !important;
+  outline-offset: 5px !important;
 }

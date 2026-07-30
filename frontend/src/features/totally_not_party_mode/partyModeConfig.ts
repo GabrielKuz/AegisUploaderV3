@@ -39,8 +39,8 @@ export const PARTY_MODES: readonly PartyModeDefinition[] = [
   },
   {
     id: "other-side",
-    title: "The Other Side",
-    shortTitle: "Other Side",
+    title: "The Upside Down",
+    shortTitle: "Upside Down",
     icon: "◉",
     category: "Visual Theme",
     tagline: "Reality appears to be unstable.",
@@ -118,8 +118,6 @@ export const PARTY_LEVELS: readonly PartyLevel[] = [
     title: "Aegis Legend",
   },
 ] as const;
-
-export const AEGIS_CLICKER_ENABLED = false;
 
 /**
  * Returns the current cosmetic level for an XP total.

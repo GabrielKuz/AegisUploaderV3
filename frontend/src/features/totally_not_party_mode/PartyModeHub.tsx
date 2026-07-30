@@ -1,21 +1,25 @@
 import { type MouseEvent } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 
-import {
-  AEGIS_CLICKER_ENABLED,
-  LINK_CREATION_XP,
-  PARTY_MODES,
-} from "./partyModeConfig";
+import { LINK_CREATION_XP, PARTY_MODES } from "./partyModeConfig";
 import { usePartyMode } from "./PartyModeContext";
 
 /**
- * Main Party Mode control center.
+ * Main Party Mode selection interface.
+ *
+ * The layout intentionally stays compact so it feels like a
+ * hidden application utility rather than a separate dashboard.
  */
 export function PartyModeHub() {
+  const navigate = useNavigate();
+  const location = useLocation();
+
   const {
     activeMode,
     activateMode,
     closeHub,
     currentLevel,
+    exitMode,
     isHubOpen,
     nextLevel,
     progress,
@@ -50,10 +54,27 @@ export function PartyModeHub() {
       )
     : 0;
 
+  const basePath = location.pathname.startsWith("/admin")
+    ? "/admin"
+    : "/support";
+
+  /**
+   * Close the hub only when the backdrop itself is selected.
+   */
   function handleBackdropClick(event: MouseEvent<HTMLDivElement>): void {
     if (event.target === event.currentTarget) {
       closeHub();
     }
+  }
+
+  /**
+   * Opens the hidden intern tribute without carrying an active
+   * visual Party Mode onto the tribute page.
+   */
+  function openInternTribute(): void {
+    exitMode();
+
+    navigate(`${basePath}/intern-tribute-2026`);
   }
 
   return (
@@ -68,12 +89,9 @@ export function PartyModeHub() {
           <div className="party-hub__heading">
             <p className="party-eyebrow">Aegis Party Protocol</p>
 
-            <h2 id="party-hub-title">Experience control center</h2>
+            <h2 id="party-hub-title">Party Mode</h2>
 
-            <p>
-              Select a visual transformation or open the secure fictional
-              terminal.
-            </p>
+            <p>Choose an experience or visit the intern archive.</p>
           </div>
 
           <button
@@ -87,11 +105,9 @@ export function PartyModeHub() {
           </button>
         </header>
 
-        <section className="party-progress-panel">
-          <div className="party-progress-panel__identity">
-            <span className="party-progress-panel__level">
-              {currentLevel.level}
-            </span>
+        <section className="party-summary">
+          <div className="party-summary__rank">
+            <span>{currentLevel.level}</span>
 
             <div>
               <small>Current rank</small>
@@ -99,19 +115,20 @@ export function PartyModeHub() {
             </div>
           </div>
 
-          <div className="party-progress-panel__progress">
-            <div className="party-progress-panel__labels">
+          <div className="party-summary__progress">
+            <div className="party-summary__labels">
               <span>{progress.xp} XP</span>
 
               <span>
                 {progress.createdLinkIds.length}{" "}
-                {progress.createdLinkIds.length === 1 ? "link" : "links"}{" "}
-                created
+                {progress.createdLinkIds.length === 1
+                  ? "link created"
+                  : "links created"}
               </span>
             </div>
 
             <div
-              className="party-progress-panel__track"
+              className="party-summary__track"
               role="progressbar"
               aria-label="Party Mode level progress"
               aria-valuemin={currentLevel.minimumXp}
@@ -125,20 +142,42 @@ export function PartyModeHub() {
               />
             </div>
 
-            <p>
+            <small>
               {nextLevel
                 ? `${linksUntilNextLevel} more ${
                     linksUntilNextLevel === 1 ? "link" : "links"
-                  } until ${nextLevel.title}.`
-                : "Maximum Party Mode rank achieved."}
-            </p>
+                  } until ${nextLevel.title}`
+                : "Maximum rank reached"}
+            </small>
           </div>
 
-          <div className="party-progress-panel__reward">
-            <small>Link reward</small>
+          <div className="party-summary__reward">
+            <small>Per link</small>
             <strong>+{LINK_CREATION_XP} XP</strong>
           </div>
         </section>
+
+        <button
+          type="button"
+          className="party-tribute-link"
+          onClick={openInternTribute}
+        >
+          <span className="party-tribute-link__icon" aria-hidden="true">
+            🛡️
+          </span>
+
+          <span className="party-tribute-link__content">
+            <small>Featured archive</small>
+
+            <strong>The 2026 Intern Team</strong>
+
+            <span>View the team behind the Secure Data Portal.</span>
+          </span>
+
+          <span className="party-tribute-link__action" aria-hidden="true">
+            View tribute →
+          </span>
+        </button>
 
         <section className="party-mode-section">
           <div className="party-section-heading">
@@ -147,8 +186,6 @@ export function PartyModeHub() {
 
               <h3>Choose a transformation</h3>
             </div>
-
-            <span>All modes are immediately available</span>
           </div>
 
           <div className="party-mode-grid">
@@ -156,6 +193,12 @@ export function PartyModeHub() {
               const isActive = activeMode === mode.id;
 
               const hasVisited = progress.visitedModes.includes(mode.id);
+
+              const status = isActive
+                ? "Active"
+                : hasVisited
+                  ? "Visited"
+                  : "Ready";
 
               return (
                 <button
@@ -170,33 +213,22 @@ export function PartyModeHub() {
                     .join(" ")}
                   onClick={() => activateMode(mode.id)}
                 >
-                  <span className="party-mode-card__preview" aria-hidden="true">
-                    <span className="party-mode-card__icon">{mode.icon}</span>
+                  <span className="party-mode-card__icon" aria-hidden="true">
+                    {mode.icon}
                   </span>
 
-                  <span className="party-mode-card__body">
-                    <span className="party-mode-card__meta">
-                      <small>{mode.category}</small>
-
-                      <small>
-                        {isActive ? "Active" : hasVisited ? "Visited" : "Ready"}
-                      </small>
-                    </span>
+                  <span className="party-mode-card__content">
+                    <small>{mode.category}</small>
 
                     <strong>{mode.title}</strong>
 
-                    <span className="party-mode-card__tagline">
-                      {mode.tagline}
-                    </span>
+                    <span>{mode.tagline}</span>
+                  </span>
 
-                    <span className="party-mode-card__description">
-                      {mode.description}
-                    </span>
+                  <span className="party-mode-card__end">
+                    <small>{status}</small>
 
-                    <span className="party-mode-card__launch">
-                      {isActive ? "Resume experience" : "Launch experience"}
-                      <span aria-hidden="true">→</span>
-                    </span>
+                    <span aria-hidden="true">→</span>
                   </span>
                 </button>
               );
@@ -204,44 +236,12 @@ export function PartyModeHub() {
           </div>
         </section>
 
-        <section className="party-games-section">
-          <div>
-            <p className="party-eyebrow">Experimental</p>
-
-            <h3>Mini-game laboratory</h3>
-          </div>
-
-          <button
-            type="button"
-            className="party-game-card"
-            disabled={!AEGIS_CLICKER_ENABLED}
-          >
-            <span className="party-game-card__icon" aria-hidden="true">
-              🛡️
-            </span>
-
-            <span>
-              <strong>Aegis Clicker</strong>
-
-              <small>
-                {AEGIS_CLICKER_ENABLED
-                  ? "Ready to launch"
-                  : "Currently under construction"}
-              </small>
-            </span>
-
-            <span>{AEGIS_CLICKER_ENABLED ? "Play" : "Coming later"}</span>
-          </button>
-        </section>
-
         <footer className="party-hub__footer">
-          <div>
-            <span>
-              Shortcut: <kbd>Alt</kbd> + <kbd>Shift</kbd> + <kbd>P</kbd>
-            </span>
+          <span>
+            <kbd>Alt</kbd> + <kbd>Shift</kbd> + <kbd>P</kbd>
+          </span>
 
-            <span>Create secure upload links to earn Party Mode XP.</span>
-          </div>
+          <span>Create upload links to earn XP.</span>
 
           <button
             type="button"

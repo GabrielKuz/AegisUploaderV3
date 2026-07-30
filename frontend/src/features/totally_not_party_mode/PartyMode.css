@@ -42,403 +42,442 @@ body.party-mode-active .app-main {
    ========================================================================== */
 
 .party-hub-backdrop {
-  background:
-    radial-gradient(
-      circle at 50% 0%,
-      rgba(31, 106, 138, 0.28),
-      transparent 34%
-    ),
-    rgba(1, 11, 16, 0.88);
-  backdrop-filter: blur(18px);
-  display: grid;
-  inset: 0;
-  padding: clamp(12px, 3vw, 40px);
-  place-items: center;
   position: fixed;
+  inset: 0;
   z-index: var(--party-layer-hub);
+
+  display: grid;
+  place-items: center;
+
+  padding: clamp(12px, 3vw, 32px);
+
+  background: rgba(2, 14, 20, 0.86);
+  backdrop-filter: blur(14px);
 }
 
 .party-hub {
-  background:
-    linear-gradient(145deg, rgba(255, 255, 255, 0.035), transparent 38%),
-    #061f2b;
-  border: 1px solid rgba(120, 197, 232, 0.25);
-  border-radius: 26px;
-  box-shadow:
-    0 40px 110px rgba(0, 0, 0, 0.64),
-    inset 0 1px rgba(255, 255, 255, 0.07);
-  color: #f7fbfc;
+  width: min(880px, 100%);
   max-height: calc(100dvh - 24px);
   overflow-y: auto;
-  padding: clamp(20px, 3vw, 34px);
-  width: min(1120px, 100%);
-}
 
-.party-hub__header {
-  align-items: flex-start;
-  display: flex;
-  gap: 24px;
-  justify-content: space-between;
-}
+  padding: clamp(20px, 3vw, 28px);
 
-.party-hub__heading {
-  max-width: 720px;
-}
+  border: 1px solid rgba(120, 197, 232, 0.23);
+  border-radius: 20px;
 
-.party-hub__heading h2 {
-  font-family: var(--font-heading);
-  font-size: clamp(2rem, 4.5vw, 3.35rem);
-  font-weight: var(--font-medium);
-  letter-spacing: -0.055em;
-  line-height: 1.02;
-  margin: 7px 0 10px;
-}
+  color: #f6fafb;
+  background: #062431;
 
-.party-hub__heading > p:last-child {
-  color: #b8ced7;
-  line-height: 1.55;
-  margin: 0;
-}
-
-.party-icon-button {
-  align-items: center;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: 50%;
-  color: #ffffff;
-  display: flex;
-  flex: 0 0 42px;
-  font-size: 1.55rem;
-  height: 42px;
-  justify-content: center;
-  transition:
-    background-color var(--transition-fast),
-    border-color var(--transition-fast),
-    transform var(--transition-fast);
-}
-
-.party-icon-button:hover {
-  background: rgba(239, 59, 50, 0.15);
-  border-color: rgba(239, 59, 50, 0.55);
-  transform: rotate(4deg);
+  box-shadow:
+    0 30px 86px rgba(0, 0, 0, 0.54),
+    inset 0 1px rgba(255, 255, 255, 0.05);
 }
 
 /* ==========================================================================
-   PARTY PROGRESS
+   PARTY HUB HEADER
    ========================================================================== */
 
-.party-progress-panel {
-  align-items: center;
-  background: linear-gradient(
-    135deg,
-    rgba(120, 197, 232, 0.09),
-    rgba(239, 59, 50, 0.045)
-  );
-  border: 1px solid rgba(120, 197, 232, 0.2);
-  border-radius: 18px;
+.party-hub__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.party-hub__heading h2 {
+  margin: 5px 0 6px;
+
+  font-family: var(--font-heading);
+  font-size: clamp(2rem, 4vw, 2.7rem);
+  font-weight: var(--font-medium);
+  letter-spacing: -0.055em;
+  line-height: 1;
+}
+
+.party-hub__heading > p:last-child {
+  margin: 0;
+
+  color: #abc1ca;
+
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.party-icon-button {
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
+
   display: grid;
-  gap: 22px;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  margin: 24px 0 28px;
-  padding: 17px 19px;
+  place-items: center;
+
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 50%;
+
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.05);
+
+  font-size: 1.35rem;
+
+  transition:
+    background-color var(--transition-fast),
+    border-color var(--transition-fast);
 }
 
-.party-progress-panel__identity {
-  align-items: center;
-  display: flex;
-  gap: 12px;
+.party-icon-button:hover {
+  border-color: rgba(239, 59, 50, 0.45);
+  background: rgba(239, 59, 50, 0.12);
 }
 
-.party-progress-panel__level {
+/* ==========================================================================
+   PARTY SUMMARY
+   ========================================================================== */
+
+.party-summary {
+  margin: 20px 0;
+  padding: 12px 14px;
+
+  display: grid;
+  grid-template-columns: auto minmax(180px, 1fr) auto;
   align-items: center;
-  background: linear-gradient(135deg, #ef3b32, #a92b26);
-  border-radius: 14px;
-  box-shadow: 0 10px 24px rgba(239, 59, 50, 0.2);
+  gap: 18px;
+
+  border: 1px solid rgba(120, 197, 232, 0.18);
+  border-radius: 13px;
+
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.party-summary__rank {
   display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.party-summary__rank > span {
+  width: 34px;
+  height: 34px;
+
+  display: grid;
+  place-items: center;
+
+  border-radius: 10px;
+
+  color: #ffffff;
+  background: #d83b3b;
+
   font-family: var(--font-mono);
-  font-size: 1.2rem;
+  font-size: 0.8rem;
   font-weight: var(--font-extrabold);
-  height: 48px;
-  justify-content: center;
-  width: 48px;
 }
 
-.party-progress-panel__identity div,
-.party-progress-panel__reward {
+.party-summary__rank div,
+.party-summary__reward {
   display: grid;
-  gap: 3px;
+  gap: 2px;
 }
 
-.party-progress-panel small {
-  color: #8faab5;
-  font-size: 0.66rem;
-  text-transform: uppercase;
+.party-summary small {
+  color: #8fa7b0;
+  font-size: 0.59rem;
 }
 
-.party-progress-panel__progress {
+.party-summary__rank strong {
+  font-size: 0.76rem;
+}
+
+.party-summary__progress {
   min-width: 0;
 }
 
-.party-progress-panel__labels {
-  color: #c8d8de;
+.party-summary__labels {
+  margin-bottom: 6px;
+
   display: flex;
-  font-size: 0.72rem;
   justify-content: space-between;
-  margin-bottom: 8px;
+  gap: 16px;
+
+  color: #b9cbd2;
+
+  font-size: 0.61rem;
 }
 
-.party-progress-panel__track {
-  background: rgba(255, 255, 255, 0.09);
-  border-radius: var(--radius-pill);
-  height: 9px;
+.party-summary__track {
+  height: 6px;
   overflow: hidden;
+
+  border-radius: var(--radius-pill);
+
+  background: rgba(255, 255, 255, 0.09);
 }
 
-.party-progress-panel__track span {
-  background: linear-gradient(90deg, #78c5e8, #ef3b32);
-  border-radius: inherit;
+.party-summary__track span {
   display: block;
   height: 100%;
-  transition: width 300ms ease;
+
+  border-radius: inherit;
+
+  background: linear-gradient(90deg, #78c5e8, #ef3b32);
+
+  transition: width 250ms ease;
 }
 
-.party-progress-panel__progress p {
-  color: #92abb5;
-  font-size: 0.7rem;
-  margin: 7px 0 0;
+.party-summary__progress > small {
+  display: block;
+  margin-top: 5px;
 }
 
-.party-progress-panel__reward {
-  border-left: 1px solid rgba(255, 255, 255, 0.1);
-  padding-left: 20px;
+.party-summary__reward {
+  padding-left: 16px;
+
+  border-left: 1px solid rgba(255, 255, 255, 0.09);
+
   text-align: right;
 }
 
-.party-progress-panel__reward strong {
+.party-summary__reward strong {
   color: #8ed9f6;
+
   font-family: var(--font-mono);
+  font-size: 0.82rem;
+}
+
+/* ==========================================================================
+   INTERN TRIBUTE LINK
+   ========================================================================== */
+
+.party-tribute-link {
+  width: 100%;
+  min-height: 76px;
+  padding: 12px 14px;
+
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 13px;
+
+  border: 1px solid rgba(239, 59, 50, 0.24);
+  border-radius: 13px;
+
+  color: #ffffff;
+  background: linear-gradient(
+    90deg,
+    rgba(120, 197, 232, 0.055),
+    rgba(239, 59, 50, 0.045)
+  );
+
+  text-align: left;
+
+  transition:
+    border-color var(--transition-fast),
+    background-color var(--transition-fast);
+}
+
+.party-tribute-link:hover {
+  border-color: rgba(239, 59, 50, 0.46);
+
+  background: linear-gradient(
+    90deg,
+    rgba(120, 197, 232, 0.085),
+    rgba(239, 59, 50, 0.075)
+  );
+}
+
+.party-tribute-link__icon {
+  width: 42px;
+  height: 42px;
+
+  display: grid;
+  place-items: center;
+
+  border-radius: 11px;
+
+  background: rgba(120, 197, 232, 0.1);
+
+  font-size: 1.3rem;
+}
+
+.party-tribute-link__content {
+  min-width: 0;
+
+  display: grid;
+  gap: 2px;
+}
+
+.party-tribute-link__content small {
+  color: #78c5e8;
+
+  font-family: var(--font-mono);
+  font-size: 0.57rem;
+  font-weight: var(--font-extrabold);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.party-tribute-link__content strong {
+  font-size: 0.9rem;
+}
+
+.party-tribute-link__content > span {
+  color: #aebfc6;
+
+  font-size: 0.68rem;
+}
+
+.party-tribute-link__action {
+  color: #ec9290;
+
+  font-size: 0.67rem;
+  font-weight: var(--font-bold);
+  white-space: nowrap;
+}
+
+/* ==========================================================================
+   PARTY MODE SECTION
+   ========================================================================== */
+
+.party-mode-section {
+  margin-top: 22px;
+}
+
+.party-section-heading {
+  margin-bottom: 10px;
+}
+
+.party-section-heading h3 {
+  margin: 3px 0 0;
+
+  font-size: 1rem;
 }
 
 /* ==========================================================================
    PARTY MODE CARDS
    ========================================================================== */
 
-.party-section-heading {
-  align-items: flex-end;
-  display: flex;
-  gap: 18px;
-  justify-content: space-between;
-  margin-bottom: 13px;
-}
-
-.party-section-heading h3,
-.party-games-section h3 {
-  font-size: 1.15rem;
-  margin: 5px 0 0;
-}
-
-.party-section-heading > span {
-  color: #8fa8b2;
-  font-size: 0.72rem;
-}
-
 .party-mode-grid {
   display: grid;
-  gap: 14px;
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
 }
 
 .party-mode-card {
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.11);
-  border-radius: 18px;
-  color: #ffffff;
+  width: 100%;
+  min-height: 100px;
+  padding: 11px 12px;
+
   display: grid;
-  grid-template-columns: 130px minmax(0, 1fr);
-  min-height: 220px;
-  overflow: hidden;
-  padding: 0;
+  grid-template-columns: 46px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 13px;
+
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.03);
+
   text-align: left;
+
   transition:
     border-color var(--transition-fast),
-    box-shadow var(--transition-fast),
+    background-color var(--transition-fast),
     transform var(--transition-fast);
 }
 
 .party-mode-card:hover {
-  border-color: rgba(120, 197, 232, 0.5);
-  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.24);
-  transform: translateY(-3px);
+  border-color: rgba(120, 197, 232, 0.38);
+  background: rgba(120, 197, 232, 0.055);
+
+  transform: translateY(-1px);
 }
 
 .party-mode-card--active {
-  border-color: rgba(239, 59, 50, 0.72);
-  box-shadow: 0 0 0 1px rgba(239, 59, 50, 0.16);
-}
-
-.party-mode-card__preview {
-  align-items: center;
-  display: flex;
-  justify-content: center;
-  overflow: hidden;
-  position: relative;
-}
-
-.party-mode-card__preview::before,
-.party-mode-card__preview::after {
-  content: "";
-  position: absolute;
+  border-color: rgba(239, 59, 50, 0.58);
+  background: rgba(239, 59, 50, 0.06);
 }
 
 .party-mode-card__icon {
-  font-family: var(--font-mono);
-  font-size: 2.1rem;
-  font-weight: var(--font-extrabold);
-  position: relative;
-  z-index: 2;
-}
+  width: 46px;
+  height: 46px;
 
-.party-mode-card--terminal .party-mode-card__preview {
-  background:
-    repeating-linear-gradient(
-      to bottom,
-      transparent 0 5px,
-      rgba(126, 255, 177, 0.07) 6px
-    ),
-    radial-gradient(circle, #0d503e, #03120e 72%);
-  color: #82ffb5;
-}
-
-.party-mode-card--other-side .party-mode-card__preview {
-  background:
-    radial-gradient(circle, rgba(160, 22, 32, 0.46), transparent 42%), #090609;
-  color: #e6656d;
-}
-
-.party-mode-card--other-side .party-mode-card__preview::before {
-  border: 2px solid rgba(203, 39, 49, 0.42);
-  border-radius: 50%;
-  height: 92px;
-  transform: rotate(-14deg);
-  width: 92px;
-}
-
-.party-mode-card--battle-royale .party-mode-card__preview {
-  background: linear-gradient(145deg, #48c8f1, #6048df 58%, #b047d1);
-  color: #fff25c;
-}
-
-.party-mode-card--battle-royale .party-mode-card__preview::before {
-  border: 10px solid rgba(206, 94, 255, 0.55);
-  border-radius: 50%;
-  height: 115px;
-  width: 115px;
-}
-
-.party-mode-card--kung-fu-panda .party-mode-card__preview {
-  background:
-    radial-gradient(circle at 72% 22%, #e4a94d 0 18%, transparent 19%),
-    linear-gradient(145deg, #e8dbad, #78965f);
-}
-
-.party-mode-card__body {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  padding: 17px 18px;
-}
-
-.party-mode-card__meta {
-  display: flex;
-  gap: 10px;
-  justify-content: space-between;
-}
-
-.party-mode-card__meta small {
-  color: #99b2bc;
-  font-family: var(--font-mono);
-  font-size: 0.62rem;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
-.party-mode-card__body > strong {
-  font-size: 1.08rem;
-  margin-top: 12px;
-}
-
-.party-mode-card__tagline {
-  color: #8ed9f6;
-  font-size: 0.74rem;
-  font-weight: var(--font-semibold);
-  margin-top: 4px;
-}
-
-.party-mode-card__description {
-  color: #acc1c9;
-  font-size: 0.78rem;
-  line-height: 1.45;
-  margin-top: 9px;
-}
-
-.party-mode-card__launch {
-  align-items: center;
-  color: #ffffff;
-  display: flex;
-  font-size: 0.74rem;
-  font-weight: var(--font-bold);
-  gap: 8px;
-  margin-top: auto;
-  padding-top: 14px;
-}
-
-.party-mode-card__launch span {
-  color: #8ed9f6;
-}
-
-/* ==========================================================================
-   MINI-GAME AREA
-   ========================================================================== */
-
-.party-games-section {
-  border-top: 1px solid rgba(255, 255, 255, 0.09);
-  margin-top: 26px;
-  padding-top: 22px;
-}
-
-.party-game-card {
-  align-items: center;
-  background: rgba(120, 197, 232, 0.05);
-  border: 1px dashed rgba(120, 197, 232, 0.32);
-  border-radius: 14px;
-  color: #ffffff;
   display: grid;
-  gap: 13px;
-  grid-template-columns: auto 1fr auto;
-  margin-top: 12px;
-  padding: 13px 15px;
-  text-align: left;
-  width: 100%;
+  place-items: center;
+
+  border-radius: 11px;
+
+  color: #8ed9f6;
+  background: rgba(255, 255, 255, 0.06);
+
+  font-family: var(--font-mono);
+  font-size: 1.2rem;
+  font-weight: var(--font-extrabold);
 }
 
-.party-game-card:disabled {
-  cursor: not-allowed;
-  opacity: 0.68;
+.party-mode-card--terminal .party-mode-card__icon {
+  color: #85f5b0;
+  background: rgba(79, 217, 139, 0.08);
 }
 
-.party-game-card__icon {
-  font-size: 1.35rem;
+.party-mode-card--other-side .party-mode-card__icon {
+  color: #e0646c;
+  background: rgba(202, 55, 66, 0.09);
 }
 
-.party-game-card > span:nth-child(2) {
+.party-mode-card--battle-royale .party-mode-card__icon {
+  color: #ffe46a;
+  background: rgba(125, 91, 229, 0.16);
+}
+
+.party-mode-card--kung-fu-panda .party-mode-card__icon {
+  background: rgba(214, 173, 85, 0.13);
+}
+
+.party-mode-card__content {
+  min-width: 0;
+
   display: grid;
   gap: 3px;
 }
 
-.party-game-card small,
-.party-game-card > span:last-child {
-  color: #94adb7;
-  font-size: 0.7rem;
+.party-mode-card__content small {
+  color: #829ba5;
+
+  font-family: var(--font-mono);
+  font-size: 0.54rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.party-mode-card__content strong {
+  font-size: 0.84rem;
+}
+
+.party-mode-card__content > span {
+  overflow: hidden;
+
+  color: #9eb2ba;
+
+  font-size: 0.65rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.party-mode-card__end {
+  min-width: 48px;
+
+  display: grid;
+  justify-items: end;
+  gap: 7px;
+}
+
+.party-mode-card__end small {
+  color: #829ba5;
+  font-size: 0.56rem;
+}
+
+.party-mode-card__end > span {
+  color: #78c5e8;
+  font-size: 0.9rem;
 }
 
 /* ==========================================================================
@@ -446,43 +485,51 @@ body.party-mode-active .app-main {
    ========================================================================== */
 
 .party-hub__footer {
-  align-items: flex-end;
-  border-top: 1px solid rgba(255, 255, 255, 0.09);
-  color: #91aab4;
+  margin-top: 18px;
+  padding-top: 13px;
+
   display: flex;
-  font-size: 0.7rem;
-  gap: 20px;
-  justify-content: space-between;
-  margin-top: 24px;
-  padding-top: 17px;
+  align-items: center;
+  gap: 14px;
+
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+
+  color: #839ba5;
+
+  font-size: 0.62rem;
 }
 
-.party-hub__footer > div {
-  display: grid;
-  gap: 5px;
+.party-hub__footer > span:nth-child(2) {
+  flex: 1;
 }
 
 .party-hub kbd {
-  background: rgba(255, 255, 255, 0.07);
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  border-radius: 5px;
-  color: #ffffff;
-  font-family: inherit;
   padding: 2px 5px;
+
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.05);
+
+  font-family: inherit;
 }
 
 .party-text-button {
-  background: transparent;
-  color: #aec5ce;
-  font-size: 0.72rem;
-  font-weight: var(--font-bold);
   padding: 0;
+
+  border: 0;
+
+  color: #aabdc4;
+  background: transparent;
+
+  font-size: 0.62rem;
+  font-weight: var(--font-bold);
 }
 
 .party-text-button:hover {
   color: #ffffff;
 }
-
 /* ==========================================================================
    ACTIVE MODE CONTROLS
    ========================================================================== */
@@ -1593,52 +1640,232 @@ body.party-theme--kung-fu-panda .upload-link-summary {
   text-align: center;
 }
 
-.intern-tribute-photo {
-  display: flex;
-  justify-content: center;
+/* ==========================================================================
+   INTERN PHOTO COMPARISON
+   ========================================================================== */
 
+.intern-comparison {
+  --comparison-position: 50%;
+
+  position: relative;
+
+  width: min(940px, 100%);
+  aspect-ratio: 16 / 9;
   margin: 0 auto 48px;
-}
+  overflow: hidden;
 
-.intern-tribute-photo img {
-  width: min(900px, 100%);
-  max-height: 520px;
-
-  object-fit: cover;
-
+  border: 2px solid rgba(120, 197, 232, 0.34);
   border-radius: 24px;
 
-  border: 3px solid rgba(120, 197, 232, 0.35);
+  background: #02141c;
 
   box-shadow:
-    0 24px 60px rgba(0, 0, 0, 0.35),
-    0 0 32px rgba(120, 197, 232, 0.18);
+    0 24px 60px rgba(0, 0, 0, 0.38),
+    0 0 32px rgba(120, 197, 232, 0.14);
 }
+
+.intern-comparison:focus-within {
+  outline: 3px solid #78c5e8;
+  outline-offset: 5px;
+}
+
+/*
+ * Both images occupy exactly the same space.
+ *
+ * object-fit: cover keeps them aligned even if their source
+ * dimensions are slightly different.
+ */
+.intern-comparison__image {
+  position: absolute;
+  inset: 0;
+
+  width: 100%;
+  height: 100%;
+
+  display: block;
+
+  object-fit: cover;
+  object-position: center;
+}
+
+.intern-comparison__before {
+  z-index: 1;
+}
+
+/*
+ * The after image is revealed from left to right.
+ */
+.intern-comparison__after {
+  z-index: 2;
+
+  clip-path: inset(0 calc(100% - var(--comparison-position)) 0 0);
+}
+
+/* ==========================================================================
+   BEFORE AND AFTER LABELS
+   ========================================================================== */
+
+.intern-comparison__label {
+  position: absolute;
+  top: 18px;
+  z-index: 3;
+
+  padding: 7px 11px;
+
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: var(--radius-pill);
+
+  color: #ffffff;
+  background: rgba(3, 20, 28, 0.72);
+
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: var(--font-bold);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.24);
+
+  backdrop-filter: blur(8px);
+}
+
+.intern-comparison__label--after {
+  left: 18px;
+}
+
+.intern-comparison__label--before {
+  right: 18px;
+}
+
+/* ==========================================================================
+   COMPARISON DIVIDER
+   ========================================================================== */
+
+.intern-comparison__divider {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: var(--comparison-position);
+  z-index: 4;
+
+  width: 3px;
+
+  background: rgba(255, 255, 255, 0.94);
+
+  box-shadow:
+    0 0 12px rgba(0, 0, 0, 0.34),
+    0 0 18px rgba(120, 197, 232, 0.45);
+
+  pointer-events: none;
+  transform: translateX(-50%);
+}
+
+.intern-comparison__handle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+
+  width: 50px;
+  height: 50px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+
+  border: 2px solid rgba(255, 255, 255, 0.88);
+  border-radius: 50%;
+
+  color: #ffffff;
+  background: linear-gradient(
+    135deg,
+    rgba(8, 52, 70, 0.96),
+    rgba(11, 63, 78, 0.96)
+  );
+
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.34),
+    0 0 18px rgba(120, 197, 232, 0.3);
+
+  font-family: Arial, sans-serif;
+  font-size: 1.35rem;
+  font-weight: 700;
+  line-height: 1;
+
+  transform: translate(-50%, -50%);
+}
+
+.intern-comparison__handle span {
+  transform: translateY(-1px);
+}
+
+/* ==========================================================================
+   INTERACTIVE RANGE
+   ========================================================================== */
+
+/*
+ * The range input covers the whole comparison.
+ *
+ * It remains visually transparent because the custom divider
+ * and handle provide the visible interaction affordance.
+ */
+.intern-comparison__range {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+
+  width: 100%;
+  height: 100%;
+  margin: 0;
+
+  appearance: none;
+
+  opacity: 0;
+  cursor: ew-resize;
+}
+
+.intern-comparison__range-label {
+  position: absolute;
+
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ==========================================================================
+   COMPARISON CAPTION
+   ========================================================================== */
+
+.intern-comparison figcaption {
+  position: absolute;
+  right: 16px;
+  bottom: 14px;
+  z-index: 3;
+
+  padding: 6px 9px;
+
+  border-radius: var(--radius-md);
+
+  color: rgba(255, 255, 255, 0.78);
+  background: rgba(3, 20, 28, 0.66);
+
+  font-size: var(--text-xs);
+
+  backdrop-filter: blur(8px);
+  pointer-events: none;
+}
+
 /* ==========================================================================
    RESPONSIVE PARTY MODE
    ========================================================================== */
 
 @media (max-width: 820px) {
-  .party-mode-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .party-progress-panel {
-    align-items: stretch;
-    grid-template-columns: 1fr;
-  }
-
-  .party-progress-panel__reward {
-    border-left: 0;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
-    padding-left: 0;
-    padding-top: 13px;
-    text-align: left;
-  }
-
   .party-mode-banner {
-    right: 14px;
     top: 88px;
+    right: 14px;
   }
 
   .panda-bamboo--left {
@@ -1647,18 +1874,13 @@ body.party-theme--kung-fu-panda .upload-link-summary {
 }
 
 @media (max-width: 760px) {
-  .party-section-heading,
-  .party-hub__footer {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
   .party-mode-controls {
-    align-items: stretch;
-    bottom: 12px;
-    flex-direction: column;
-    left: 12px;
     right: 12px;
+    bottom: 12px;
+    left: 12px;
+
+    align-items: stretch;
+    flex-direction: column;
   }
 
   .party-mode-controls__buttons {
@@ -1674,7 +1896,7 @@ body.party-theme--kung-fu-panda .upload-link-summary {
   }
 
   .party-terminal__toolbar {
-    grid-template-columns: auto 1fr;
+    grid-template-columns: auto minmax(0, 1fr);
   }
 
   .party-terminal__actions {
@@ -1696,17 +1918,145 @@ body.party-theme--kung-fu-panda .upload-link-summary {
   }
 }
 
-@media (max-width: 560px) {
-  .party-mode-card {
-    grid-template-columns: 92px minmax(0, 1fr);
+@media (max-width: 720px) {
+  .party-hub {
+    padding: 20px;
   }
 
-  .party-mode-card__description {
+  .party-summary {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .party-summary__reward {
+    padding-top: 10px;
+    padding-left: 0;
+
+    border-top: 1px solid rgba(255, 255, 255, 0.09);
+    border-left: 0;
+
+    text-align: left;
+  }
+
+  .party-mode-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .party-hub__footer {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 520px) {
+  .party-hub-backdrop {
+    padding: 8px;
+  }
+
+  .party-hub {
+    max-height: calc(100dvh - 16px);
+    padding: 18px;
+
+    border-radius: 16px;
+  }
+
+  .party-hub__heading h2 {
+    font-size: 2rem;
+  }
+
+  .party-hub__heading > p:last-child {
+    font-size: 0.76rem;
+  }
+
+  .party-tribute-link {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .party-tribute-link__action {
+    display: none;
+  }
+
+  .party-mode-card {
+    grid-template-columns: 42px minmax(0, 1fr) auto;
+    gap: 10px;
+
+    min-height: 92px;
+    padding: 10px;
+  }
+
+  .party-mode-card__icon {
+    width: 42px;
+    height: 42px;
+  }
+
+  .party-mode-card__content > span {
+    max-width: 170px;
+  }
+
+  .party-mode-card__end {
+    min-width: 32px;
+  }
+
+  .party-mode-card__end small {
     display: none;
   }
 
   .party-mode-banner div > span {
     display: none;
+  }
+
+  .party-mode-controls__buttons {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .party-mode-controls__buttons .party-mode-controls__exit {
+    grid-column: 1 / -1;
+  }
+
+  .intern-tribute-page {
+    padding-inline: 14px;
+  }
+
+  .intern-tribute-page__header {
+    margin-block: 42px;
+  }
+
+  .intern-comparison {
+    aspect-ratio: 4 / 3;
+    margin-bottom: 30px;
+
+    border-radius: 16px;
+  }
+
+  .intern-comparison__label {
+    top: 10px;
+
+    padding: 5px 8px;
+
+    font-size: 0.62rem;
+  }
+
+  .intern-comparison__label--after {
+    left: 10px;
+  }
+
+  .intern-comparison__label--before {
+    right: 10px;
+  }
+
+  .intern-comparison__handle {
+    width: 42px;
+    height: 42px;
+
+    font-size: 1.15rem;
+  }
+
+  .intern-comparison figcaption {
+    right: 10px;
+    bottom: 10px;
+
+    font-size: 0.65rem;
   }
 }
 
@@ -1717,7 +2067,9 @@ body.party-theme--kung-fu-panda .upload-link-summary {
 @media (prefers-reduced-motion: reduce) {
   .party-mode-card,
   .party-icon-button,
-  .party-progress-panel__track span,
+  .party-tribute-link,
+  .party-summary__track span,
+  .party-mode-controls button,
   body.party-theme--other-side #root {
     transition: none;
   }
@@ -1733,5 +2085,10 @@ body.party-theme--kung-fu-panda .upload-link-summary {
   .other-side-particles,
   .panda-leaves {
     display: none;
+  }
+
+  .party-mode-card:hover,
+  .party-icon-button:hover {
+    transform: none;
   }
 }
