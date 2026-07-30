@@ -404,12 +404,6 @@ python uploaderV3-cli.py auth-check
 Create a link:
 
 ```powershell
-python uploaderV3-cli.py create-link AIS-7002
-```
-
-Create an EU link:
-
-```powershell
 python uploaderV3-cli.py create-link AIS-7002 --region EU
 ```
 
@@ -431,28 +425,10 @@ Extend a file's retention:
 python uploaderV3-cli.py extend <upload_id> 7
 ```
 
-For non-interactive use, skip the confirmation:
-
-```powershell
-python uploaderV3-cli.py extend <upload_id> 7 --yes
-```
-
 Mark a file for deletion:
 
 ```powershell
 python uploaderV3-cli.py delete <upload_id>
-```
-
-Mark all files for a link for deletion:
-
-```powershell
-python uploaderV3-cli.py delete-all <uuid>
-```
-
-Submit a data-deletion request:
-
-```powershell
-python uploaderV3-cli.py request-deletion <uuid>
 ```
 
 ---
