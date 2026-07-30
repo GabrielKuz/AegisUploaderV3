@@ -1,17 +1,15 @@
 import datetime
 import inspect
 import json
-import inspect
 import os
-
-from typing import Any, Literal
-from dataclasses import dataclass, field, asdict
-from uuid import UUID
+from dataclasses import asdict, dataclass, field
 from enum import Enum
 from functools import wraps
-from modules import usFileStorageProvider, euFileStorageProvider, itarFileStorageProvider, Session
-from modules.models import StorageRegion, LinkRecord, UploadRecord, UploadSession
+from typing import Any, Literal
+from uuid import UUID
 
+from modules import Session, euFileStorageProvider, itarFileStorageProvider, usFileStorageProvider
+from modules.models import LinkRecord, StorageRegion, UploadRecord, UploadSession
 
 EXCLUDED_FIELDS = {
     "db",
@@ -24,6 +22,7 @@ EXCLUDED_FIELDS = {
 TRUNCATED_FIELDS = {
     "upload_token",
 }
+
 
 def serialize_value(value):
     if value is None:
@@ -46,7 +45,8 @@ def serialize_value(value):
 
     return str(value)
 
-def getRegionFromCaseId(case_id: str) -> StorageRegion: # Get the storage region for a given case id by querying the database
+
+def getRegionFromCaseId(case_id: str) -> StorageRegion:  # Get the storage region for a given case id by querying the database
     db = Session()
     try:
         link_entry = db.query(LinkRecord).filter(LinkRecord.case_id == case_id).first()
@@ -56,7 +56,8 @@ def getRegionFromCaseId(case_id: str) -> StorageRegion: # Get the storage region
     finally:
         db.close()
 
-def getRegionFromUploadID(upload_id: str) -> StorageRegion: # Get the storage region for a given upload id by querying the database
+
+def getRegionFromUploadID(upload_id: str) -> StorageRegion:  # Get the storage region for a given upload id by querying the database
     db = Session()
     try:
         upload_session = db.query(UploadSession).filter(UploadSession.upload_id == upload_id).first()
@@ -68,7 +69,8 @@ def getRegionFromUploadID(upload_id: str) -> StorageRegion: # Get the storage re
     finally:
         db.close()
 
-def getRegionFromlinkID(link_id: str) -> StorageRegion: # Get the storage region for a given link id by querying the database
+
+def getRegionFromlinkID(link_id: str) -> StorageRegion:  # Get the storage region for a given link id by querying the database
     db = Session()
     try:
         link_entry = db.query(LinkRecord).filter(LinkRecord.uuid == link_id).first()
@@ -78,7 +80,8 @@ def getRegionFromlinkID(link_id: str) -> StorageRegion: # Get the storage region
     finally:
         db.close()
 
-def getCaseIdFromLinkID(link_id: str) -> str: # Get the case id for a given link id by querying the database
+
+def getCaseIdFromLinkID(link_id: str) -> str:  # Get the case id for a given link id by querying the database
     db = Session()
     try:
         link_entry = db.query(LinkRecord).filter(LinkRecord.uuid == link_id).first()
@@ -88,7 +91,8 @@ def getCaseIdFromLinkID(link_id: str) -> str: # Get the case id for a given link
     finally:
         db.close()
 
-def getCaseIdFromUploadID(upload_id: str) -> str: # Get the case id for a given upload id by querying the database
+
+def getCaseIdFromUploadID(upload_id: str) -> str:  # Get the case id for a given upload id by querying the database
     db = Session()
     try:
         upload_session = db.query(UploadSession).filter(UploadSession.upload_id == upload_id).first()
@@ -101,7 +105,7 @@ def getCaseIdFromUploadID(upload_id: str) -> str: # Get the case id for a given 
         db.close()
 
 
-def storageRegionToLiteral(region: StorageRegion) -> Literal["US", "EU", "ITAR"]: # Convert a StorageRegion enum to a string literal for use in the audit log
+def storageRegionToLiteral(region: StorageRegion) -> Literal["US", "EU", "ITAR"]:  # Convert a StorageRegion enum to a string literal for use in the audit log
     match region:
         case StorageRegion.US:
             return "US"
@@ -111,6 +115,7 @@ def storageRegionToLiteral(region: StorageRegion) -> Literal["US", "EU", "ITAR"]
             return "ITAR"
         case _:
             raise ValueError(f"Unknown storage region: {region}")
+
 
 @dataclass(slots=True)
 class LogEntry:
@@ -127,6 +132,7 @@ def truncateMiddle(value: str, prefix: int = 6, suffix: int = 4) -> str:
         return value
 
     return f"{value[:prefix]}...{value[-suffix:]}"
+
 
 def auditLog(location: Literal["US", "EU", "ITAR"] | None = None, fromParameter: str | None = None, parameterToRegionFunction: callable | None = None, parameterToCaseIdFunction: callable | None = None):
     def decorator_function(func):
@@ -169,13 +175,7 @@ def auditLog(location: Literal["US", "EU", "ITAR"] | None = None, fromParameter:
                 else:
                     details[key] = serialize_value(value)
 
-            log_entry = LogEntry(
-                timestamp=datetime.datetime.now(datetime.timezone.utc),
-                action=func.__name__,
-                case_id=case_id,
-                user=user,
-                details=details
-            )
+            log_entry = LogEntry(timestamp=datetime.datetime.now(datetime.UTC), action=func.__name__, case_id=case_id, user=user, details=details)
 
             if location is not None:
                 locations = [location]
@@ -194,8 +194,11 @@ def auditLog(location: Literal["US", "EU", "ITAR"] | None = None, fromParameter:
                 await appendAuditLog(log_entry, loc)
 
             return result
+
         return wrapper
+
     return decorator_function
+
 
 async def appendAuditLog(log_entry, location: Literal["US", "EU", "ITAR"]):
     storage_provider = None
@@ -209,9 +212,11 @@ async def appendAuditLog(log_entry, location: Literal["US", "EU", "ITAR"]):
         case _:
             raise ValueError(f"Invalid location: {location}")
 
-    await storage_provider.append(f"logs/{log_entry.case_id}.jsonl",
+    await storage_provider.append(
+        f"logs/{log_entry.case_id}.jsonl",
         json.dumps(
             asdict(log_entry),
             default=serialize_value,
             separators=(",", ":"),
-        ))
+        ),
+    )

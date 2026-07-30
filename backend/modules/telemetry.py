@@ -1,22 +1,22 @@
 import time
-from fastapi import FastAPI, Request
-from httpcore2 import request
-from starlette.middleware.base import BaseHTTPMiddleware
 
+from fastapi import Request
 from opentelemetry import trace
+from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
-from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
-
-from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+from starlette.middleware.base import BaseHTTPMiddleware
 
 
 def setup_telemetry(app):
-    resource = Resource.create({
-        "service.name": "aegis-backend",
-        "service.version": "1.0.0",
-    })
+    resource = Resource.create(
+        {
+            "service.name": "aegis-backend",
+            "service.version": "1.0.0",
+        }
+    )
 
     provider = TracerProvider(resource=resource)
     trace.set_tracer_provider(provider)
@@ -30,9 +30,11 @@ def setup_telemetry(app):
 
     FastAPIInstrumentor.instrument_app(app)
 
-#========================================================================
-#Get telemetry data for each request and add it to the response headers
-#========================================================================
+
+# ========================================================================
+# Get telemetry data for each request and add it to the response headers
+# ========================================================================
+
 
 class TelemetryMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
@@ -47,7 +49,7 @@ class TelemetryMiddleware(BaseHTTPMiddleware):
             except Exception as exc:
                 span.record_exception(exc)
                 raise
-            
+
             process_time = time.time() - start_time
             endpoint = request.scope.get("endpoint")
             endpoint_name = getattr(endpoint, "__name__", "unknown")

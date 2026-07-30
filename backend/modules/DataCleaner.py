@@ -1,36 +1,33 @@
-import AppConstants
 import logging
-import Utils
+from datetime import UTC, datetime
 
-from datetime import datetime, timedelta, timezone
-from modules import Session, usFileStorageProvider, euFileStorageProvider, itarFileStorageProvider
-from modules.HubSpotIntegration import is_caseExpirable
-from modules.models import LinkRecord, UploadRecord, UploadChunk, UploadSession, update_other_from_self, update_similar_between_LinkDB_and_UploadDB
-from modules.StorageProvider import StorageProvider 
 from sqlalchemy import select
-from Utils import IsCaseID
+
+import AppConstants
+import Utils
+from modules import Session, euFileStorageProvider, itarFileStorageProvider, usFileStorageProvider
+from modules.HubSpotIntegration import is_caseExpirable
 from modules.log_config import setup_logging
+from modules.models import LinkRecord, UploadChunk, UploadRecord, UploadSession, update_similar_between_LinkDB_and_UploadDB
+from modules.StorageProvider import StorageProvider
+
 setup_logging()  # Initialize logging configuration
 logger = logging.getLogger(__name__)
 
 LINK_EXPIRY_DAYS = 2
 
-#========================================================================================
+# ========================================================================================
 # Expiration Functions
-#========================================================================================
+# ========================================================================================
+
 
 def _expireUploads():
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
 
     with Session() as session:
-        uploads = session.scalars(
-            select(UploadRecord)
-            .where(UploadRecord.upload_complete.is_(True))
-            .where(UploadRecord.for_deletion.is_(False))
-        ).all()
+        uploads = session.scalars(select(UploadRecord).where(UploadRecord.upload_complete.is_(True)).where(UploadRecord.for_deletion.is_(False))).all()
 
         case_cache: dict[str, bool] = {}
-
 
         for upload in uploads:
             if not upload.timestamp:
@@ -48,14 +45,12 @@ def _expireUploads():
 
         session.commit()
 
+
 def _expireLinks():
-    cutoff = datetime.now(timezone.utc) - AppConstants.LINK_EXPIRATION_TIME
+    cutoff = datetime.now(UTC) - AppConstants.LINK_EXPIRATION_TIME
 
     with Session() as session:
-        links = session.scalars(
-            select(LinkRecord)
-            .where(LinkRecord.expired.is_(False))
-        ).all()
+        links = session.scalars(select(LinkRecord).where(LinkRecord.expired.is_(False))).all()
 
         for link in links:
             if link.timestamp and link.timestamp <= cutoff:
@@ -64,29 +59,25 @@ def _expireLinks():
         session.commit()
         update_similar_between_LinkDB_and_UploadDB(session)
 
-#========================================================================================
-# Deletion Functions
-#========================================================================================
 
-def _deleteExpiredUploadSessions(): # Delete sessions where upload is completeted and the upload id is marked for deletion
+# ========================================================================================
+# Deletion Functions
+# ========================================================================================
+
+
+def _deleteExpiredUploadSessions():  # Delete sessions where upload is completeted and the upload id is marked for deletion
     with Session() as session:
-        sessions = session.scalars(
-            select(UploadSession)
-            .where(UploadSession.completed.is_(True))
-            .where(UploadSession.upload_id.in_(select(UploadRecord.upload_id).where(UploadRecord.for_deletion.is_(True))))
-        ).all()
+        sessions = session.scalars(select(UploadSession).where(UploadSession.completed.is_(True)).where(UploadSession.upload_id.in_(select(UploadRecord.upload_id).where(UploadRecord.for_deletion.is_(True))))).all()
 
         for session_record in sessions:
             session.delete(session_record)
 
         session.commit()
 
+
 async def _deleteExpiredUploads(storage: StorageProvider):
     with Session() as session:
-        uploads = session.scalars(
-            select(UploadRecord)
-            .where(UploadRecord.for_deletion.is_(True))
-        ).all()
+        uploads = session.scalars(select(UploadRecord).where(UploadRecord.for_deletion.is_(True))).all()
 
         for upload in uploads:
             try:
@@ -105,17 +96,10 @@ async def _deleteExpiredUploads(storage: StorageProvider):
 
 
 def _deleteExpiredLinks():
-    with Session() as session: # delete expired likns only once their assoiciated uploads have for_deletion set to True and they are marked as expired
-        expired_links = session.scalars(
-            select(LinkRecord)
-            .where(LinkRecord.expired.is_(True))
-        ).all()
+    with Session() as session:  # delete expired likns only once their assoiciated uploads have for_deletion set to True and they are marked as expired
+        expired_links = session.scalars(select(LinkRecord).where(LinkRecord.expired.is_(True))).all()
 
-        active_links = set(session.scalars(
-            select(UploadRecord.link_uuid)
-            .where(UploadRecord.for_deletion.is_(False))
-            ).all()
-        )
+        active_links = set(session.scalars(select(UploadRecord.link_uuid).where(UploadRecord.for_deletion.is_(False))).all())
 
         for link in expired_links:
             if link.uuid not in active_links:
@@ -123,13 +107,10 @@ def _deleteExpiredLinks():
 
         session.commit()
 
-async def _deleteOrphanedUploads(storage: StorageProvider): # Find uploads not in db where the file exists in storage and delete them if the case id their under has no record in the db
+
+async def _deleteOrphanedUploads(storage: StorageProvider):  # Find uploads not in db where the file exists in storage and delete them if the case id their under has no record in the db
     with Session() as session:
-        db_uploads = set(
-            session.execute(
-                select(UploadRecord.case_id, UploadRecord.blob_name)
-            ).all()
-        )
+        db_uploads = set(session.execute(select(UploadRecord.case_id, UploadRecord.blob_name)).all())
 
         for upload in await storage.ls("./"):
             case_id, blob_name = upload.split("/", 1)
@@ -140,16 +121,13 @@ async def _deleteOrphanedUploads(storage: StorageProvider): # Find uploads not i
                 except Exception as e:
                     logger.error(f"Failed to delete orphaned upload {upload}: {e}")
 
-async def _deleteEmptyCaseDirs(storage: StorageProvider): # Find case directories in storage that have no uploads in the db and delete them
+
+async def _deleteEmptyCaseDirs(storage: StorageProvider):  # Find case directories in storage that have no uploads in the db and delete them
     with Session() as session:
-        existing_case_ids = set(
-            session.scalars(
-                select(UploadRecord.case_id).distinct()
-            ).all()
-        )
+        existing_case_ids = set(session.scalars(select(UploadRecord.case_id).distinct()).all())
 
         case_dirs = {path.split("/", 1)[0] for path in await storage.ls("./")}
-        
+
         for case_dir in case_dirs:
             if not Utils.IsCaseID(case_dir):
                 continue
@@ -161,12 +139,10 @@ async def _deleteEmptyCaseDirs(storage: StorageProvider): # Find case directorie
                 except Exception as e:
                     logger.error(f"Failed to delete empty case directory {case_dir}: {e}")
 
+
 def _deleteOldUploadChunks():
     with Session() as session:
-        chunks = session.scalars(
-            select(UploadChunk)
-            .where(UploadChunk.upload_id.in_(select(UploadRecord.upload_id).where(UploadRecord.for_deletion.is_(True))))
-        ).all()
+        chunks = session.scalars(select(UploadChunk).where(UploadChunk.upload_id.in_(select(UploadRecord.upload_id).where(UploadRecord.for_deletion.is_(True))))).all()
 
         for chunk in chunks:
             try:
@@ -179,6 +155,7 @@ def _deleteOldUploadChunks():
                 logger.error(f"Failed deleting file for upload chunk {chunk.chunk_id} ({chunk.blob_name}): {e}")
 
         session.commit()
+
 
 async def expireAndDeleteOldData():
     try:

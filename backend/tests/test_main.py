@@ -4,9 +4,7 @@ import sys
 from pathlib import Path
 
 import jwt
-from fastapi import Depends
 from fastapi.testclient import TestClient
-
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
@@ -19,10 +17,9 @@ os.environ.setdefault("DATABASE_URL", "sqlite:///:memory:")
 os.environ.setdefault("AZURE_STORAGE_CONNECTION_STRING", "UseDevelopmentStorage=true")
 
 from main import app
-from modules.auth import getCurrentActiveUser
-
 
 client = TestClient(app)
+
 
 def test_read_root_returns_ok_status():
     response = client.get("/")
@@ -30,30 +27,35 @@ def test_read_root_returns_ok_status():
     assert response.status_code == 200
     assert response.json() == {"status": "ok"}
 
+
 def test_health_check_returns_healthy_status():
     response = client.get("/health")
 
     assert response.status_code == 200
     assert response.json() == {"status": "healthy"}
 
+
 def test_normal():
     assert 1 + 1 == 2
     assert 2 * 2 == 4
     assert 5 - 3 == 2
     assert 10 / 2 == 5
-    assert 3 ** 2 == 9
+    assert 3**2 == 9
     assert 10 % 3 == 1
+
 
 def test_python_version():
     major, minor, *_ = sys.version_info
     assert major == 3 and minor >= 13, "Python version must be 3.13 or higher"
 
-def test_python(): # test features unique to python and not in most other languages
+
+def test_python():  # test features unique to python and not in most other languages
     assert bool([]) == False
     assert bool([1, 2, 3]) == True
     assert bool("") == False
-    assert (c:=(a:=[b:=[]]).append([a,b]) or a).append([c,[a,c]])  is None
+    assert (c := (a := [b := []]).append([a, b]) or a).append([c, [a, c]]) is None
     import random as r
+
     assert __import__("random") is r
 
 
@@ -64,18 +66,21 @@ def test_jwt():
     decoded_payload = jwt.decode(token, jwt_secret, algorithms=["HS256"])
     assert decoded_payload == payload
 
+
 def check_main_testing_var_is_false():
     from main import testing
     from modules.scheduler import testing as scheduler_testing
+
     assert testing is False, "The 'testing' variable in main.py should be set to False for production."
     assert scheduler_testing is False, "The 'testing' variable in scheduler.py should be set to False for production."
 
+
 def test_NoAuthNotPresent():
-    forbiddenMethod= "getCurrentUserNoAuthForTest"
+    forbiddenMethod = "getCurrentUserNoAuthForTest"
     violations = []
 
     for pyfile in PROJECT_ROOT.rglob("*.py"):
-        if pyfile.name == "auth.py" or pyfile.name == "test_main.py": # allow the definition of the function in auth.py and test_main.py
+        if pyfile.name == "auth.py" or pyfile.name == "test_main.py":  # allow the definition of the function in auth.py and test_main.py
             continue
         if any(part in {"venv", ".venv", "__pycache__", ".cache"} for part in pyfile.parts):
             continue
@@ -99,4 +104,4 @@ def test_NoAuthNotPresent():
                 if node.id == forbiddenMethod:
                     violations.append(f"{pyfile}:{node.lineno} referenced {forbiddenMethod}")
 
-    assert not violations, ("Insecure call to getCurrentUserNoAuthForTest() found:\n"+ "\n".join(sorted(set(violations)))) #Only allow the definition of the function in auth.py
+    assert not violations, "Insecure call to getCurrentUserNoAuthForTest() found:\n" + "\n".join(sorted(set(violations)))  # Only allow the definition of the function in auth.py

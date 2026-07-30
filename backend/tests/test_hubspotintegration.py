@@ -131,14 +131,14 @@ def test_get_caseStatus_returns_pipeline_stage(monkeypatch):
         lambda self, object_type="tickets": DummyResponse([DummyPipeline("pipeline-1", "stage-1", "Closed Won")]),
     )
 
-    assert hs.search_pipeline("AIS-0000",1) == "Closed Won"
+    assert hs.search_pipeline("AIS-0000", 1) == "Closed Won"
 
 
 def test_get_caseStatus_returns_none_when_ticket_missing(monkeypatch):
     monkeypatch.setattr(hs, "get_pipeline_stage_id", lambda value: None)
     monkeypatch.setattr(hs, "get_pipeline_id", lambda value: None)
 
-    assert hs.search_pipeline("AIS-0000",1) is None
+    assert hs.search_pipeline("AIS-0000", 1) is None
 
 
 def test_get_caseITARstatus_returns_itar_value(monkeypatch):

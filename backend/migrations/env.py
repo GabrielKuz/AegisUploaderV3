@@ -1,21 +1,20 @@
-from logging.config import fileConfig
 import os
+from logging.config import fileConfig
 
 import sqlalchemy as sa
-from sqlalchemy import engine_from_config, pool
-
 from alembic import context
+from sqlalchemy import engine_from_config, pool
 
 config = context.config
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-config.set_main_option("sqlalchemy.url",os.environ["DATABASE_URL"])
+config.set_main_option("sqlalchemy.url", os.environ["DATABASE_URL"])
 
 from modules.models import Base
 
-target_metadata = Base.metadata  
+target_metadata = Base.metadata
 
 
 def runOfflineMigrations() -> None:
@@ -33,7 +32,9 @@ def runOfflineMigrations() -> None:
 
 
 def runOnlineMigrations() -> None:
-    connectable = engine_from_config(config.get_section(config.config_ini_section, {}), prefix="sqlalchemy.",
+    connectable = engine_from_config(
+        config.get_section(config.config_ini_section, {}),
+        prefix="sqlalchemy.",
         poolclass=pool.NullPool,
     )
 
@@ -41,7 +42,7 @@ def runOnlineMigrations() -> None:
         connection.execute(sa.text('CREATE SCHEMA IF NOT EXISTS "LinkDB"'))
 
     with connectable.connect() as connection:
-        context.configure(connection=connection,target_metadata=target_metadata)
+        context.configure(connection=connection, target_metadata=target_metadata)
 
         with context.begin_transaction():
             context.run_migrations()

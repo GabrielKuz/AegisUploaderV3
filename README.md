@@ -19,7 +19,6 @@ Customer file upload application developed by the Aegis Software Summer 2026 int
 This application provides a secure mechanism for customers to upload files associated with support cases. The system supports chunked uploads, Microsoft Entra authentication for internal users, Azure File Storage, and automatic routing of ITAR data to the appropriate storage region.
 
 ## Features
-
 - Secure customer file uploads
 - Chunked upload support
 - Microsoft Entra authentication
@@ -101,9 +100,9 @@ docker compose up -d --build
 ```
 
 The frontend and backend are both served behind Nginx.
+> For architecture see `ARCHITECTURE.md`
 
 ## Local Application URLs
-
 - Frontend: https://localhost
 - Backend API: https://localhost/api
 - Swagger: https://localhost/api/docs
@@ -130,6 +129,13 @@ Examples:
 docker compose exec backend python test.py
 docker compose exec backend sh
 docker compose exec postgres psql -U <username> -d <Database>
+```
+### Ruff Linting & Formatting
+
+```bash
+uv run ruff check .              # Check for lint issues
+uv run ruff check . --fix        # Automatically fix lint issues
+uv run ruff format .             # Format code
 ```
 
 ### Database Migrations

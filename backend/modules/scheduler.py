@@ -1,12 +1,12 @@
 import asyncio
 import logging
 
+from apscheduler.events import EVENT_JOB_ERROR, EVENT_JOB_EXECUTED
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from apscheduler.events import EVENT_JOB_EXECUTED, EVENT_JOB_ERROR
 
 from modules.DataCleaner import expireAndDeleteOldData
-from modules.refreshStatus import update_link_status_from_hubspot
 from modules.log_config import setup_logging
+from modules.refreshStatus import update_link_status_from_hubspot
 
 setup_logging()
 
@@ -22,10 +22,7 @@ def job_listener(event):
         print(f"JOB COMPLETED: {event.job_id}")
 
 
-scheduler.add_listener(
-    job_listener,
-    EVENT_JOB_EXECUTED | EVENT_JOB_ERROR
-)
+scheduler.add_listener(job_listener, EVENT_JOB_EXECUTED | EVENT_JOB_ERROR)
 
 
 testing = False
@@ -59,6 +56,7 @@ else:
         hour="1,2,3,4,5,7,8,9,10,11,13,14,15,16,17,19,20,21,22,23",
         id="hubspot",
     )
+
 
 async def main():
     scheduler.start()

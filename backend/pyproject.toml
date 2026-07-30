@@ -9,7 +9,7 @@ dependencies = [
     "apscheduler>=3.11.3",
     "azure-keyvault-secrets>=4.11.0",
     "azure-mgmt-resource>=26.0.0",
-    "azure-mgmt-storage>=25.0.0",
+    "azure-mgmt-storage>=25.1.0",
     "azure-storage-blob>=12.30.0",
     "azure-storage-file-share>=12.26.0",
     "fastapi>=0.139.2",
@@ -38,3 +38,27 @@ dependencies = [
     "slowapi>=0.1.10",
     "cachetools>=7.1.6",
 ]
+[dependency-groups]
+dev = [
+    "ruff>=0.11.0",
+]
+
+[tool.ruff]
+line-length = 256
+target-version = "py314"
+
+[tool.ruff.lint]
+ignore = [
+    "B904",
+]
+select = [
+    "E",
+    "F",
+    "I",
+    "UP",
+    "B",
+    "ASYNC"
+]
+
+[tool.ruff.format]
+quote-style = "double"

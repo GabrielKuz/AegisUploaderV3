@@ -1,45 +1,38 @@
+import logging
+import os
+from typing import Annotated
 from zoneinfo import ZoneInfo
 
-import fastapi
-import uuid
-
-from fastapi import APIRouter, Depends, HTTPException
 import sqlalchemy
-from modules.auth import getCurrentActiveUser, getCurrentUser, User, userAuthenticated
-from pydantic import Field, BaseModel
-from typing import Annotated
 from azure.communication.email.aio import EmailClient
-import os
-from cachetools import TTLCache
-from threading import Lock
-import logging
-from modules.models import LinkRecord, UploadRecord
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy import create_engine
-from Utils import IsUUID
-import logging
-from modules.rateLimit import rate_limit
+from fastapi import APIRouter, Depends, HTTPException
+
 from modules import Session
+from modules.models import LinkRecord, UploadRecord
+from Utils import IsUUID
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
 CONNECTION_STRING = os.getenv("ACS_CONNECTION_STRING")
-def get_db(): # Avoid reusing the same session across requests, which can cause issues with concurrent transactions
+
+
+def get_db():  # Avoid reusing the same session across requests, which can cause issues with concurrent transactions
     db = Session()
 
     try:
         logger.debug("Yielding database session")
-        yield db # Use a generator to yield the session and ensure its closed after
+        yield db  # Use a generator to yield the session and ensure its closed after
     finally:
         db.close()
         logger.debug("Closed database session")
 
-@router.post("/requestfordeletion/{link_uuid}") #Requests from client side to delete data. Only sends email 
-#@rate_limit(limit=5, window=60, key=lambda args: args['link_uuid'])  # Limit to 5 requests per minute per link_uuid
+
+@router.post("/requestfordeletion/{link_uuid}")  # Requests from client side to delete data. Only sends email
+# @rate_limit(limit=5, window=60, key=lambda args: args['link_uuid'])  # Limit to 5 requests per minute per link_uuid
 async def request_For_Data_Deletion(link_uuid: str, db: Annotated[sqlalchemy.orm.Session, Depends(get_db)]):
     if not IsUUID(link_uuid):
         raise HTTPException(status_code=400, detail="Invalid UUID format")
-    #get upload record from db
+    # get upload record from db
     record = db.query(UploadRecord).filter(UploadRecord.link_uuid == link_uuid).first()
     if not record:
         raise HTTPException(status_code=404, detail="No upload record found for the provided UUID")
@@ -50,13 +43,13 @@ async def request_For_Data_Deletion(link_uuid: str, db: Annotated[sqlalchemy.orm
     record.requested_for_deletion = True
     db.commit()
     try:
-        if not os.getenv("TESTING") or os.getenv("TESTING").lower() != "true": # Only send email if not in testing mode
+        if not os.getenv("TESTING") or os.getenv("TESTING").lower() != "true":  # Only send email if not in testing mode
             link_record = db.query(LinkRecord).filter_by(uuid=link_uuid).first()
             creator = link_record.creator if link_record else "Unknown"
             company = link_record.customer if link_record else "Unknown"
             itar = link_record.itar if link_record else "Unknown"
             logger.debug(f"Retrieved link record for UUID {link_uuid} in Datadeletion: {link_record}")
-            storage_region = (db.query(UploadRecord.storage_region).filter(UploadRecord.link_uuid == link_uuid).scalar() if link_record else "Unknown") or "Unknown" # if theirs an uplaod sharing the uuid gets its region else Unknown
+            storage_region = (db.query(UploadRecord.storage_region).filter(UploadRecord.link_uuid == link_uuid).scalar() if link_record else "Unknown") or "Unknown"  # if theirs an uplaod sharing the uuid gets its region else Unknown
             status = link_record.status if link_record else "Unknown"
             created_at = link_record.timestamp if link_record else "Unknown"
             case_id = link_record.case_id if link_record else "Unknown"
@@ -79,7 +72,7 @@ Created At: {created_at.astimezone(ZoneInfo("America/New_York")).strftime("%B %-
 
 Please review this request and take the appropriate action.
 """,
-                "html": f"""
+                        "html": f"""
                 <html>
                     <body style="font-family: Arial, Helvetica, sans-serif; color: #333;">
                         <h2 style="color: #b22222;">Data Deletion Request Received</h2>
@@ -133,21 +126,14 @@ Please review this request and take the appropriate action.
 
                     </body>
                 </html>
-                """
-            },
-            "recipients": {
-                "to": [
-                    {
-                        "address": os.getenv("ACS_HELPDESK_ADDRESS"),
-                        "displayName": os.getenv("ACS_HELPDESK_ADDRESS")
-                    }
-                ],
-                "cc": 
-                    [{"address": creator, "displayName": creator}] if creator != "Unknown" else []
-                ,
-            },
-            "senderAddress": os.getenv("ACS_SENDER_ADDRESS", "DoNotReply@aiscorp.com")
-        }
+                """,
+                    },
+                    "recipients": {
+                        "to": [{"address": os.getenv("ACS_HELPDESK_ADDRESS"), "displayName": os.getenv("ACS_HELPDESK_ADDRESS")}],
+                        "cc": [{"address": creator, "displayName": creator}] if creator != "Unknown" else [],
+                    },
+                    "senderAddress": os.getenv("ACS_SENDER_ADDRESS", "DoNotReply@aiscorp.com"),
+                }
 
             try:
                 await sendDeletionEmail(message)
@@ -160,9 +146,11 @@ Please review this request and take the appropriate action.
     except Exception as e:
         logger.error(f"Error processing deletion request for UUID {link_uuid}: {e}")
         raise HTTPException(status_code=400, detail="Internal Server Error")
-    
+
+
 async def sendDeletionEmail(message):
     logger.info("Sending deletion request email...")
     async with EmailClient.from_connection_string(CONNECTION_STRING) as client:
         response = await client.begin_send(message)
         await response.result()
+
