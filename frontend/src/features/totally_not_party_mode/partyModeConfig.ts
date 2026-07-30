@@ -50,13 +50,13 @@ export const PARTY_MODES: readonly PartyModeDefinition[] = [
     firstVisitXp: 15,
   },
   {
-    id: "bamboo-guardian",
-    title: "Bamboo Guardian",
-    shortTitle: "Bamboo Guardian",
+    id: "kung-fu-panda",
+    title: "Kung Fu Panda 2",
+    shortTitle: "Kung Fu Panda",
     icon: "🐼",
     category: "Visual Theme",
     description:
-      "Enter a warm panda martial-arts world with parchment panels, bamboo, jade accents, and floating leaves.",
+      "Enter the martial-arts world of Kung Fu Panda (copyright hehe) with parchment panels, bamboo, jade accents, and floating leaves.",
     firstVisitXp: 15,
   },
 ] as const;

@@ -7,7 +7,7 @@ export type PartyModeId =
   | "terminal"
   | "other-side"
   | "battle-royale"
-  | "bamboo-guardian";
+  | "kung-fu-panda";
 
 /**
  * Cosmetic Party Mode progression.

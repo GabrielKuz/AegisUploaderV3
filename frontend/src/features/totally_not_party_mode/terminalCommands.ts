@@ -91,7 +91,7 @@ const VIRTUAL_FILES: Record<string, string[]> = {
     "- terminal",
     "- other-side",
     "- battle-royale",
-    "- bamboo-guardian",
+    "- kung-fu-panda",
   ],
 
   "/home/aegis/team.txt": [
@@ -409,7 +409,7 @@ export function executeTerminalCommand(
             "mode terminal",
             "mode other-side",
             "mode battle-royale",
-            "mode bamboo-guardian",
+            "mode kung-fu-panda",
             "mode normal",
           ],
         };
@@ -425,7 +425,7 @@ export function executeTerminalCommand(
         requestedMode === "terminal" ||
         requestedMode === "other-side" ||
         requestedMode === "battle-royale" ||
-        requestedMode === "bamboo-guardian"
+        requestedMode === "kung-fu-panda"
       ) {
         return {
           setMode: requestedMode,

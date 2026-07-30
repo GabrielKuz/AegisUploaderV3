@@ -982,15 +982,10 @@ body.party-theme--battle-royale #root {
 }
 
 /* ==========================================================================
-   BAMBOO GUARDIAN THEME
+   KUNG FU PANDA THEME
    ========================================================================== */
 
-/*
- * This is an original panda martial-arts visual treatment.
- * It does not include copied movie characters, logos, or art.
- */
-
-body.party-theme--bamboo-guardian {
+body.party-theme--kung-fu-panda {
   --theme-page: #e9e1bb;
   --theme-surface: #fff9df;
   --theme-panel: #f7efd0;
@@ -1001,7 +996,7 @@ body.party-theme--bamboo-guardian {
   background: linear-gradient(135deg, #efe5bd, #cfddad);
 }
 
-body.party-theme--bamboo-guardian #root {
+body.party-theme--kung-fu-panda #root {
   filter: saturate(0.94) contrast(1.02);
 }
 
@@ -1051,7 +1046,7 @@ body.party-theme--bamboo-guardian #root {
   animation: bamboo-leaf-fall 9s linear infinite;
 }
 
-.bamboo-guardian-badge {
+.kung-fu-panda-badge {
   position: fixed;
   left: clamp(14px, 2vw, 28px);
   top: clamp(14px, 2vw, 28px);
@@ -1071,16 +1066,16 @@ body.party-theme--bamboo-guardian #root {
   box-shadow: 0 12px 32px rgba(64, 77, 43, 0.22);
 }
 
-.bamboo-guardian-badge > span {
+.kung-fu-panda-badge > span {
   font-size: 1.7rem;
 }
 
-.bamboo-guardian-badge strong,
-.bamboo-guardian-badge small {
+.kung-fu-panda-badge strong,
+.kung-fu-panda-badge small {
   display: block;
 }
 
-.bamboo-guardian-badge small {
+.kung-fu-panda-badge small {
   color: #63745d;
 }
 

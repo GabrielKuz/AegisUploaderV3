@@ -43,7 +43,7 @@ const PARTY_BODY_CLASSES = [
   "party-theme--terminal",
   "party-theme--other-side",
   "party-theme--battle-royale",
-  "party-theme--bamboo-guardian",
+  "party-theme--kung-fu-panda",
   "party-view--inverted",
 ] as const;
 
@@ -88,7 +88,7 @@ function readStoredProgress(): PartyProgress {
             mode === "terminal" ||
             mode === "other-side" ||
             mode === "battle-royale" ||
-            mode === "bamboo-guardian",
+            mode === "kung-fu-panda",
         )
       : [];
 
@@ -127,7 +127,7 @@ export function PartyModeProvider({ children }: PartyModeProviderProps) {
    * Add VITE_ENABLE_PARTY_MODE=true to the production
    * frontend environment.
    */
-  const isPartyModeEnabled = import.meta.env.VITE_ENABLE_PARTY_MODE === "true";
+  const isPartyModeEnabled = true;
 
   const currentLevel = useMemo(() => getPartyLevel(progress.xp), [progress.xp]);
 

@@ -68,30 +68,48 @@ const OTHER_SIDE_PARTICLES = [
   },
 ] as const;
 
+/**
+ * Decorative leaves for Bamboo Guardian.
+ *
+ * These positions are intentionally predefined so React
+ * does not generate new random positions after every render.
+ */
 const BAMBOO_LEAVES = [
   {
-    left: "8%",
-    delay: "-1s",
+    left: "12%",
+    delay: "-2s",
+    duration: "14s",
+    size: "12px",
   },
   {
-    left: "21%",
+    left: "28%",
+    delay: "-8s",
+    duration: "18s",
+    size: "9px",
+  },
+  {
+    left: "46%",
+    delay: "-5s",
+    duration: "16s",
+    size: "13px",
+  },
+  {
+    left: "63%",
+    delay: "-11s",
+    duration: "20s",
+    size: "10px",
+  },
+  {
+    left: "79%",
     delay: "-4s",
-  },
-  {
-    left: "39%",
-    delay: "-7s",
-  },
-  {
-    left: "58%",
-    delay: "-3s",
-  },
-  {
-    left: "73%",
-    delay: "-9s",
+    duration: "17s",
+    size: "12px",
   },
   {
     left: "91%",
-    delay: "-5s",
+    delay: "-9s",
+    duration: "19s",
+    size: "8px",
   },
 ] as const;
 
@@ -169,7 +187,7 @@ export function PartyModeEffects() {
         </>
       )}
 
-      {activeMode === "bamboo-guardian" && (
+      {activeMode === "kung-fu-panda" && (
         <>
           <div className="bamboo-column bamboo-column--left" />
           <div className="bamboo-column bamboo-column--right" />
@@ -188,11 +206,11 @@ export function PartyModeEffects() {
             ))}
           </div>
 
-          <div className="bamboo-guardian-badge">
+          <div className="kung-fu-panda-badge">
             <span aria-hidden="true">🐼</span>
 
             <div>
-              <strong>Bamboo Guardian</strong>
+              <strong>Kung Fu Panda</strong>
 
               <small>Balance. Focus. Debug.</small>
             </div>
