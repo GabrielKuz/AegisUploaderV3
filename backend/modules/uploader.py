@@ -312,7 +312,7 @@ async def start_upload(
 
     return {
         "uploadToken": upload_token,  # Token to identify session
-        "chunkSize": 4 * 1024 * 1024,  # 32 MiB  # Tell client the chunk size to use for uploads, maybe set up negotiation later for different sizes
+        "chunkSize": 4 * 1024 * 1024,  # 4 MiB  # Tell client the chunk size to use for uploads, maybe set up negotiation later for different sizes
     }
 
 
@@ -339,7 +339,7 @@ async def upload_file_chunk(
         raise HTTPException(status_code=400, detail="X-Chunk-Hash header required")
 
     if chunk_size is None or chunk_size <= 0 or received_size != chunk_size or chunk_size > 4 * 1024 * 1024:  # Handle invalid chunk sizes, including the final chunk which can be smaller than the chunk size
-        raise HTTPException(status_code=400, detail="X-Chunk-Size invalid or missing, must be > 0 and <= 32 MiB and match Content-Length")
+        raise HTTPException(status_code=400, detail="X-Chunk-Size invalid or missing, must be > 0 and <= 4 MiB and match Content-Length")
 
     upload_session = (  # GRab the session using the token and link uuid
         db.query(UploadSession)
