@@ -19,11 +19,10 @@ const INTERN_TEAMS = [
       "Built secure upload processing, APIs, storage workflows, and backend reliability.",
   },
   {
-    department: "Infrastructure",
-    members: ["Gabe II"],
-    contribution:
-      "Built and supported the cloud, deployment, Docker, and infrastructure foundation.",
-  },
+    department: "Third Column",
+    members: ["Secret Sixth Person"],
+    contribution: "I needed a third box for the formatting to work :/",
+  }
 ] as const;
 
 
@@ -59,7 +58,7 @@ export function TributePage() {
           
           <p className="party-eyebrow">Secret: Party Mode</p>
 
-          <h1>The 2026 Intern Team</h1>
+          <h1>The 2026 Intern Team: Before</h1>
 
           
         </header>
@@ -70,7 +69,20 @@ export function TributePage() {
             alt="The 2026 intern team"
           />
         </div>
+        <header className="intern-tribute-page__header">
 
+          
+
+          <h1>The 2026 Intern Team: After</h1>
+
+
+        </header>
+        <div className = "intern-tribute-photo">
+          <img
+            src="/images/interns2.jpeg"
+            alt="The 2026 intern team but better"
+          />
+        </div>
         <div className="intern-tribute-grid">
           {INTERN_TEAMS.map((team) => (
             <article key={team.department} className="intern-tribute-card">
