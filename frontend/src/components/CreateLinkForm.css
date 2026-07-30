@@ -17,14 +17,14 @@
    ========================================================================== */
 
 .create-link-header {
-  margin-bottom: 24px;
+  margin-bottom: var(--space-xl);
 }
 
 .create-link-header h1 {
   color: var(--theme-text);
   font-family: var(--font-heading);
-  font-size: clamp(46px, 5vw, 68px);
-  font-weight: 400;
+  font-size: var(--text-display);
+  font-weight: var(--font-regular);
   letter-spacing: -0.055em;
   line-height: 1.04;
   margin: 0;
@@ -32,12 +32,11 @@
 
 .create-link-description {
   color: var(--theme-accent);
-  font-size: clamp(18px, 1rem + 1vw, 20px);
+  font-size: var(--text-lead);
   line-height: 1.6;
-  margin: 12px 0 0;
-  max-width: 700px;
+  margin: var(--space-md) 0 0;
   font-style: italic;
-  font-weight: 400;
+  font-weight: var(--font-regular);
 }
 
 /* ==========================================================================
@@ -47,7 +46,7 @@
 .create-link-shell {
   align-items: stretch;
   display: grid;
-  gap: 24px;
+  gap: var(--space-xl);
   grid-template-columns:
     minmax(0, 1fr)
     minmax(280px, 0.75fr);
@@ -69,39 +68,39 @@
 
 .create-link-form {
   display: grid;
-  gap: 20px;
-  padding: clamp(24px, 4vw, 34px);
+  gap: var(--space-lg);
+  padding: var(--card-padding);
 }
 
 .create-link-field {
   display: grid;
-  gap: 8px;
+  gap: var(--space-sm);
   min-width: 0;
 }
 
 .create-link-field label {
   color: var(--theme-text);
   font-family: var(--font-body);
-  font-size: clamp(22px, 2vw, 24px);
-  font-weight: 500;
+  font-size: var(--text-card-title);
+  font-weight: var(--font-medium);
   letter-spacing: -0.04em;
   line-height: 1.4;
-  padding-bottom: 10px;
+  padding-bottom: var(--space-md);
   border-bottom: 2px solid var(--theme-border-strong);
-  margin: 0 0 12px;
+  margin: 0 0 var(--space-md);
 }
 
 .create-link-field input,
 .create-link-field select {
   font-family: var(--font-body);
-  font-size: clamp(16px, 2vw, 18px);
+  font-size: var(--text-sm);
   background: var(--theme-control-bg);
   border: 1px solid var(--theme-control-border);
   border-radius: var(--radius-md);
   box-shadow: var(--theme-control-shadow);
   color: var(--theme-text);
   min-height: 46px;
-  padding: 0 14px;
+  padding: 0 var(--space-lg);
   transition:
     background-color var(--transition-fast),
     border-color var(--transition-fast),
@@ -146,17 +145,17 @@
 .create-link-actions {
   font-family: var(--font-body);
   display: flex;
-  gap: 12px;
+  gap: var(--space-md);
   justify-content: flex-end;
-  padding-top: 4px;
+  padding-top: var(--space-xs);
 }
 
 .create-link-actions button {
   border-radius: var(--radius-md);
-  font-size: clamp(14px, 2vw, 16px);
-  font-weight: 600;
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
   min-height: 44px;
-  padding: 0 15px;
+  padding: 0 var(--space-lg);
   transition:
     background-color var(--transition-fast),
     border-color var(--transition-fast),
@@ -207,28 +206,28 @@
    ========================================================================== */
 
 .create-link-info {
-  padding: clamp(24px, 4vw, 34px);
+  padding: var(--card-padding);
 }
 
 .create-link-info h2 {
   color: var(--theme-text);
-  padding-bottom: 10px;
+  padding-bottom: var(--space-md);
   border-bottom: 2px solid var(--theme-border-strong);
   font-family: var(--font-body);
-  font-size: clamp(22px, 2vw, 24px);
-  font-weight: 500;
+  font-size: var(--text-card-title);
+  font-weight: var(--font-medium);
   letter-spacing: -0.04em;
   line-height: 1.4;
-  margin: 0 0 12px;
+  margin: 0 0 var(--space-md);
 }
 
 .create-link-info p {
   color: var(--theme-text-secondary);
-  font-size: clamp(16px, 2vw, 18px);
+  font-size: var(--text-base);
   font-family: var(--font-body);
   line-height: 1.5;
-  font-weight: 400;
-  padding-top: 2px;
+  font-weight: var(--font-regular);
+  padding-top: var(--space-xs);
 }
 
 /* ==========================================================================
@@ -257,7 +256,7 @@
   display: flex;
   flex-direction: column;
   gap: 18px;
-  padding: clamp(24px, 4vw, 34px);
+  padding: var(--card-padding);
   width: min(500px, 90vw);
 }
 
@@ -265,18 +264,18 @@
   border-bottom: 2px solid var(--theme-border-strong);
   color: var(--theme-text);
   font-family: var(--font-body);
-  font-size: clamp(22px, 2vw, 26px);
-  font-weight: 500;
+  font-size: var(--text-card-title);
+  font-weight: var(--font-medium);
   letter-spacing: -0.04em;
   line-height: 1.4;
   margin: 0;
-  padding-bottom: 10px;
+  padding-bottom: var(--space-md);
 }
 
 .create-link-modal p {
   color: var(--theme-text-secondary);
   font-family: var(--font-body);
-  font-size: 16px;
+  font-size: var(--text-base);
   line-height: 1.5;
   margin: 0;
 }
@@ -288,16 +287,15 @@
   border-radius: var(--radius-md);
   box-shadow: var(--theme-control-shadow);
   display: flex;
-  gap: 10px;
-  /*margin: 4px 0;*/
-  padding: 10px 12px;
+  gap: var(--space-md);
+  padding: var(--space-md);
 }
 
 .created-link-display code {
   color: var(--theme-accent);
   flex: 1;
   font-family: var(--font-mono);
-  font-size: 13px;
+  font-size: var(--text-xs);
   overflow-wrap: anywhere;
   word-break: break-all;
 }
@@ -343,18 +341,15 @@
   color: var(--theme-button-text);
   cursor: pointer;
   font-family: var(--font-body);
-  /*font-size: 16px;*/
-  font-weight: 600;
-  /*justify-self: end;*/
+  font-weight: var(--font-semibold);
   min-height: 44px;
   min-width: 120px;
-  padding: 0 18px;
+  padding: 0 var(--space-lg);
   transition:
     background-color var(--transition-fast),
     border-color var(--transition-fast),
     color var(--transition-fast),
     transform var(--transition-fast);
-
   align-self: flex-end;
 }
 
@@ -380,10 +375,6 @@
   .create-link-header {
     margin-bottom: 18px;
   }
-
-  .create-link-header h1 {
-    font-size: clamp(34px, 4vw, 46px);
-  }
 }
 
 @media (max-width: 760px) {
@@ -398,10 +389,6 @@
 }
 
 @media (max-width: 480px) {
-  .create-link-header h1 {
-    font-size: 40px;
-  }
-
   .create-link-actions {
     flex-direction: column-reverse;
   }

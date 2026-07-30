@@ -8,7 +8,7 @@
   color: var(--status-error-text);
   display: flex;
   gap: 14px;
-  margin: 0 0 24px;
+  margin: 0 0 var(--space-xl);
   padding: 18px;
   width: 100%;
 }
@@ -20,8 +20,8 @@
   display: grid;
   flex: 0 0 30px;
   font-family: var(--font-heading);
-  font-size: 17px;
-  font-weight: 800;
+  font-size: var(--text-base);
+  font-weight: var(--font-extrabold);
   height: 30px;
   line-height: 1;
   place-items: center;
@@ -38,16 +38,16 @@
   color: var(--status-error-text);
   display: flex;
   flex-wrap: wrap;
-  font-size: 15px;
-  font-weight: 700;
+  font-size: var(--text-sm);
+  font-weight: var(--font-bold);
   gap: 7px;
   line-height: 1.4;
 }
 
 .data-error-alert-status {
   font-family: var(--font-mono);
-  font-size: 13px;
-  font-weight: 700;
+  font-size: var(--text-xs);
+  font-weight: var(--font-bold);
   letter-spacing: 0.04em;
 }
 
@@ -59,7 +59,7 @@
 
 .data-error-alert-message {
   color: var(--status-error-text);
-  font-size: 14px;
+  font-size: var(--text-sm);
   line-height: 1.55;
   margin: 6px 0 0;
   overflow-wrap: anywhere;
@@ -70,8 +70,8 @@
   border: 1px solid var(--status-error-border);
   border-radius: var(--radius-md);
   color: var(--status-error-text);
-  font-size: 13px;
-  font-weight: 700;
+  font-size: var(--text-xs);
+  font-weight: var(--font-bold);
   margin-top: 14px;
   min-height: 36px;
   padding: 0 14px;
@@ -95,7 +95,7 @@
 
 @media (max-width: 600px) {
   .data-error-alert {
-    padding: 16px;
+    padding: var(--space-lg);
   }
 
   .data-error-alert-icon {

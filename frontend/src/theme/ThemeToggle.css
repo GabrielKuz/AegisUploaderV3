@@ -8,9 +8,9 @@
   cursor: pointer;
   display: inline-flex;
   font: inherit;
-  font-size: 14px;
-  font-weight: 600;
-  gap: 8px;
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+  gap: var(--space-sm);
   justify-content: center;
   min-height: 40px;
   padding: 0 14px;
@@ -38,7 +38,7 @@
 }
 
 .theme-toggle-icon {
-  font-size: 17px;
+  font-size: var(--text-base);
   line-height: 1;
 }
 

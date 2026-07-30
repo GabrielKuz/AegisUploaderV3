@@ -32,7 +32,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 24px;
+  gap: var(--space-xl);
 
   color: #ffffff;
   background: #000000;
@@ -44,7 +44,7 @@
   min-width: 0;
   display: flex;
   align-items: center;
-  gap: 24px;
+  gap: var(--space-xl);
 }
 
 .login-header-logo {
@@ -63,13 +63,13 @@
 .login-header-title {
   min-width: 0;
   display: grid;
-  gap: 4px;
+  gap: var(--space-xs);
 }
 
 .login-product-name {
   color: #ffffff;
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
   line-height: 1.25;
 }
 
@@ -85,7 +85,7 @@
 .login-header-actions {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: var(--space-lg);
   flex: 0 0 auto;
 }
 
@@ -94,7 +94,7 @@
   border: 1px solid var(--status-error-border);
   border-radius: var(--radius-md);
   color: var(--status-error-text);
-  font-size: 14px;
+  font-size: var(--text-sm);
   line-height: 1.5;
   margin: 0;
   padding: 12px 14px;
@@ -110,8 +110,8 @@
   cursor: pointer;
   font: inherit;
   display: inline-flex;
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
   justify-content: center;
   min-height: 40px;
   padding: 0 14px;
@@ -233,8 +233,8 @@
   max-width: 640px;
   margin: 0;
   color: #ffffff;
-  font-size: clamp(34px, 4vw, 64px);
-  font-weight: 400;
+  font-size: var(--text-page-title);
+  font-weight: var(--font-regular);
   line-height: 0.98;
   letter-spacing: -0.07em;
 }
@@ -247,7 +247,7 @@
   max-width: 500px;
   margin: clamp(14px, 2.5vh, 28px) 0 0;
   color: rgba(255, 255, 255, 0.72);
-  font-size: clamp(13px, 1.05vw, 17px);
+  font-size: var(--text-base);
   line-height: 1.55;
 }
 
@@ -275,20 +275,20 @@
   margin-bottom: clamp(8px, 1.6vh, 18px);
   color: rgba(255, 255, 255, 0.42);
   font-family: var(--font-mono);
-  font-size: clamp(15px, 1.4vw, 20px);
+  font-size: var(--text-lg);
 }
 
 .security-item h2 {
   margin: 0 0 6px;
   color: #ffffff;
-  font-size: clamp(12px, 1.05vw, 15px);
-  font-weight: 600;
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
 }
 
 .security-item p {
   margin: 0;
   color: rgba(255, 255, 255, 0.62);
-  font-size: clamp(10px, 0.9vw, 12px);
+  font-size: var(--text-xs);
   line-height: 1.4;
 }
 
@@ -338,7 +338,7 @@
 .auth-footer a:focus-visible {
   border-radius: 2px;
   outline: 3px solid var(--theme-focus-ring);
-  outline-offset: 4px;
+  outline-offset: var(--space-xs);
 }
 
 /* ==========================================================================
@@ -384,8 +384,8 @@
 .auth-card h2 {
   margin: 0;
   color: var(--theme-text);
-  font-size: clamp(30px, 3.8vw, 58px);
-  font-weight: 400;
+  font-size: var(--text-page-title);
+  font-weight: var(--font-regular);
   line-height: 1;
   text-align: center;
   letter-spacing: -0.06em;
@@ -399,7 +399,7 @@
   max-width: 470px;
   margin: clamp(14px, 2vh, 22px) auto clamp(20px, 3vh, 32px);
   color: var(--theme-text);
-  font-size: clamp(14px, 1.25vw, 20px);
+  font-size: var(--text-lg);
   line-height: 1.45;
   text-align: center;
 }
@@ -411,9 +411,9 @@
 .sso-button {
   width: min(100%, 400px);
   min-height: clamp(48px, 6vh, 58px);
-  /*padding: 0 clamp(12px, 2vw, 14px);*/
+
   padding: 12px 14px;
-  column-gap: 12px;
+  column-gap: var(--space-md);
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
@@ -447,7 +447,7 @@
 
 .sso-button:focus-visible {
   outline: 3px solid var(--theme-focus-ring);
-  outline-offset: 4px;
+  outline-offset: var(--space-xs);
 }
 
 .sso-button-logo {
@@ -462,8 +462,8 @@
   /*overflow: hidden;*/
   color: var(--theme-button-text);
   font-family: var(--font-microsoft);
-  font-size: clamp(14px, 1.1vw, 17px);
-  font-weight: 500;
+  font-size: var(--text-base);
+  font-weight: var(--font-medium);
   letter-spacing: -0.02em;
   white-space: normal;
   overflow-wrap: anywhere;
@@ -474,7 +474,7 @@
 
 .sso-button-arrow {
   justify-self: end;
-  font-size: clamp(24px, 4vh, 35px);
+  font-size: var(--text-lg);
   line-height: 1;
   flex-shrink: 0;
 }
@@ -488,7 +488,7 @@
   padding-top: clamp(18px, 3vh, 40px);
 
   display: grid;
-  gap: 8px;
+  gap: var(--space-sm);
 
   border-top: 1px solid var(--theme-divider);
   text-align: center;
@@ -496,13 +496,13 @@
 
 .access-note span {
   color: var(--theme-muted);
-  font-size: clamp(13px, 1.2vw, 18px);
+  font-size: var(--text-base);
 }
 
 .access-note a {
   color: var(--theme-accent);
-  font-size: clamp(13px, 1.2vw, 18px);
-  font-weight: 600;
+  font-size: var(--text-base);
+  font-weight: var(--font-semibold);
   text-decoration: none;
   transition: color 160ms ease;
 }
@@ -522,7 +522,7 @@
   gap: 18px;
 
   color: var(--theme-muted);
-  font-size: clamp(12px, 1.05vw, 18px);
+  font-size: var(--text-sm);
 }
 
 .auth-footer nav {
@@ -558,7 +558,7 @@
   }
 
   .security-number {
-    margin-bottom: 12px;
+    margin-bottom: var(--space-md);
   }
 
   .auth-card {
@@ -588,19 +588,19 @@
   }
 
   .brand-side {
-    padding: 24px;
+    padding: var(--space-xl);
   }
 
   .brand-message {
-    padding-block: 24px;
+    padding-block: var(--space-xl);
   }
 
   .brand-message h1 {
-    font-size: clamp(30px, 5.2vw, 46px);
+    font-size: var(--text-section-title);
   }
 
   .brand-description {
-    font-size: 13px;
+    font-size: var(--text-xs);
     line-height: 1.45;
   }
 
@@ -614,13 +614,13 @@
   }
 
   .security-number {
-    margin-bottom: 4px;
-    font-size: 13px;
+    margin-bottom: var(--space-xs);
+    font-size: var(--text-xs);
   }
 
   .security-item h2 {
-    margin-bottom: 4px;
-    font-size: 12px;
+    margin-bottom: var(--space-xs);
+    font-size: var(--text-xs);
   }
 
   .security-item p {
@@ -639,7 +639,7 @@
   }
 
   .auth-footer {
-    font-size: 12px;
+    font-size: var(--text-xs);
   }
 }
 
@@ -687,8 +687,8 @@
     border: 1px solid var(--gray);
 
     font: inherit;
-    font-size: 14px;
-    font-weight: 600;
+    font-size: var(--text-sm);
+    font-weight: var(--font-semibold);
     text-decoration: none;
 
     box-shadow: var(--theme-control-shadow);
@@ -741,11 +741,11 @@
   }
 
   .auth-card h2 {
-    font-size: clamp(32px, 10vw, 44px);
+    font-size: var(--text-section-title);
   }
 
   .auth-copy {
-    font-size: clamp(14px, 4vw, 16px);
+    font-size: var(--text-sm);
   }
 
   .sso-button {
@@ -754,7 +754,7 @@
 
   .auth-footer {
     flex-direction: column;
-    gap: 8px;
+    gap: var(--space-sm);
     text-align: center;
   }
 
@@ -780,31 +780,31 @@
    TINY SCREENS
    ========================================================================== */
 
- @media (max-width: 520px) {
-   .sso-button {
-     grid-template-columns: auto 1fr;
-     grid-template-areas:
-       "logo arrow"
-       "text text";
+@media (max-width: 520px) {
+  .sso-button {
+    grid-template-columns: auto 1fr;
+    grid-template-areas:
+      "logo arrow"
+      "text text";
 
-     row-gap: 8px;
-     padding: 14px;
-     text-align: center;
-   }
+    row-gap: var(--space-sm);
+    padding: 14px;
+    text-align: center;
+  }
 
-   .sso-button-logo {
-     grid-area: logo;
-   }
+  .sso-button-logo {
+    grid-area: logo;
+  }
 
-   .sso-button-arrow {
-     grid-area: arrow;
-     justify-self: end;
-   }
+  .sso-button-arrow {
+    grid-area: arrow;
+    justify-self: end;
+  }
 
-   .sso-button-label {
-     grid-area: text;
-   }
- }
+  .sso-button-label {
+    grid-area: text;
+  }
+}
 @media (max-width: 420px) {
   .login-header {
     padding-inline: 14px;
@@ -828,31 +828,31 @@
   }
 
   .auth-card h2 {
-    font-size: clamp(30px, 11vw, 38px);
+    font-size: var(--text-section-title);
   }
 
   .auth-copy {
     margin-block: 12px 18px;
-    font-size: 13px;
+    font-size: var(--text-xs);
     line-height: 1.4;
   }
 
   .sso-button {
-    min-height: 48px;
+    min-height: var(--space-2xl);
   }
 
   .sso-button-label {
-    font-size: 12px;
+    font-size: var(--text-xs);
   }
 
   .access-note {
-    margin-top: 16px;
-    padding-top: 16px;
+    margin-top: var(--space-lg);
+    padding-top: var(--space-lg);
   }
 
   .access-note span,
   .access-note a {
-    font-size: 13px;
+    font-size: var(--text-xs);
   }
 
   .brand-shapes {
@@ -870,16 +870,11 @@
   }
 
   .brand-message {
-    padding-block: 16px;
-  }
-
-  .brand-message h1 {
-    font-size: clamp(30px, 3.8vw, 52px);
+    padding-block: var(--space-lg);
   }
 
   .brand-description {
     margin-top: 14px;
-    font-size: 13px;
     line-height: 1.4;
   }
 
@@ -889,17 +884,14 @@
   }
 
   .security-number {
-    margin-bottom: 4px;
-    font-size: 13px;
+    margin-bottom: var(--space-xs);
   }
 
   .security-item h2 {
-    margin-bottom: 4px;
-    font-size: 12px;
+    margin-bottom: var(--space-xs);
   }
 
   .security-item p {
-    font-size: 10px;
     line-height: 1.3;
   }
 
@@ -916,35 +908,21 @@
   .auth-icon {
     width: 52px;
     height: auto;
-    margin-bottom: 12px;
-  }
-
-  .auth-card h2 {
-    font-size: clamp(30px, 3.4vw, 44px);
+    margin-bottom: var(--space-md);
   }
 
   .auth-copy {
     margin-block: 12px 18px;
-    font-size: 14px;
     line-height: 1.4;
   }
 
   .sso-button {
-    min-height: 48px;
+    min-height: var(--space-2xl);
   }
 
   .access-note {
     margin-top: 14px;
     padding-top: 14px;
-  }
-
-  .access-note span,
-  .access-note a {
-    font-size: 13px;
-  }
-
-  .auth-footer {
-    font-size: 12px;
   }
 }
 
@@ -959,16 +937,11 @@
   }
 
   .brand-message {
-    padding-block: 12px;
-  }
-
-  .brand-message h1 {
-    font-size: clamp(28px, 3.4vw, 44px);
+    padding-block: var(--space-md);
   }
 
   .brand-description {
     margin-top: 10px;
-    font-size: 12px;
     line-height: 1.35;
   }
 
@@ -982,14 +955,6 @@
 
   .security-number {
     display: none;
-  }
-
-  .security-item h2 {
-    font-size: 11px;
-  }
-
-  .security-item p {
-    font-size: 9px;
   }
 
   .auth-side {
@@ -1006,13 +971,8 @@
     margin-bottom: 10px;
   }
 
-  .auth-card h2 {
-    font-size: clamp(28px, 3vw, 38px);
-  }
-
   .auth-copy {
     margin-block: 10px 14px;
-    font-size: 13px;
     line-height: 1.35;
   }
 
@@ -1024,22 +984,9 @@
     width: 28px;
   }
 
-  .sso-button-arrow {
-    font-size: 24px;
-  }
-
   .access-note {
-    margin-top: 12px;
-    padding-top: 12px;
-  }
-
-  .access-note span,
-  .access-note a {
-    font-size: 12px;
-  }
-
-  .auth-footer {
-    font-size: 11px;
+    margin-top: var(--space-md);
+    padding-top: var(--space-md);
   }
 }
 

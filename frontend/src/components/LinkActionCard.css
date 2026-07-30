@@ -54,8 +54,8 @@
 .link-action-number {
   color: var(--theme-accent);
   font-family: var(--font-mono);
-  font-size: 25px;
-  font-weight: 500;
+  font-size: var(--text-card-title);
+  font-weight: var(--font-medium);
   line-height: 1;
 }
 
@@ -95,16 +95,16 @@
 .link-action-content h2 {
   color: var(--theme-text);
   font-family: var(--font-heading);
-  font-size: clamp(27px, 2.4vw, 36px);
-  font-weight: 400;
+  font-size: var(--text-section-title);
+  font-weight: var(--font-regular);
   letter-spacing: -0.055em;
   line-height: 1.14;
-  margin: 0 0 16px;
+  margin: 0 0 var(--space-lg);
 }
 
 .link-action-content p {
   color: var(--theme-text-secondary);
-  font-size: clamp(14px, 2vw, 18px);
+  font-size: var(--text-base);
   line-height: 1.65;
   margin: 0;
 }
@@ -113,8 +113,8 @@
   align-items: center;
   color: var(--theme-accent);
   display: flex;
-  font-size: 15px;
-  font-weight: 700;
+  font-size: var(--text-sm);
+  font-weight: var(--font-bold);
   gap: 14px;
   margin-top: auto;
   padding-top: 36px;
@@ -167,7 +167,7 @@
   }
 
   .link-action-content h2 {
-    margin-bottom: 12px;
+    margin-bottom: var(--space-md);
   }
 
   .link-action-content p {

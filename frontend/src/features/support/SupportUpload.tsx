@@ -3,13 +3,12 @@ import { Link, useParams } from "react-router-dom";
 
 import { ApiErrorAlert } from "../../components/ApiErrorAlert";
 import "../../components/DataTable.css";
-
-import { formatBytes, formatDate } from "../../utils/formatters";
 import {
   getUnexpectedError,
   readApiError,
   type UserFacingError,
 } from "../../utils/apiErrors";
+import { formatBytes, formatDate } from "../../utils/formatters";
 import {
   applySortDirection,
   getAriaSort,
@@ -19,6 +18,7 @@ import {
 import { useApiAccessToken } from "../auth/useApiAccessToken";
 
 const REQUEST_DEDUPE_WINDOW_MS = 1_000;
+const ACTION_MESSAGE_DURATION_MS = 3_000;
 
 type Upload = {
   upload_id: string;
@@ -37,8 +37,8 @@ type CaseLink = {
 type SortKey =
   | "blob_name"
   | "size"
-  | "expiration_date"
   | "upload_complete"
+  | "expiration_date"
   | "date_uploaded";
 
 type UploadRequestEntry = {
@@ -46,6 +46,23 @@ type UploadRequestEntry = {
   promise: Promise<Upload[]>;
 };
 
+type SortableHeaderProps = {
+  label: string;
+  column: SortKey;
+  sortKey: SortKey;
+  sortDirection: SortDirection;
+  onSort: (key: SortKey) => void;
+};
+
+type UploadStatusBadgeProps = {
+  isComplete: boolean;
+};
+
+const DATE_KEYS = new Set<SortKey>(["date_uploaded", "expiration_date"]);
+
+const uploadRequestCache = new Map<string, UploadRequestEntry>();
+
+// Carries a structured API error through a rejected request.
 class ApiRequestError extends Error {
   readonly userFacingError: UserFacingError;
 
@@ -57,10 +74,7 @@ class ApiRequestError extends Error {
   }
 }
 
-const DATE_KEYS = new Set<SortKey>(["date_uploaded", "expiration_date"]);
-
-const uploadRequestCache = new Map<string, UploadRequestEntry>();
-
+// Confirms the files endpoint returned an array.
 function parseUploadResponse(payload: unknown): Upload[] {
   if (!Array.isArray(payload)) {
     throw new Error(
@@ -71,13 +85,28 @@ function parseUploadResponse(payload: unknown): Upload[] {
   return payload as Upload[];
 }
 
+// Formats an optional API date.
+function formatOptionalDate(value: string | null | undefined): string {
+  if (!value) {
+    return "—";
+  }
+
+  const date = new Date(value);
+
+  return Number.isNaN(date.getTime()) ? "—" : formatDate(value);
+}
+
+/**
+ * Requests files associated with an upload link.
+ * The short-lived cache prevents React Strict Mode from issuing
+ * duplicate requests during development.
+ */
 function requestUploads(
   uuid: string,
   accessToken: string,
   forceRefresh = false,
 ): Promise<Upload[]> {
   const requestKey = `support-uploads-${uuid}`;
-
   const existingRequest = uploadRequestCache.get(requestKey);
 
   const existingRequestIsCurrent =
@@ -121,7 +150,7 @@ function requestUploads(
 
   uploadRequestCache.set(requestKey, entry);
 
-  const removeRequest = (): void => {
+  const removeCachedRequest = (): void => {
     window.setTimeout(() => {
       if (uploadRequestCache.get(requestKey) === entry) {
         uploadRequestCache.delete(requestKey);
@@ -129,11 +158,12 @@ function requestUploads(
     }, REQUEST_DEDUPE_WINDOW_MS);
   };
 
-  request.then(removeRequest, removeRequest);
+  request.then(removeCachedRequest, removeCachedRequest);
 
   return request;
 }
 
+// Finds the case ID associated with an upload-link UUID.
 async function requestCaseId(
   uuid: string,
   accessToken: string,
@@ -146,12 +176,11 @@ async function requestCaseId(
 
   if (!response.ok) {
     throw new ApiRequestError(
-      await readApiError(response, "load the upload link")
+      await readApiError(response, "load the upload link"),
     );
   }
 
   const links = (await response.json()) as CaseLink[];
-
   const matchingLink = links.find((link) => link.uuid === uuid);
 
   if (!matchingLink) {
@@ -161,45 +190,56 @@ async function requestCaseId(
   return matchingLink.case_id;
 }
 
-function getUploadStatusLabel(uploadComplete: boolean): string {
-  return uploadComplete ? "Complete" : "In progress";
+// Displays an upload's completion status.
+function UploadStatusBadge({ isComplete }: UploadStatusBadgeProps) {
+  const label = isComplete ? "Complete" : "In progress";
+
+  const className = isComplete
+    ? "data-table-badge data-table-badge--complete"
+    : "data-table-badge data-table-badge--progress";
+
+  return <span className={className}>{label}</span>;
 }
 
-function formatOptionalDate(value: string | null | undefined): string {
-  if (!value) {
-    return "—";
-  }
-
-  return formatDate(value);
+// Renders a sortable table column heading.
+function SortableHeader({
+  label,
+  column,
+  sortKey,
+  sortDirection,
+  onSort,
+}: SortableHeaderProps) {
+  return (
+    <th scope="col" aria-sort={getAriaSort(column, sortKey, sortDirection)}>
+      <button
+        className="data-table-sort-button"
+        type="button"
+        onClick={() => onSort(column)}
+      >
+        {label} {getSortIcon(column, sortKey, sortDirection)}
+      </button>
+    </th>
+  );
 }
 
 export function SupportUpload() {
-  const { uuid } = useParams<{
-    uuid: string;
-  }>();
-
+  const { uuid } = useParams<{ uuid: string }>();
   const getAccessToken = useApiAccessToken();
 
   const [uploads, setUploads] = useState<Upload[]>([]);
-
-  const [caseId, setCaseId] = useState<string>("Loading...");
-
+  const [caseId, setCaseId] = useState("Loading...");
   const [sortKey, setSortKey] = useState<SortKey>("date_uploaded");
-
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
-
   const [error, setError] = useState<UserFacingError | null>(null);
-
-  const [isLoading, setIsLoading] = useState(true);
-
   const [actionError, setActionError] = useState<UserFacingError | null>(null);
-
   const [actionMessage, setActionMessage] = useState<string | null>(null);
-  
+  const [isLoading, setIsLoading] = useState(true);
   const [linkCopied, setLinkCopied] = useState(false);
-
   const [isRequestingDeletion, setIsRequestingDeletion] = useState(false);
 
+  const uploadLink = uuid ? `${window.location.origin}/uploads/${uuid}` : "";
+
+  // Loads the selected link and its uploaded files.
   const loadUploads = useCallback(
     async (forceRefresh = false): Promise<void> => {
       setError(null);
@@ -208,13 +248,11 @@ export function SupportUpload() {
       if (!uuid) {
         setUploads([]);
         setCaseId("Unknown");
-
         setError({
           title: "Upload link not selected",
           message:
             "The page URL does not contain an upload-link ID. Return to the links table and select View uploads again.",
         });
-
         setIsLoading(false);
 
         return;
@@ -226,7 +264,6 @@ export function SupportUpload() {
         if (!accessToken) {
           setUploads([]);
           setCaseId("Unknown");
-
           setError({
             status: 401,
             title: "Sign-in required",
@@ -237,20 +274,19 @@ export function SupportUpload() {
           return;
         }
 
-        const [data, currentCaseId] = await Promise.all([
+        const [uploadData, currentCaseId] = await Promise.all([
           requestUploads(uuid, accessToken, forceRefresh),
           requestCaseId(uuid, accessToken),
         ]);
 
-        setUploads(data);
+        setUploads(uploadData);
         setCaseId(currentCaseId);
-
       } catch (requestError) {
         setUploads([]);
         setCaseId("Unknown");
+
         if (requestError instanceof ApiRequestError) {
           setError(requestError.userFacingError);
-
           return;
         }
 
@@ -273,11 +309,24 @@ export function SupportUpload() {
 
     const timer = window.setTimeout(() => {
       setActionMessage(null);
-    }, 3000);
+    }, ACTION_MESSAGE_DURATION_MS);
 
     return () => window.clearTimeout(timer);
   }, [actionMessage]);
 
+  useEffect(() => {
+    if (!linkCopied) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      setLinkCopied(false);
+    }, ACTION_MESSAGE_DURATION_MS);
+
+    return () => window.clearTimeout(timer);
+  }, [linkCopied]);
+
+  // Updates the selected sort column or reverses its direction.
   function handleSort(key: SortKey): void {
     if (key === sortKey) {
       setSortDirection((currentDirection) =>
@@ -288,14 +337,12 @@ export function SupportUpload() {
     }
 
     setSortKey(key);
-
     setSortDirection(DATE_KEYS.has(key) ? "desc" : "asc");
   }
 
   const sortedUploads = useMemo(() => {
     return [...uploads].sort((firstUpload, secondUpload) => {
       const firstValue = firstUpload[sortKey];
-
       const secondValue = secondUpload[sortKey];
 
       if (DATE_KEYS.has(sortKey)) {
@@ -329,12 +376,11 @@ export function SupportUpload() {
     });
   }, [uploads, sortDirection, sortKey]);
 
+  // Copies the customer-facing upload link.
   async function copyUploadLink(): Promise<void> {
-    if (!uuid) {
+    if (!uploadLink) {
       return;
     }
-
-    const uploadLink = `${window.location.origin}/uploads/${uuid}`;
 
     try {
       await navigator.clipboard.writeText(uploadLink);
@@ -342,10 +388,6 @@ export function SupportUpload() {
       setLinkCopied(true);
       setActionError(null);
       setActionMessage("Upload link copied to clipboard.");
-
-      window.setTimeout(() => {
-        setLinkCopied(false);
-      }, 3000);
     } catch {
       setActionError({
         title: "Unable to copy link",
@@ -355,13 +397,14 @@ export function SupportUpload() {
     }
   }
 
+  // Sends a deletion-request email for this upload link.
   async function requestDeletion(): Promise<void> {
     if (!uuid) {
       return;
     }
 
     const confirmed = window.confirm(
-      "Send a deletion request email for this upload link?"
+      "Send a deletion request email for this upload link?",
     );
 
     if (!confirmed) {
@@ -393,23 +436,21 @@ export function SupportUpload() {
           headers: {
             Authorization: `Bearer ${accessToken}`,
           },
-        }
+        },
       );
 
       if (!response.ok) {
         setActionError(
-          await readApiError(response, "send the deletion request")
+          await readApiError(response, "send the deletion request"),
         );
 
         return;
       }
 
-      setActionMessage(
-        "A deletion request email has been sent successfully."
-      );
+      setActionMessage("A deletion request email has been sent successfully.");
     } catch (requestError) {
       setActionError(
-        getUnexpectedError(requestError, "send the deletion request")
+        getUnexpectedError(requestError, "send the deletion request"),
       );
     } finally {
       setIsRequestingDeletion(false);
@@ -426,56 +467,78 @@ export function SupportUpload() {
             View files received through this customer upload link.
           </p>
         </div>
+
         <div className="data-page-actions">
+          <Link
+            to="/support/links"
+            className="data-page-action data-page-icon-action data-page-back"
+            aria-label="Back to links"
+            title="Back to links"
+          >
+            <span className="back-symbol" aria-hidden="true">
+              ←
+            </span>
+          </Link>
+
           <button
             type="button"
-            className="data-page-action"
+            className="data-page-action data-page-icon-action data-page-refresh"
             onClick={() => void loadUploads(true)}
             disabled={isLoading}
+            aria-label={
+              isLoading ? "Refreshing uploaded files" : "Refresh uploaded files"
+            }
+            aria-busy={isLoading}
+            title={isLoading ? "Refreshing..." : "Refresh"}
           >
-            {isLoading ? "Loading..." : "Refresh"}
+            <span
+              className={`refresh-symbol ${isLoading ? "is-loading" : ""}`}
+              aria-hidden="true"
+            >
+              ↻
+            </span>
           </button>
+
           <button
             type="button"
             className="data-page-action data-table-action-button--danger"
-            disabled={isRequestingDeletion}
+            disabled={isRequestingDeletion || isLoading}
             onClick={() => void requestDeletion()}
           >
-            {isRequestingDeletion
-              ? "Sending..."
-              : "Request Deletion"}
+            {isRequestingDeletion ? "Sending..." : "Request Deletion"}
           </button>
-
-          <Link
-            to="/support/links"
-            className="data-page-action"
-          >
-            Back to Links
-          </Link>
         </div>
       </header>
+
       <div className="upload-link-summary">
         <div className="upload-link-summary-row">
           <strong>Upload Link</strong>
 
           <div className="upload-link-value">
-            <a
-              href={`${window.location.origin}/uploads/${uuid}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="upload-link"
-            >
-              <code>{`${window.location.origin}/uploads/${uuid}`}</code>
-            </a>
+            {uploadLink ? (
+              <a
+                href={uploadLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="upload-link"
+              >
+                <code>{uploadLink}</code>
+              </a>
+            ) : (
+              <code>Unavailable</code>
+            )}
 
             <button
               type="button"
-              className="copy-link-button"
+              className="copy-link-button data-table-icon-action"
               onClick={() => void copyUploadLink()}
-              title="Copy upload link"
-              aria-label="Copy upload link"
+              disabled={!uploadLink}
+              title={linkCopied ? "Upload link copied" : "Copy upload link"}
+              aria-label={
+                linkCopied ? "Upload link copied" : "Copy upload link"
+              }
             >
-              {linkCopied ? "✓" : "❐"}
+              <span aria-hidden="true">{linkCopied ? "✓" : "❐"}</span>
             </button>
           </div>
         </div>
@@ -485,18 +548,15 @@ export function SupportUpload() {
           <span>{caseId}</span>
         </div>
       </div>
-      {actionError && (
-        <ApiErrorAlert
-          error={actionError}
-          onRetry={() => setActionError(null)}
-        />
-      )}
 
       {actionMessage && (
         <p className="data-table-message" role="status">
           {actionMessage}
         </p>
       )}
+
+      {actionError && <ApiErrorAlert error={actionError} />}
+
       {isLoading && (
         <p className="data-table-message" role="status">
           Loading uploaded files...
@@ -518,85 +578,45 @@ export function SupportUpload() {
           <table className="data-table">
             <thead>
               <tr>
-                <th
-                  scope="col"
-                  aria-sort={getAriaSort("blob_name", sortKey, sortDirection)}
-                >
-                  <button
-                    className="data-table-sort-button"
-                    type="button"
-                    onClick={() => handleSort("blob_name")}
-                  >
-                    File {getSortIcon("blob_name", sortKey, sortDirection)}
-                  </button>
-                </th>
+                <SortableHeader
+                  label="File"
+                  column="blob_name"
+                  sortKey={sortKey}
+                  sortDirection={sortDirection}
+                  onSort={handleSort}
+                />
 
-                <th
-                  scope="col"
-                  aria-sort={getAriaSort("size", sortKey, sortDirection)}
-                >
-                  <button
-                    className="data-table-sort-button"
-                    type="button"
-                    onClick={() => handleSort("size")}
-                  >
-                    Size {getSortIcon("size", sortKey, sortDirection)}
-                  </button>
-                </th>
+                <SortableHeader
+                  label="Size"
+                  column="size"
+                  sortKey={sortKey}
+                  sortDirection={sortDirection}
+                  onSort={handleSort}
+                />
 
-                <th
-                  scope="col"
-                  aria-sort={getAriaSort(
-                    "upload_complete",
-                    sortKey,
-                    sortDirection,
-                  )}
-                >
-                  <button
-                    className="data-table-sort-button"
-                    type="button"
-                    onClick={() => handleSort("upload_complete")}
-                  >
-                    Status{" "}
-                    {getSortIcon("upload_complete", sortKey, sortDirection)}
-                  </button>
-                </th>
+                <SortableHeader
+                  label="Status"
+                  column="upload_complete"
+                  sortKey={sortKey}
+                  sortDirection={sortDirection}
+                  onSort={handleSort}
+                />
 
-                <th
-                  scope="col"
-                  aria-sort={getAriaSort(
-                    "date_uploaded",
-                    sortKey,
-                    sortDirection,
-                  )}
-                >
-                  <button
-                    className="data-table-sort-button"
-                    type="button"
-                    onClick={() => handleSort("date_uploaded")}
-                  >
-                    Uploaded{" "}
-                    {getSortIcon("date_uploaded", sortKey, sortDirection)}
-                  </button>
-                </th>
+                <SortableHeader
+                  label="Uploaded"
+                  column="date_uploaded"
+                  sortKey={sortKey}
+                  sortDirection={sortDirection}
+                  onSort={handleSort}
+                />
 
-                <th
-                  scope="col"
-                  aria-sort={getAriaSort(
-                    "expiration_date",
-                    sortKey,
-                    sortDirection,
-                  )}
-                >
-                  <button
-                    className="data-table-sort-button"
-                    type="button"
-                    onClick={() => handleSort("expiration_date")}
-                  >
-                    Expires{" "}
-                    {getSortIcon("expiration_date", sortKey, sortDirection)}
-                  </button>
-                </th>
+                <SortableHeader
+                  label="Expires"
+                  column="expiration_date"
+                  sortKey={sortKey}
+                  sortDirection={sortDirection}
+                  onSort={handleSort}
+                />
               </tr>
             </thead>
 
@@ -608,15 +628,7 @@ export function SupportUpload() {
                   <td>{formatBytes(upload.size)}</td>
 
                   <td>
-                    <span
-                      className={
-                        upload.upload_complete
-                          ? "data-table-badge data-table-badge--complete"
-                          : "data-table-badge data-table-badge--progress"
-                      }
-                    >
-                      {getUploadStatusLabel(upload.upload_complete)}
-                    </span>
+                    <UploadStatusBadge isComplete={upload.upload_complete} />
                   </td>
 
                   <td>{formatDate(upload.date_uploaded)}</td>

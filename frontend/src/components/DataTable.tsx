@@ -3,12 +3,12 @@ import { Link } from "react-router-dom";
 
 import { useApiAccessToken } from "../features/auth/useApiAccessToken";
 import { ApiErrorAlert } from "./ApiErrorAlert";
-import { formatDate } from "../utils/formatters";
 import {
   getUnexpectedError,
   readApiError,
   type UserFacingError,
 } from "../utils/apiErrors";
+import { formatDate } from "../utils/formatters";
 import {
   applySortDirection,
   getAriaSort,
@@ -21,12 +21,12 @@ import "./DataTable.css";
 type SupportLink = {
   uuid: string;
   case_id: string;
+  customer: string | null;
+  status: string | null;
   itar: boolean;
   creator: string;
   timestamp: string;
   expiration_date: string;
-  customer: string | null;
-  status: string | null;
 };
 
 type SortKey =
@@ -47,6 +47,23 @@ type DataTableProps = {
   showItarColumn?: boolean;
 };
 
+type LinkStatusDisplay = {
+  label: string;
+  className: string;
+};
+
+type LinkStatusBadgeProps = {
+  status: string | null;
+};
+
+type SortableHeaderProps = {
+  label: string;
+  column: SortKey;
+  sortKey: SortKey;
+  sortDirection: SortDirection;
+  onSort: (key: SortKey) => void;
+};
+
 const DATE_KEYS = new Set<SortKey>(["timestamp", "expiration_date"]);
 
 /**
@@ -62,14 +79,10 @@ function parseLinksResponse(payload: unknown): SupportLink[] {
   return payload as SupportLink[];
 }
 
-type LinkStatusDisplay = {
-  label: string;
-  className: string;
-};
-
+// Converts an API status into a display label and badge style.
 function getLinkStatus(status: string | null | undefined): LinkStatusDisplay {
-  const normalized =
-    typeof status === "string" ? status.trim().toLowerCase() : "";
+  const label = status?.trim() || "Unknown";
+  const normalized = label.toLowerCase();
 
   switch (normalized) {
     case "completed":
@@ -77,7 +90,7 @@ function getLinkStatus(status: string | null | undefined): LinkStatusDisplay {
     case "closed":
     case "resolved":
       return {
-        label: status ?? "Completed",
+        label,
         className: "data-table-badge data-table-badge--complete",
       };
 
@@ -86,7 +99,7 @@ function getLinkStatus(status: string | null | undefined): LinkStatusDisplay {
     case "active":
     case "new":
       return {
-        label: status ?? "In progress",
+        label,
         className: "data-table-badge data-table-badge--progress",
       };
 
@@ -95,17 +108,46 @@ function getLinkStatus(status: string | null | undefined): LinkStatusDisplay {
     case "canceled":
     case "failed":
       return {
-        label: status ?? "Expired",
+        label,
         className: "data-table-badge data-table-badge--danger",
       };
 
     default:
       return {
-        label: typeof status === "string" && status.trim() ? status : "Unknown",
+        label,
         className: "data-table-badge",
       };
   }
 }
+
+// Displays a link status using the appropriate badge style.
+function LinkStatusBadge({ status }: LinkStatusBadgeProps) {
+  const display = getLinkStatus(status);
+
+  return <span className={display.className}>{display.label}</span>;
+}
+
+// Renders a sortable table header.
+function SortableHeader({
+  label,
+  column,
+  sortKey,
+  sortDirection,
+  onSort,
+}: SortableHeaderProps) {
+  return (
+    <th scope="col" aria-sort={getAriaSort(column, sortKey, sortDirection)}>
+      <button
+        className="data-table-sort-button"
+        type="button"
+        onClick={() => onSort(column)}
+      >
+        {label} {getSortIcon(column, sortKey, sortDirection)}
+      </button>
+    </th>
+  );
+}
+
 export function DataTable({
   createPath,
   title = "Created links",
@@ -116,17 +158,13 @@ export function DataTable({
   const getAccessToken = useApiAccessToken();
 
   const [links, setLinks] = useState<SupportLink[]>([]);
-
   const [sortKey, setSortKey] = useState<SortKey>("timestamp");
-
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
-
   const [error, setError] = useState<UserFacingError | null>(null);
-
   const [isLoading, setIsLoading] = useState(true);
-
   const [copiedUuid, setCopiedUuid] = useState<string | null>(null);
 
+  // Loads all upload links available to the current user.
   const loadLinks = useCallback(async (): Promise<void> => {
     setError(null);
     setIsLoading(true);
@@ -136,7 +174,6 @@ export function DataTable({
 
       if (!accessToken) {
         setLinks([]);
-
         setError({
           status: 401,
           title: "Sign-in required",
@@ -153,10 +190,6 @@ export function DataTable({
         },
       });
 
-      /*
-       * Defensively handle an empty response, even though
-       * the links endpoint should normally return an array.
-       */
       if (response.status === 204) {
         setLinks([]);
         return;
@@ -164,20 +197,15 @@ export function DataTable({
 
       if (!response.ok) {
         setLinks([]);
-
         setError(await readApiError(response, "load the upload links"));
 
         return;
       }
 
       const payload: unknown = await response.json();
-
-      const data = parseLinksResponse(payload);
-
-      setLinks(data);
+      setLinks(parseLinksResponse(payload));
     } catch (requestError) {
       setLinks([]);
-
       setError(getUnexpectedError(requestError, "load the upload links"));
     } finally {
       setIsLoading(false);
@@ -188,6 +216,7 @@ export function DataTable({
     void loadLinks();
   }, [loadLinks]);
 
+  // Updates selected sort column or reverses its direction.
   function handleSort(key: SortKey): void {
     if (key === sortKey) {
       setSortDirection((currentDirection) =>
@@ -198,19 +227,34 @@ export function DataTable({
     }
 
     setSortKey(key);
-
     setSortDirection(DATE_KEYS.has(key) ? "desc" : "asc");
+  }
+
+  // Copies customer upload URL to clipboard.
+  async function copyUploadLink(uuid: string): Promise<void> {
+    const uploadLink = `${window.location.origin}/uploads/${uuid}`;
+
+    try {
+      await navigator.clipboard.writeText(uploadLink);
+      setCopiedUuid(uuid);
+
+      window.setTimeout(() => {
+        setCopiedUuid((currentUuid) =>
+          currentUuid === uuid ? null : currentUuid,
+        );
+      }, 2000);
+    } catch {
+      window.alert("Unable to copy the upload link. Please copy it manually.");
+    }
   }
 
   const sortedLinks = useMemo(() => {
     return [...links].sort((firstLink, secondLink) => {
       const firstValue = firstLink[sortKey];
-
       const secondValue = secondLink[sortKey];
 
       if (DATE_KEYS.has(sortKey)) {
         const firstTime = new Date(String(firstValue)).getTime();
-
         const secondTime = new Date(String(secondValue)).getTime();
 
         return applySortDirection(firstTime - secondTime, sortDirection);
@@ -231,41 +275,32 @@ export function DataTable({
     });
   }, [links, sortDirection, sortKey]);
 
-  /*const showActions = Boolean(uploadActionPathPrefix);*/
-
-  async function copyUploadLink(uuid: string): Promise<void> {
-    const uploadLink = `${window.location.origin}/uploads/${uuid}`;
-
-    try {
-      await navigator.clipboard.writeText(uploadLink);
-
-      setCopiedUuid(uuid);
-
-      window.setTimeout(() => {
-        setCopiedUuid((current) => (current === uuid ? null : current));
-      }, 2000);
-    } catch {
-      window.alert("Unable to copy the upload link. Please copy it manually.");
-    }
-  }
-
   return (
     <section className="data-page" aria-labelledby="links-page-heading">
       <header className="data-page-header">
         <div className="data-page-heading">
           <h1 id="links-page-heading">{title}</h1>
-
           <p className="data-page-description">{description}</p>
         </div>
 
         <div className="data-page-actions">
           <button
             type="button"
-            className="data-page-action"
+            className="data-page-action data-page-refresh"
             onClick={() => void loadLinks()}
             disabled={isLoading}
+            aria-label={
+              isLoading ? "Refreshing upload links" : "Refresh upload links"
+            }
+            aria-busy={isLoading}
+            title={isLoading ? "Refreshing..." : "Refresh"}
           >
-            {isLoading ? "Refreshing..." : "Refresh"}
+            <span
+              className={`refresh-symbol ${isLoading ? "is-spinning" : ""}`}
+              aria-hidden="true"
+            >
+              ⟳
+            </span>
           </button>
 
           <Link to={createPath} className="data-page-action">
@@ -295,186 +330,143 @@ export function DataTable({
           <table className="data-table links-table">
             <thead>
               <tr>
-                <th
-                  scope="col"
-                  aria-sort={getAriaSort("case_id", sortKey, sortDirection)}
-                >
-                  <button
-                    className="data-table-sort-button"
-                    type="button"
-                    onClick={() => handleSort("case_id")}
-                  >
-                    Case ID {getSortIcon("case_id", sortKey, sortDirection)}
-                  </button>
-                </th>
-                <th
-                  scope="col"
-                >
-                  <button
-                    className="data-table-sort-button"
-                    type="button"
-                    onClick={() => handleSort("uuid")}
-                  >
-                    Link Actions {getSortIcon("uuid", sortKey, sortDirection)}
-                  </button>
-                </th>
+                <SortableHeader
+                  label="Case ID"
+                  column="case_id"
+                  sortKey={sortKey}
+                  sortDirection={sortDirection}
+                  onSort={handleSort}
+                />
 
-                
-                <th
-                  scope="col"
-                  aria-sort={getAriaSort("customer", sortKey, sortDirection)}
-                >
-                  <button
-                    className="data-table-sort-button"
-                    type="button"
-                    onClick={() => handleSort("customer")}
-                  >
-                    Customer {getSortIcon("customer", sortKey, sortDirection)}
-                  </button>
-                </th>
-                <th
-                  scope="col"
-                  aria-sort={getAriaSort("status", sortKey, sortDirection)}
-                >
-                  <button
-                    className="data-table-sort-button"
-                    type="button"
-                    onClick={() => handleSort("status")}
-                  >
-                    Status {getSortIcon("status", sortKey, sortDirection)}
-                  </button>
-                </th>
+                <th scope="col">Link Actions</th>
+
+                <SortableHeader
+                  label="Customer"
+                  column="customer"
+                  sortKey={sortKey}
+                  sortDirection={sortDirection}
+                  onSort={handleSort}
+                />
+
+                <SortableHeader
+                  label="Status"
+                  column="status"
+                  sortKey={sortKey}
+                  sortDirection={sortDirection}
+                  onSort={handleSort}
+                />
+
                 {showItarColumn && (
-                  <th
-                    scope="col"
-                    aria-sort={getAriaSort("itar", sortKey, sortDirection)}
-                  >
-                    <button
-                      className="data-table-sort-button"
-                      type="button"
-                      onClick={() => handleSort("itar")}
-                    >
-                      ITAR {getSortIcon("itar", sortKey, sortDirection)}
-                    </button>
-                  </th>
+                  <SortableHeader
+                    label="ITAR"
+                    column="itar"
+                    sortKey={sortKey}
+                    sortDirection={sortDirection}
+                    onSort={handleSort}
+                  />
                 )}
 
-                <th
-                  scope="col"
-                  aria-sort={getAriaSort("creator", sortKey, sortDirection)}
-                >
-                  <button
-                    className="data-table-sort-button"
-                    type="button"
-                    onClick={() => handleSort("creator")}
-                  >
-                    Creator {getSortIcon("creator", sortKey, sortDirection)}
-                  </button>
-                </th>
+                <SortableHeader
+                  label="Creator"
+                  column="creator"
+                  sortKey={sortKey}
+                  sortDirection={sortDirection}
+                  onSort={handleSort}
+                />
 
-                <th
-                  scope="col"
-                  aria-sort={getAriaSort("timestamp", sortKey, sortDirection)}
-                >
-                  <button
-                    className="data-table-sort-button"
-                    type="button"
-                    onClick={() => handleSort("timestamp")}
-                  >
-                    Created {getSortIcon("timestamp", sortKey, sortDirection)}
-                  </button>
-                </th>
+                <SortableHeader
+                  label="Created"
+                  column="timestamp"
+                  sortKey={sortKey}
+                  sortDirection={sortDirection}
+                  onSort={handleSort}
+                />
 
-                <th
-                  scope="col"
-                  aria-sort={getAriaSort(
-                    "expiration_date",
-                    sortKey,
-                    sortDirection,
-                  )}
-                >
-                  <button
-                    className="data-table-sort-button"
-                    type="button"
-                    onClick={() => handleSort("expiration_date")}
-                  >
-                    Expires{" "}
-                    {getSortIcon("expiration_date", sortKey, sortDirection)}
-                  </button>
-                </th>
-
-                {/*{showActions && <th scope="col">Actions</th>}*/}
+                <SortableHeader
+                  label="Expires"
+                  column="expiration_date"
+                  sortKey={sortKey}
+                  sortDirection={sortDirection}
+                  onSort={handleSort}
+                />
               </tr>
             </thead>
 
             <tbody>
-              {sortedLinks.map((supportLink) => (
-                <tr key={supportLink.uuid}>
-                  
-                  <td>{supportLink.case_id}</td>
-                  <td>
-                    <div className="data-table-link-container">
-                      {uploadActionPathPrefix && (
-                        <Link
-                          className="data-table-action-link"
-                          to={`${uploadActionPathPrefix}/${supportLink.uuid}`}
-                          state={{ caseId: supportLink.case_id }}
-                        >
-                          View Uploads
-                        </Link>
-                      )}
+              {sortedLinks.map((supportLink) => {
+                const isCopied = copiedUuid === supportLink.uuid;
 
-                      <Link
-                        className="data-table-action-link"
-                        to={`/uploads/${supportLink.uuid}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        Open
-                      </Link>
+                return (
+                  <tr key={supportLink.uuid}>
+                    <td>{supportLink.case_id}</td>
 
-                      <button
-                        type="button"
-                        className="copy-link-button"
-                        onClick={() => void copyUploadLink(supportLink.uuid)}
-                        title="Copy upload link"
-                        aria-label={`Copy upload link for ${supportLink.case_id}`}
-                      >
-                        {copiedUuid === supportLink.uuid ? "✓" : "❐"}
-                      </button>
-                    </div>
-                  </td>
-                  <td>{supportLink.customer ?? "Unknown"}</td>
-                  <td>
-                    {(() => {
-                      const status = getLinkStatus(supportLink.status);
-
-                      return (
-                        <span className={status.className}>{status.label}</span>
-                      );
-                    })()}
-                  </td>
-
-                  {showItarColumn && (
                     <td>
-                      {supportLink.itar ? (
-                        <span className="data-table-badge data-table-badge--danger">
-                          ITAR
-                        </span>
-                      ) : (
-                        "No"
-                      )}
+                      <div className="data-table-link-container">
+                        {uploadActionPathPrefix && (
+                          <Link
+                            className="data-table-action-link"
+                            to={`${uploadActionPathPrefix}/${supportLink.uuid}`}
+                            state={{
+                              caseId: supportLink.case_id,
+                            }}
+                          >
+                            View Uploads
+                          </Link>
+                        )}
+
+                        <Link
+                          className="data-table-action-link data-table-icon-action"
+                          to={`/uploads/${supportLink.uuid}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          title={`Open upload page for ${supportLink.case_id}`}
+                          aria-label={`Open upload page for ${supportLink.case_id} in a new tab`}
+                        >
+                          <span aria-hidden="true">↗</span>
+                        </Link>
+
+                        <button
+                          type="button"
+                          className="copy-link-button data-table-icon-action"
+                          onClick={() => void copyUploadLink(supportLink.uuid)}
+                          title={
+                            isCopied ? "Upload link copied" : "Copy upload link"
+                          }
+                          aria-label={
+                            isCopied
+                              ? `Upload link copied for ${supportLink.case_id}`
+                              : `Copy upload link for ${supportLink.case_id}`
+                          }
+                        >
+                          <span aria-hidden="true">{isCopied ? "✓" : "❐"}</span>
+                        </button>
+                      </div>
                     </td>
-                  )}
 
-                  <td>{supportLink.creator}</td>
+                    <td>{supportLink.customer ?? "Unknown"}</td>
 
-                  <td>{formatDate(supportLink.timestamp)}</td>
+                    <td>
+                      <LinkStatusBadge status={supportLink.status} />
+                    </td>
 
-                  <td>{formatDate(supportLink.expiration_date)}</td>
+                    {showItarColumn && (
+                      <td>
+                        {supportLink.itar ? (
+                          <span className="data-table-badge data-table-badge--danger">
+                            ITAR
+                          </span>
+                        ) : (
+                          "No"
+                        )}
+                      </td>
+                    )}
 
-                </tr>
-              ))}
+                    <td>{supportLink.creator}</td>
+                    <td>{formatDate(supportLink.timestamp)}</td>
+                    <td>{formatDate(supportLink.expiration_date)}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
