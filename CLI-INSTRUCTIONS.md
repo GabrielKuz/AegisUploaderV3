@@ -1,6 +1,6 @@
 # UploaderV3 CLI
 
-A command-line interface for interacting with UploaderV3.
+A command-line interface for interacting with UploaderV3. To use, download `uploaderV3-cli.py` and add it to your working directory or PATH. 
 
 ## Authentication
 
