@@ -1,5 +1,6 @@
 import { useLocation, useNavigate } from "react-router-dom";
 
+
 /**
  * Keep team data near the top so names and roles are easy
  * to update without searching through the JSX.
@@ -19,19 +20,13 @@ const INTERN_TEAMS = [
   },
   {
     department: "Infrastructure",
-    members: ["Corey"],
+    members: ["Gabe II"],
     contribution:
       "Built and supported the cloud, deployment, Docker, and infrastructure foundation.",
   },
 ] as const;
 
-const PROJECT_ACHIEVEMENTS = [
-  "Merge conflicts resolved: More than anyone wanted",
-  "Console logs investigated: Too many to count",
-  "Large files tested: Extremely large",
-  "Deadlocks encountered: Character building",
-  "Production vibes: Optimal",
-] as const;
+
 
 /**
  * Hidden page route:
@@ -61,16 +56,20 @@ export function TributePage() {
         </button>
 
         <header className="intern-tribute-page__header">
-          <div className="intern-tribute-page__shield" aria-hidden="true">
-            🛡️
-          </div>
-
-          <p className="party-eyebrow">Classified Archive Unlocked</p>
+          
+          <p className="party-eyebrow">Secret: Party Mode</p>
 
           <h1>The 2026 Intern Team</h1>
 
-          <p>Built securely. Debugged repeatedly. Shipped together.</p>
+          
         </header>
+
+        <div className="intern-tribute-photo">
+          <img
+            src="/images/interns.jpg"
+            alt="The 2026 intern team"
+          />
+        </div>
 
         <div className="intern-tribute-grid">
           {INTERN_TEAMS.map((team) => (
@@ -84,23 +83,10 @@ export function TributePage() {
           ))}
         </div>
 
-        <section className="intern-achievements">
-          <p className="party-eyebrow">Project Statistics</p>
-
-          <h2>Completely accurate* metrics</h2>
-
-          <div>
-            {PROJECT_ACHIEVEMENTS.map((achievement) => (
-              <p key={achievement}>{achievement}</p>
-            ))}
-          </div>
-
-          <small>*Accuracy may depend on who is reading the console.</small>
-        </section>
+     
 
         <blockquote className="intern-tribute-quote">
-          “The strongest shield was the teammates we debugged with along the
-          way.”
+          “It works on <i>my</i> computer.”
         </blockquote>
       </section>
     </main>

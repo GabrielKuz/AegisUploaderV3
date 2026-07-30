@@ -1265,6 +1265,27 @@ body.party-theme--kung-fu-panda #root {
   text-align: center;
 }
 
+.intern-tribute-photo {
+  display: flex;
+  justify-content: center;
+
+  margin: 0 auto 48px;
+}
+
+.intern-tribute-photo img {
+  width: min(900px, 100%);
+  max-height: 520px;
+
+  object-fit: cover;
+
+  border-radius: 24px;
+
+  border: 3px solid rgba(120, 197, 232, 0.35);
+
+  box-shadow:
+    0 24px 60px rgba(0, 0, 0, 0.35),
+    0 0 32px rgba(120, 197, 232, 0.18);
+}
 /* ==========================================================================
    RESPONSIVE LAYOUT
    ========================================================================== */
